@@ -1,0 +1,560 @@
+/* ================================================================
+   SmartCrick AI — Global Stylesheet v3.1
+   CDN React 18 · No bundler · Mobile-first
+   ================================================================ */
+
+/* ── Reset & Base ────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+               'Helvetica Neue', Arial, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+  line-height: 1.5;
+  overflow-x: hidden;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100dvh;
+  position: relative;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(48, 54, 61, 0.9); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(99, 110, 123, 0.7); }
+* { scrollbar-width: thin; scrollbar-color: rgba(48,54,61,0.9) transparent; }
+
+/* ── Typography Scale ────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #e6edf3;
+}
+
+p { line-height: 1.65; }
+
+/* ── Utility Classes (used by inline style fallbacks) ────────────── */
+.w-3    { width:  0.75rem; }
+.w-3\.5 { width:  0.875rem; }
+.w-4    { width:  1rem; }
+.w-5    { width:  1.25rem; }
+.w-6    { width:  1.5rem; }
+.w-7    { width:  1.75rem; }
+.w-8    { width:  2rem; }
+.w-9    { width:  2.25rem; }
+.h-3    { height: 0.75rem; }
+.h-3\.5 { height: 0.875rem; }
+.h-4    { height: 1rem; }
+.h-5    { height: 1.25rem; }
+.h-6    { height: 1.5rem; }
+.h-7    { height: 1.75rem; }
+.h-8    { height: 2rem; }
+.h-9    { height: 2.25rem; }
+
+/* Tailwind-compat flex helpers used in Icon component */
+.flex-shrink-0 { flex-shrink: 0; }
+
+/* Text colour utilities used in Icon cls prop */
+.text-white   { color: #fff; }
+.text-green   { color: #4ade80; }
+
+/* ── Keyframe Animations ─────────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes xp-flash-in {
+  0%   { opacity: 0; transform: translateY(0) scale(0.8); }
+  20%  { opacity: 1; transform: translateY(-16px) scale(1.05); }
+  80%  { opacity: 1; transform: translateY(-28px) scale(1); }
+  100% { opacity: 0; transform: translateY(-44px) scale(0.9); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  50%       { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.12); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ── XP Flash Toast ──────────────────────────────────────────────── */
+.xp-flash {
+  position: fixed;
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border-radius: 9999px;
+
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+
+  box-shadow:
+    0 4px 20px rgba(16, 185, 129, 0.45),
+    0 2px 8px  rgba(0, 0, 0, 0.4);
+
+  animation: xp-flash-in 1.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Level Bar ───────────────────────────────────────────────────── */
+.level-bar-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(51, 65, 85, 0.6);
+  overflow: hidden;
+}
+.level-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #16a34a, #34d399);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
+}
+
+/* ── Sidebar Panel ───────────────────────────────────────────────── */
+.sidebar-panel {
+  position: fixed;
+  top: 0; bottom: 0; left: 0;
+  z-index: 50;
+  width: 280px;
+  background: #0d1117;
+  border-right: 1px solid rgba(48, 54, 61, 0.9);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  will-change: transform;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sidebar-panel.closed { transform: translateX(-100%); }
+.sidebar-panel.open   { transform: translateX(0); }
+
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── Bottom Navigation ───────────────────────────────────────────── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 30;
+  background: rgba(13, 17, 23, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(48, 54, 61, 0.9);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Card System ─────────────────────────────────────────────────── */
+.card {
+  background: rgba(22, 27, 34, 0.9);
+  border: 1px solid rgba(48, 54, 61, 0.9);
+  border-radius: 10px;
+}
+
+.card-hover {
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+  cursor: pointer;
+}
+.card-hover:hover {
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.card-hover:active { transform: scale(0.985); }
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.12s, transform 0.12s;
+}
+.btn-primary:hover  { opacity: 0.92; }
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  background: rgba(22, 27, 34, 0.9);
+  color: #8b949e;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid rgba(48, 54, 61, 0.9);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.btn-secondary:hover { border-color: rgba(99, 110, 123, 0.6); color: #e6edf3; }
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.btn-danger:hover { background: rgba(239, 68, 68, 0.14); }
+
+/* ── Inputs & Textareas ──────────────────────────────────────────── */
+input[type="text"],
+input[type="number"],
+input[type="time"],
+input[type="email"],
+textarea {
+  background: rgba(22, 27, 34, 0.9);
+  border: 1px solid rgba(48, 54, 61, 0.9);
+  border-radius: 10px;
+  color: #e6edf3;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus,
+textarea:focus {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+}
+
+input::placeholder,
+textarea::placeholder { color: #484f58; }
+
+/* ── Stat Cards ──────────────────────────────────────────────────── */
+.stat-card {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(22, 27, 34, 0.9);
+  border: 1px solid rgba(48, 54, 61, 0.9);
+}
+.stat-card__label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #484f58;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+.stat-card__value {
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #e6edf3;
+}
+
+/* ── Ring Timer (SVG circle) ─────────────────────────────────────── */
+.ring-circle {
+  transform-origin: center;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset 1s linear;
+  will-change: stroke-dashoffset;
+}
+
+/* ── Mental Player Immersive ─────────────────────────────────────── */
+.mental-bg {
+  background: linear-gradient(160deg, #0f0824 0%, #1e1040 50%, #0f172a 100%);
+}
+
+/* ── Page Transitions ────────────────────────────────────────────── */
+main > * {
+  animation: fade-in 0.18s ease-out;
+}
+
+/* ── Badge Pills ─────────────────────────────────────────────────── */
+.badge-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  color: #4ade80;
+}
+
+.badge-pro {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: #fff;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.badge-new {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(22, 163, 74, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── Heatmap Cells ───────────────────────────────────────────────── */
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  transition: transform 0.1s;
+  cursor: default;
+}
+.heatmap-cell:hover { transform: scale(1.3); }
+
+/* ── Category Tabs / Filter Strips ──────────────────────────────── */
+.cat-strip {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.cat-strip::-webkit-scrollbar { display: none; }
+
+.cat-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  border: none;
+  transition: all 0.12s;
+}
+.cat-tab--active {
+  color: #fff;
+}
+.cat-tab--inactive {
+  background: rgba(22, 27, 34, 0.9);
+  color: #8b949e;
+  border: 1px solid rgba(48, 54, 61, 0.9);
+}
+.cat-tab--inactive:hover {
+  border-color: rgba(99, 110, 123, 0.5);
+  color: #e6edf3;
+}
+
+/* ── Schedule Session Cards ──────────────────────────────────────── */
+.session-card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: opacity 0.2s;
+}
+.session-card--skipped { opacity: 0.5; }
+
+/* ── 30-Day / 90-Day Grid Cells ──────────────────────────────────── */
+.day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.12s;
+  border: 2px solid transparent;
+}
+.day-cell--done   { background: #10b981; border-color: #059669; }
+.day-cell--next   { border-color: #f59e0b; }
+.day-cell--rest   { background: rgba(15, 23, 42, 0.5); }
+.day-cell--locked { background: rgba(22, 27, 34, 0.9); border-color: rgba(48, 54, 61, 0.9); }
+
+.day-cell:hover:not(.day-cell--done) { transform: scale(1.06); }
+
+/* ── Accordion (Skill Paths WeekAccordion) ───────────────────────── */
+.accordion {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+.accordion__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  text-align: left;
+  background: rgba(22, 27, 34, 0.9);
+  border: none;
+  cursor: pointer;
+}
+.accordion__body {
+  background: rgba(15, 23, 42, 0.4);
+  border-top: 1px solid rgba(51, 65, 85, 0.4);
+}
+
+/* ── Wizard Step Dots ────────────────────────────────────────────── */
+.wizard-dot {
+  height: 8px;
+  border-radius: 9999px;
+  transition: all 0.3s;
+}
+.wizard-dot--done    { width: 8px; background: #10b981; }
+.wizard-dot--active  { width: 32px; background: #f97316; }
+.wizard-dot--pending { width: 8px; background: rgba(51, 65, 85, 0.5); }
+
+/* ── Notification Toast (Schedule) ──────────────────────────────── */
+.notif-toast {
+  padding: 12px 16px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #34d399;
+  animation: slide-up 0.2s ease-out;
+}
+
+/* ── Loading Spinner (Spinner component) ─────────────────────────── */
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid rgba(30, 41, 59, 0.8);
+  border-top-color: #10b981;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Responsive: slightly wider on tablets ───────────────────────── */
+@media (min-width: 640px) {
+  /* Center the app column on wide screens like an iPad */
+  body { display: flex; justify-content: center; }
+  #root {
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+  }
+  /* Constrain fixed elements to same column */
+  .sidebar-panel  { max-width: 480px; }
+  .bottom-nav,
+  .xp-flash       { max-width: 480px; }
+}
+
+/* ── Safe Area Padding Helpers ───────────────────────────────────── */
+.pt-safe { padding-top: max(1rem, calc(1rem + env(safe-area-inset-top))); }
+.pb-safe { padding-bottom: max(1rem, calc(1rem + env(safe-area-inset-bottom))); }
+
+/* ── Dark Mode Class (applied by JS to <html>) ───────────────────── */
+html.sc-dark  { color-scheme: dark; }
+html.sc-light { color-scheme: light; filter: none; }
+
+/* ── Global focus ring (accessibility) ──────────────────────────── */
+:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Misc Utility ────────────────────────────────────────────────── */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ── YouTube Embed ───────────────────────────────────────────────── */
+.yt-wrap {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #0f172a;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.yt-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ── Shimmer Skeleton (for future async states) ──────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(30,41,59,0.6) 25%,
+    rgba(51,65,85,0.4) 50%,
+    rgba(30,41,59,0.6) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
+}
