@@ -558,3 +558,90 @@ html.sc-light { color-scheme: light; filter: none; }
   animation: shimmer 1.4s infinite;
   border-radius: 8px;
 }
+
+/* ════════════════════════════════════════════════════════════════════ */
+/* GSAP Animation CSS Hooks                                             */
+/* ════════════════════════════════════════════════════════════════════ */
+
+/* ── FOUC Prevention ────────────────────────────────────────────────── */
+/* Hide elements with [data-gsap-reveal] until GSAP sets .gsap-ready    */
+/* SCAnim.init() adds .gsap-ready immediately to avoid flicker          */
+body:not(.gsap-ready) [data-gsap-reveal] {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/* ── Performance Hints ──────────────────────────────────────────────── */
+/* will-change for elements actively animated by GSAP                   */
+[data-gsap-stat],
+[data-gsap-bar],
+[data-gsap-pageheader],
+[data-gsap-cell] {
+  will-change: transform, opacity;
+}
+
+/* ── Level-Up Celebration Overlay ──────────────────────────────────── */
+.level-up-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.level-up-overlay-content {
+  background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+  border-radius: 24px;
+  padding: 32px;
+  text-align: center;
+  color: #fff;
+  box-shadow: 0 20px 60px rgba(16, 163, 74, 0.3);
+  max-width: 320px;
+}
+
+.level-up-overlay-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 12px 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.level-up-overlay-subtitle {
+  font-size: 14px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* ── Bottom Navigation Indicator ───────────────────────────────────── */
+.bottom-nav-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 20px;
+  height: 2px;
+  background: linear-gradient(to right, #10b981, #34d399);
+  border-radius: 1px;
+  transition: left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Reduced Motion Enforcement ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Ensure will-change doesn't cause repaints */
+  [data-gsap-stat],
+  [data-gsap-bar],
+  [data-gsap-pageheader],
+  [data-gsap-cell] {
+    will-change: auto;
+  }
+}
