@@ -1,15 +1,14 @@
 // ================================================================
+// Save as: app-core.js
 // SmartCrick AI — Core: namespace, auth, router, DB, XP, utils
-// app-core.js  ·  loads first (after React sync CDN)
+// UPDATED: Added drill progress tracking methods to DB
 // ================================================================
 (function () {
 'use strict';
 
-// ── 1. Bootstrap SC_APP namespace ────────────────────────────────
 window.SC_APP = {};
 const A = window.SC_APP;
 
-// ── 2. React hooks used in this file ────────────────────────────
 const {
   createElement:h, useState, useEffect, useCallback,
   useRef, useContext, createContext, useMemo, Fragment, memo
@@ -20,7 +19,7 @@ A.createRoot = createRoot;
 A.Fragment = Fragment;
 A.memo = memo;
 
-// ── 3. ErrorBoundary ─────────────────────────────────────────────
+// ── ErrorBoundary ─────────────────────────────────────────────────
 class ErrorBoundary extends React.Component {
   constructor(p) { super(p); this.state = { err:null }; }
   static getDerivedStateFromError(e) { return { err:e }; }
@@ -42,13 +41,13 @@ class ErrorBoundary extends React.Component {
 }
 A.ErrorBoundary = ErrorBoundary;
 
-// ── 4. Theme Context ─────────────────────────────────────────────
+// ── Theme Context ─────────────────────────────────────────────────
 const ThemeCtx = createContext({ dark:true, toggle:()=>{} });
 function useTheme() { return useContext(ThemeCtx); }
 A.ThemeCtx = ThemeCtx;
 A.useTheme = useTheme;
 
-// ── 5. Hash Router ───────────────────────────────────────────────
+// ── Hash Router ───────────────────────────────────────────────────
 function getRoute() {
   const hash = window.location.hash.replace(/^#\/?/,'') || 'Home';
   const [page, qs] = hash.split('?');
@@ -74,7 +73,7 @@ A.getRoute = getRoute;
 A.nav = nav;
 A.useRoute = useRoute;
 
-// ── 6. LocalStorage DB ───────────────────────────────────────────
+// ── LocalStorage DB ───────────────────────────────────────────────
 const DB = {
   _k: k=>`sc_${k}`,
   isAvailable() {
@@ -87,10 +86,7 @@ const DB = {
   },
   set(k,v) {
     try {
-      const serialized=JSON.stringify(v);
-      localStorage.setItem(this._k(k),serialized);
-      const readback=localStorage.getItem(this._k(k));
-      if(!readback) console.warn('SC: write failed for key',k);
+      localStorage.setItem(this._k(k),JSON.stringify(v));
     } catch(e) { console.warn('SC: localStorage write error',k,e); }
     try {
       if(typeof getPouchDB==='function' && typeof SC_SYNC_KEYS!=='undefined') {
@@ -108,6 +104,7 @@ const DB = {
   },
   del(k) { try { localStorage.removeItem(this._k(k)); } catch {} },
 
+  // ── Progress ──────────────────────────────────────────────────
   getProgress() {
     const saved=this.get('progress');
     return Object.assign({
@@ -120,6 +117,7 @@ const DB = {
   },
   saveProgress(v) { this.set('progress', v); },
 
+  // ── XP Log ────────────────────────────────────────────────────
   getXPLog() { return this.get('xp_log')||[]; },
   addXPEntry(xp, source) {
     const log = this.getXPLog();
@@ -152,11 +150,13 @@ const DB = {
     return days;
   },
 
+  // ── User / Goals ──────────────────────────────────────────────
   getUser() { return this.get('user')||{}; },
   setUser(v) { this.set('user',v); },
   getGoals() { return this.get('goals')||[]; },
   saveGoals(v) { this.set('goals',v); },
 
+  // ── Schedule ──────────────────────────────────────────────────
   getSchedule() { return this.get('schedule')||{ sessions:[] }; },
   saveSchedule(v) { this.set('schedule',v); },
   getSessionsForDate(dateStr) {
@@ -192,11 +192,104 @@ const DB = {
     if (!sess || sess.status==='complete') return null;
     this.updateSession(id, { status:'complete' });
     return sess;
+  },
+
+  // ── NEW: Drill Progress Tracking (D-A / D-B) ─────────────────
+  // Stores per-drill performance history for target tracking and tier system
+  getDrillProgress() {
+    return this.get('drill_progress') || {};
+  },
+  saveDrillProgress(data) {
+    this.set('drill_progress', data);
+  },
+
+  // Log a single drill attempt with a score
+  // rawScore: for count drills = number achieved (e.g. 7 out of 10)
+  //           for quality drills = 1-5 rating
+  // targetScore: for count = the target count, for quality = 5
+  // targetType: 'count' | 'quality'
+  logDrillAttempt(drillId, rawScore, targetScore, targetType) {
+    const prog = this.getDrillProgress();
+    if (!prog[drillId]) {
+      prog[drillId] = {
+        attempts: [], personalBest: 0, personalBestPct: 0,
+        tier: 'none', targetType, targetScore,
+        firstAttemptDate: new Date().toISOString().slice(0,10)
+      };
+    }
+    const today = new Date().toISOString().slice(0,10);
+    // Percentage of target achieved (capped at 100 for display)
+    const pct = targetScore > 0 ? Math.min(100, Math.round((rawScore / targetScore) * 100)) : 0;
+
+    prog[drillId].attempts.push({
+      date: today,
+      score: rawScore,
+      targetScore: targetScore,
+      pct: pct,
+      ts: Date.now()
+    });
+    // Keep last 30 attempts only
+    if (prog[drillId].attempts.length > 30) {
+      prog[drillId].attempts = prog[drillId].attempts.slice(-30);
+    }
+    // Update personal bests
+    if (rawScore > prog[drillId].personalBest) prog[drillId].personalBest = rawScore;
+    if (pct > prog[drillId].personalBestPct) prog[drillId].personalBestPct = pct;
+    // Store type/target for display purposes
+    prog[drillId].targetType = targetType;
+    prog[drillId].targetScore = targetScore;
+    // Recalculate tier
+    prog[drillId].tier = this._calcDrillTier(prog[drillId].attempts);
+    this.saveDrillProgress(prog);
+    window.dispatchEvent(new CustomEvent('sc_update'));
+    return prog[drillId];
+  },
+
+  // Get a single drill's progress data
+  getSingleDrillProgress(drillId) {
+    const prog = this.getDrillProgress();
+    return prog[drillId] || null;
+  },
+
+  // Get the tier for a drill (for card display)
+  getDrillTier(drillId) {
+    const prog = this.getDrillProgress();
+    return prog[drillId]?.tier || 'none';
+  },
+
+  // Internal: calculate tier from attempts array
+  // Bronze: at least 1 attempt (any score)
+  // Silver: achieved 80%+ of target at least once
+  // Gold:   achieved 80%+ in 3 or more consecutive attempts
+  _calcDrillTier(attempts) {
+    if (!attempts || attempts.length === 0) return 'none';
+    const hitTarget = attempts.filter(a => a.pct >= 80);
+    if (hitTarget.length === 0) return 'bronze'; // done but below 80%
+
+    // Check for 3+ consecutive hits at 80%+
+    let consecutive = 0;
+    for (const a of attempts) {
+      if (a.pct >= 80) {
+        consecutive++;
+        if (consecutive >= 3) return 'gold';
+      } else {
+        consecutive = 0;
+      }
+    }
+    return 'silver';
+  },
+
+  // Get recent attempt scores for sparkline (last 5)
+  getDrillRecentScores(drillId) {
+    const prog = this.getDrillProgress();
+    const d = prog[drillId];
+    if (!d || !d.attempts.length) return [];
+    return d.attempts.slice(-5).map(a => ({ pct: a.pct, date: a.date }));
   }
 };
 A.DB = DB;
 
-// ── 7. XP & Level System ─────────────────────────────────────────
+// ── XP & Level System ────────────────────────────────────────────
 const XP_LEVELS = [
   { level:1,  name:'Rookie',            min:0,     max:500   },
   { level:2,  name:'Club Player',       min:500,   max:1200  },
@@ -238,6 +331,8 @@ const BADGE_DEFS = {
   min600:    { icon:'clock',    label:'600 Min Club',     desc:'600 min of practice' },
   workouts5: { icon:'dumbbell', label:'Fitness Start',    desc:'5 workouts completed' },
   sched10:   { icon:'calendar', label:'Scheduled Pro',    desc:'10 scheduled sessions done' },
+  drillSilver:{ icon:'target',  label:'Silver Driller',   desc:'Hit a drill target metric' },
+  drillGold: { icon:'star',     label:'Gold Driller',     desc:'Hit target 3 sessions in a row' },
 };
 
 function checkBadges(p) {
@@ -258,6 +353,12 @@ function checkBadges(p) {
   if ((p.workouts_done||0)>=5) add('workouts5');
   const schedDone = (DB.getSchedule().sessions||[]).filter(s=>s.status==='complete').length;
   if (schedDone>=10) add('sched10');
+  // Drill tier badges
+  const drillProg = DB.getDrillProgress();
+  const hasSilver = Object.values(drillProg).some(d=>d.tier==='silver'||d.tier==='gold');
+  const hasGold   = Object.values(drillProg).some(d=>d.tier==='gold');
+  if (hasSilver) add('drillSilver');
+  if (hasGold)   add('drillGold');
   return b;
 }
 A.BADGE_DEFS = BADGE_DEFS;
@@ -329,13 +430,11 @@ A.awardXP = awardXP;
 A.showXPFlash = showXPFlash;
 A.fireConfetti = fireConfetti;
 
-// ── 8. Utility helpers ───────────────────────────────────────────
+// ── Date utilities ────────────────────────────────────────────────
 function getWeekMonday(date) {
-  const d = new Date(date);
-  d.setHours(0,0,0,0);
+  const d = new Date(date); d.setHours(0,0,0,0);
   const day = d.getDay();
-  const diff = day===0 ? -6 : 1-day;
-  d.setDate(d.getDate()+diff);
+  d.setDate(d.getDate() + (day===0 ? -6 : 1-day));
   return d;
 }
 function dateStr(d) { return d.toISOString().slice(0,10); }
@@ -358,7 +457,7 @@ A.formatDate = formatDate;
 A.isToday = isToday;
 A.fmtTime = fmtTime;
 
-// ── 9. Schedule session type config ──────────────────────────────
+// ── Schedule session type config ──────────────────────────────────
 const SCHED_TYPES = {
   drill:   { label:'Cricket Drill',    icon:'bat',      color:'#3b82f6', bg:'rgba(59,130,246,0.12)',  border:'rgba(59,130,246,0.4)' },
   mental:  { label:'Mental Session',   icon:'brain',    color:'#a855f7', bg:'rgba(168,85,247,0.12)',  border:'rgba(168,85,247,0.4)' },
