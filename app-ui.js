@@ -1,6 +1,8 @@
 // ================================================================
-// SmartCrick AI — Shared UI: Icon, components, Sidebar, BottomNav
-// app-ui.js  ·  loads after app-data.js
+// Save as: app-ui.js
+// SmartCrick AI — Shared UI Components
+// UPDATED: A1 Sidebar 48px items, A2 active left-bar indicator,
+//          A3 SectionLabel separators, cleaner dark mode toggle
 // ================================================================
 (function () {
 'use strict';
@@ -146,8 +148,10 @@ function Heatmap({ days }) {
 A.Heatmap = Heatmap;
 
 // ── SectionLabel ──────────────────────────────────────────────────
-function SectionLabel({ children }) {
-  return h('div', { className:'sc-section-label' }, children);
+function SectionLabel({ children, first=false }) {
+  return h('div', {
+    className: first ? 'sc-section-label sc-section-label--first' : 'sc-section-label'
+  }, children);
 }
 A.SectionLabel = SectionLabel;
 
@@ -183,7 +187,10 @@ function PageHeader({ title, subtitle, gradient, onBack, actions }) {
 }
 A.PageHeader = PageHeader;
 
-// ── Sidebar ───────────────────────────────────────────────────────
+// ================================================================
+// SIDEBAR — A1 + A2 + A3: Fully redesigned for professionalism
+// 48px touch targets, left-accent active state, clear section sep.
+// ================================================================
 function Sidebar({ open, onClose, currentPage }) {
   const scrollRef = useRef(null);
   const savedScroll = useRef(0);
@@ -203,18 +210,35 @@ function Sidebar({ open, onClose, currentPage }) {
     }
   },[open]);
 
+  // ── NavBtn: A1 min-height 48px, A2 left-accent active state ────
   function NavBtn({ label, icon, pg, onClick, badge, isNew }) {
     const active = currentPage===pg;
     return h('button',{
-      onClick:onClick||(()=>{ A.nav(pg); handleClose(); }),
-      className:`sc-nav-btn${active?' active':''}`,
+      onClick: onClick||(()=>{ A.nav(pg); handleClose(); }),
+      className: `sc-nav-btn${active?' active':''}`,
+      'aria-current': active ? 'page' : undefined,
     },
-      h(Icon,{n:icon,cls:'w-4 h-4 flex-shrink-0',style:{color:active?'#4ade80':'#484f58'}}),
-      h('span',{style:{fontSize:'13px',fontWeight:600,flex:1,textAlign:'left',color:active?'#e6edf3':'#8b949e'}},label),
+      // Icon — green when active, muted when not
+      h('div',{style:{
+        width:32,height:32,borderRadius:7,flexShrink:0,
+        display:'flex',alignItems:'center',justifyContent:'center',
+        background:active?'rgba(22,163,74,0.15)':'rgba(48,54,61,0.3)',
+        transition:'background 0.15s',
+      }},
+        h(Icon,{n:icon,cls:'w-4 h-4',style:{color:active?'#4ade80':'#6b7280',transition:'color 0.15s'}})
+      ),
+      h('span',{style:{
+        fontSize:13,fontWeight:600,flex:1,textAlign:'left',
+        color:active?'#f0fdf4':'#9ca3af',
+        transition:'color 0.15s',
+        letterSpacing:'-0.01em',
+      }},label),
       badge && h('span',{className:'premium-badge'},badge),
-      isNew && h('span',{style:{fontSize:'10px',fontWeight:700,letterSpacing:'0.06em',textTransform:'uppercase',
-        background:'rgba(22,163,74,0.12)',color:'#4ade80',border:'1px solid rgba(22,163,74,0.25)',
-        padding:'2px 6px',borderRadius:'4px',flexShrink:0}},'NEW')
+      isNew && h('span',{style:{
+        fontSize:9,fontWeight:800,letterSpacing:'0.08em',textTransform:'uppercase',
+        background:'rgba(22,163,74,0.15)',color:'#4ade80',
+        border:'1px solid rgba(22,163,74,0.3)',padding:'2px 5px',borderRadius:3,flexShrink:0,
+      }},'NEW')
     );
   }
 
@@ -225,87 +249,156 @@ function Sidebar({ open, onClose, currentPage }) {
   };
 
   return h(Fragment,null,
+    // Backdrop
     open && h('div',{
       className:'fixed inset-0 z-40',
-      style:{background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)'},
+      style:{background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)'},
       onClick:handleClose
     }),
+
+    // Drawer panel
     h('div',{
-      className:'fixed inset-y-0 left-0 z-50 w-72 flex flex-col sidebar-panel',
-      style:{transform:open?'translateX(0)':'translateX(-100%)',transition:'transform .22s cubic-bezier(.16,1,.3,1)',willChange:'transform'}
+      className:'fixed inset-y-0 left-0 z-50 flex flex-col sidebar-panel',
+      style:{
+        width:280,
+        transform:open?'translateX(0)':'translateX(-100%)',
+        transition:'transform .22s cubic-bezier(.16,1,.3,1)',
+        willChange:'transform',
+      }
     },
-      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 20px',borderBottom:'1px solid rgba(48,54,61,0.9)'}},
+      // ── Sidebar Header ────────────────────────────────────────
+      h('div',{style:{
+        display:'flex',alignItems:'center',justifyContent:'space-between',
+        padding:'16px 16px 14px',
+        borderBottom:'1px solid rgba(48,54,61,0.8)',
+        background:'rgba(13,17,23,0.6)',
+        flexShrink:0,
+      }},
         h('div',{style:{display:'flex',alignItems:'center',gap:10}},
-          h('div',{style:{width:36,height:36,borderRadius:8,background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+          // App logo
+          h('div',{style:{
+            width:38,height:38,borderRadius:9,
+            background:'linear-gradient(135deg,#16a34a,#0d9488)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            flexShrink:0,boxShadow:'0 2px 12px rgba(22,163,74,0.35)',
+          }},
             h(Icon,{n:'bat',cls:'w-5 h-5 text-white'})
           ),
           h('div',{},
-            h('div',{style:{fontSize:14,fontWeight:800,color:'#e6edf3',letterSpacing:'-0.01em'}},'SMARTCRICK'),
-            h('div',{style:{fontSize:11,fontWeight:600,color:'#4ade80',marginTop:1}},`Level ${info.level} · ${info.name}`)
+            h('div',{style:{fontSize:14,fontWeight:800,color:'#f0fdf4',letterSpacing:'0.01em',lineHeight:1.2}},'SMARTCRICK'),
+            h('div',{style:{fontSize:11,fontWeight:600,color:'#34d399',marginTop:2}},`Level ${info.level} · ${info.name}`)
           )
         ),
-        h('button',{onClick:handleClose,style:{width:30,height:30,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(48,54,61,0.6)',border:'1px solid rgba(48,54,61,0.9)',cursor:'pointer',color:'#8b949e'}},
+        h('button',{
+          onClick:handleClose,
+          style:{
+            width:30,height:30,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',
+            background:'rgba(48,54,61,0.5)',border:'1px solid rgba(48,54,61,0.8)',
+            cursor:'pointer',color:'#6b7280',flexShrink:0,
+          }
+        },
           h(Icon,{n:'x',cls:'w-4 h-4'})
         )
       ),
-      h('div',{style:{padding:'12px 20px',borderBottom:'1px solid rgba(48,54,61,0.6)',background:'rgba(22,27,34,0.5)'}},
+
+      // ── Level + Streak bar ────────────────────────────────────
+      h('div',{style:{
+        padding:'12px 16px',
+        borderBottom:'1px solid rgba(48,54,61,0.5)',
+        background:'rgba(22,27,34,0.4)',
+        flexShrink:0,
+      }},
         h(LevelBar,{totalXP:p.total_xp||0}),
         h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:8}},
-          h('span',{style:{fontSize:11,color:'#484f58'}},'XP to next level'),
+          h('span',{style:{fontSize:11,color:'#4b5563'}},
+            info.next ? `${info.xpToNext.toLocaleString()} XP to next level` : 'Max Level Reached'
+          ),
           streak>0 && h('div',{style:{display:'flex',alignItems:'center',gap:4}},
             h(Icon,{n:'flame',cls:'w-3.5 h-3.5',style:{color:'#fb923c'}}),
             h('span',{style:{fontSize:11,fontWeight:700,color:'#fb923c'}},`${streak}d streak`)
           )
         )
       ),
-      h('div',{ref:scrollRef,className:'flex-1 sidebar-scroll',style:{padding:'6px 8px'}},
-        h(SectionLabel,{},'Premium'),
-        h(NavBtn,{label:'AI Head Coach',icon:'cpu',pg:'AICoach',badge:'PRO'}),
-        h(NavBtn,{label:'90-Day Program',icon:'diamond',pg:'NinetyDay',badge:'PRO'}),
+
+      // ── Scrollable nav items ──────────────────────────────────
+      h('div',{
+        ref:scrollRef,
+        className:'flex-1 sidebar-scroll',
+        style:{padding:'4px 8px 8px'},
+      },
+        h(SectionLabel,{first:true},'Premium'),
+        h(NavBtn,{label:'AI Head Coach',  icon:'cpu',     pg:'AICoach',  badge:'PRO'}),
+        h(NavBtn,{label:'90-Day Program', icon:'diamond', pg:'NinetyDay',badge:'PRO'}),
+
         h(SectionLabel,{},'Training'),
-        h(NavBtn,{label:'Home',icon:'home',pg:'Home'}),
-        h(NavBtn,{label:'Smart Start',icon:'zap',onClick:handleSmartStart}),
-        h(NavBtn,{label:'Cricket Drills',icon:'bat',pg:'Drills'}),
-        h(NavBtn,{label:'Mental Training',icon:'brain',pg:'Mental'}),
-        h(NavBtn,{label:'30-Day Challenge',icon:'target',pg:'ThirtyDay'}),
-        h(NavBtn,{label:'Fitness Builder',icon:'dumbbell',pg:'Fitness'}),
-        h(NavBtn,{label:'AI Workout',icon:'sparkles',pg:'AIWorkout'}),
-        h(NavBtn,{label:'Timer',icon:'timer',pg:'Timer'}),
+        h(NavBtn,{label:'Home',            icon:'home',     pg:'Home'}),
+        h(NavBtn,{label:'Smart Start',     icon:'zap',      onClick:handleSmartStart}),
+        h(NavBtn,{label:'Cricket Drills',  icon:'bat',      pg:'Drills'}),
+        h(NavBtn,{label:'Mental Training', icon:'brain',    pg:'Mental'}),
+        h(NavBtn,{label:'30-Day Challenge',icon:'target',   pg:'ThirtyDay'}),
+        h(NavBtn,{label:'Fitness Builder', icon:'dumbbell', pg:'Fitness'}),
+        h(NavBtn,{label:'AI Workout',      icon:'sparkles', pg:'AIWorkout'}),
+        h(NavBtn,{label:'Timer',           icon:'timer',    pg:'Timer'}),
+
         h(SectionLabel,{},'Performance'),
-        h(NavBtn,{label:'My Progress',icon:'barChart',pg:'Progress'}),
-        h(NavBtn,{label:'Skill Paths',icon:'layers',pg:'SkillPaths'}),
-        h(NavBtn,{label:'Leaderboard',icon:'trophy',pg:'Leaderboard'}),
-        h(NavBtn,{label:'Goals',icon:'target',pg:'Goals'}),
-        h(NavBtn,{label:'My Profile',icon:'user',pg:'Profile'}),
+        h(NavBtn,{label:'My Progress',   icon:'barChart', pg:'Progress'}),
+        h(NavBtn,{label:'Skill Paths',   icon:'layers',   pg:'SkillPaths'}),
+        h(NavBtn,{label:'Leaderboard',   icon:'trophy',   pg:'Leaderboard'}),
+        h(NavBtn,{label:'Goals',         icon:'target',   pg:'Goals'}),
+        h(NavBtn,{label:'My Profile',    icon:'user',     pg:'Profile'}),
+
         h(SectionLabel,{},'Planning'),
         h(NavBtn,{label:'Training Schedule',icon:'calendar',pg:'Schedule',isNew:true}),
+
         h(SectionLabel,{},'AI & Analytics'),
-        h(NavBtn,{label:'Video Analysis', icon:'cpu',      pg:'VideoAnalysis', isNew:true}),
+        h(NavBtn,{label:'Video Analysis', icon:'cpu',       pg:'VideoAnalysis',isNew:true}),
         h(NavBtn,{label:'Performance',    icon:'chartLine', pg:'Performance',  isNew:true}),
-        h(NavBtn,{label:'Match Logger',   icon:'list',     pg:'MatchLogger',   isNew:true}),
-        h(NavBtn,{label:'Reaction Drill', icon:'zap',      pg:'ReactionDrill', isNew:true}),
+        h(NavBtn,{label:'Match Logger',   icon:'list',      pg:'MatchLogger',  isNew:true}),
+        h(NavBtn,{label:'Reaction Drill', icon:'zap',       pg:'ReactionDrill',isNew:true}),
+
         h(SectionLabel,{},'Cricket Tools'),
-        h(NavBtn,{label:'Match Tracker',icon:'list',pg:'MatchTracker'}),
-        h(NavBtn,{label:'MiniMatch IQ',icon:'puzzle',pg:'MiniMatch'}),
-        h(NavBtn,{label:'Why Did I Get Out?',icon:'helpCircle',pg:'GetOut'}),
-        h(NavBtn,{label:'Quizzes',icon:'book',pg:'Quizzes'}),
+        h(NavBtn,{label:'Match Tracker',     icon:'list',       pg:'MatchTracker'}),
+        h(NavBtn,{label:'MiniMatch IQ',      icon:'puzzle',     pg:'MiniMatch'}),
+        h(NavBtn,{label:'Why Did I Get Out?',icon:'helpCircle', pg:'GetOut'}),
+        h(NavBtn,{label:'Quizzes',           icon:'book',       pg:'Quizzes'}),
+
         h(SectionLabel,{},'Account'),
         h(NavBtn,{label:'Settings',icon:'settings',pg:'Settings'}),
-        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',
-          margin:'8px 8px 4px',padding:'10px 12px',borderRadius:8,
-          background:'rgba(22,27,34,0.6)',border:'1px solid rgba(48,54,61,0.9)'}},
-          h('div',{style:{display:'flex',alignItems:'center',gap:8}},
-            h(Icon,{n:dark?'moon':'sun',cls:'w-4 h-4',style:{color:'#484f58'}}),
-            h('span',{style:{fontSize:13,fontWeight:600,color:'#8b949e'}},'Dark Mode')
+
+        // ── Dark Mode Toggle ──────────────────────────────────
+        h('div',{style:{
+          display:'flex',alignItems:'center',justifyContent:'space-between',
+          margin:'6px 4px 4px',padding:'12px 12px',borderRadius:9,
+          background:'rgba(22,27,34,0.5)',border:'1px solid rgba(48,54,61,0.6)',
+        }},
+          h('div',{style:{display:'flex',alignItems:'center',gap:9}},
+            h('div',{style:{width:32,height:32,borderRadius:7,background:'rgba(48,54,61,0.4)',
+              display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+              h(Icon,{n:dark?'moon':'sun',cls:'w-4 h-4',style:{color:'#6b7280'}})
+            ),
+            h('span',{style:{fontSize:13,fontWeight:600,color:'#9ca3af'}},dark?'Dark Mode':'Light Mode')
           ),
-          h('button',{onClick:toggle,
-            style:{position:'relative',width:40,height:22,borderRadius:11,
-              background:dark?'#16a34a':'rgba(48,54,61,0.9)',border:'none',cursor:'pointer',transition:'background .2s',flexShrink:0}},
-            h('div',{style:{position:'absolute',top:3,width:16,height:16,background:'#fff',
-              borderRadius:'50%',transition:'transform .2s',left:3,transform:dark?'translateX(18px)':'translateX(0)'}})
+          // Toggle switch
+          h('button',{
+            onClick:toggle,
+            role:'switch',
+            'aria-checked':String(dark),
+            style:{
+              position:'relative',width:44,height:24,borderRadius:12,
+              background:dark?'#16a34a':'rgba(55,65,81,0.8)',
+              border:'none',cursor:'pointer',
+              transition:'background 0.25s',flexShrink:0,
+            }
+          },
+            h('div',{style:{
+              position:'absolute',top:3,width:18,height:18,background:'#fff',
+              borderRadius:'50%',transition:'transform 0.25s',
+              left:3,transform:dark?'translateX(20px)':'translateX(0)',
+              boxShadow:'0 1px 4px rgba(0,0,0,0.35)',
+            }})
           )
         ),
-        h('div',{style:{height:24}})
+        h('div',{style:{height:16}}) // bottom padding
       )
     )
   );
@@ -325,7 +418,7 @@ function BottomNav({ page }) {
     className:'bottom-nav',
     style:{paddingBottom:'max(0px,env(safe-area-inset-bottom))'}
   },
-    h('div',{style:{display:'flex',alignItems:'center',height:56}},
+    h('div',{style:{display:'flex',alignItems:'center',height:58}},
       items.map(item=>{
         const active=page===item.pg;
         return h('button',{key:item.pg,onClick:()=>A.nav(item.pg),
@@ -333,11 +426,15 @@ function BottomNav({ page }) {
             justifyContent:'center',gap:3,height:'100%',position:'relative',
             background:'transparent',border:'none',cursor:'pointer',padding:0}
         },
-          active && h('div',{style:{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',
-            width:20,height:2,background:'#16a34a',borderRadius:'0 0 3px 3px'}}),
-          h(Icon,{n:item.n,cls:'w-5 h-5',style:{color:active?'#4ade80':'#374151'}}),
-          h('span',{style:{fontSize:10,fontWeight:active?700:500,letterSpacing:'0.02em',
-            color:active?'#4ade80':'#374151'}},item.label)
+          active && h('div',{style:{
+            position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',
+            width:24,height:3,background:'#16a34a',borderRadius:'0 0 4px 4px',
+          }}),
+          h(Icon,{n:item.n,cls:'w-5 h-5',style:{color:active?'#4ade80':'#4b5563',transition:'color 0.15s'}}),
+          h('span',{style:{
+            fontSize:10,fontWeight:active?700:500,letterSpacing:'0.02em',
+            color:active?'#4ade80':'#4b5563',transition:'color 0.15s',
+          }},item.label)
         );
       })
     )
