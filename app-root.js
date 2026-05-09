@@ -1,17 +1,16 @@
 // ================================================================
 // Save as: app-root.js
-// SmartCrick AI — AppRoot v3.1
-// KEY FIX: Desktop persistent sidebar + mobile drawer.
-//          On ≥768px: left sidebar (260px) + right content.
-//          On <768px: top bar + drawer + bottom nav.
-//          Content area uses max-width for readability on wide screens.
+// SmartCrick AI — AppRoot v3.2
+// LAYOUT FIX: Desktop content fills full available width.
+//   - No max-width restriction on outer content area
+//   - Page content gets proper horizontal padding on desktop
+//   - Mobile: unchanged (top bar + drawer + bottom nav)
+//   - Full-screen pages bypass sidebar layout entirely
 // ================================================================
 (function () {
 'use strict';
-const { createElement:h, useState, useEffect, useRef } = React;
+const { createElement:h, useState, useEffect } = React;
 const A = window.SC_APP;
-
-// Destructure pages from SC_APP
 const {
   createRoot, ThemeCtx, useRoute, nav, DB,
   ErrorBoundary, DesktopSidebar, Sidebar, BottomNav, Icon,
@@ -26,16 +25,15 @@ const {
 } = A;
 
 function AppRoot() {
-  const [mobileOpen,   setMobileOpen]   = useState(false);
-  const [isDesktop,    setIsDesktop]    = useState(()=>window.innerWidth>=768);
-  const [dark,         setDark]         = useState(()=>{ const s=DB.get('theme'); return s!==null?s:true; });
+  const [mobileOpen,   setMobileOpen]  = useState(false);
+  const [isDesktop,    setIsDesktop]   = useState(()=>window.innerWidth>=768);
+  const [dark,         setDark]        = useState(()=>{ const s=DB.get('theme'); return s!==null?s:true; });
   const { page, params } = useRoute();
 
-  // Respond to resize for desktop/mobile switch
   useEffect(()=>{
-    const handler=()=>setIsDesktop(window.innerWidth>=768);
-    window.addEventListener('resize',handler);
-    return()=>window.removeEventListener('resize',handler);
+    const h=()=>setIsDesktop(window.innerWidth>=768);
+    window.addEventListener('resize',h);
+    return()=>window.removeEventListener('resize',h);
   },[]);
 
   useEffect(()=>{
@@ -45,87 +43,101 @@ function AppRoot() {
 
   useEffect(()=>{
     if(typeof applyChartDefaults==='function') applyChartDefaults();
-    if(typeof migrateLSToPouchDB==='function') migrateLSToPouchDB();
     if(!window.location.hash||window.location.hash==='#'||window.location.hash==='#/'){
       window.location.hash='#/Home';
     }
   },[]);
 
-  // Close mobile sidebar on navigation
   useEffect(()=>{ setMobileOpen(false); },[page]);
 
   const theme = { dark, toggle:()=>setDark(d=>!d) };
+  // Pages that need full viewport (no sidebar, no chrome)
   const fullscreenPages = ['MentalPlayer','MentalRoutinePlayer'];
   const isFS = fullscreenPages.includes(page);
 
   function renderPage() {
     switch(page) {
-      case 'Home':               return h(HomePage);
-      case 'Drills':             return h(DrillsPage);
-      case 'DrillDetail':        return h(DrillDetailPage,{params});
-      case 'PracticeSession':    return h(PracticeSessionBuilderPage);
-      case 'Mental':             return h(MentalPage);
-      case 'MentalPlayer':       return h(MentalPlayerPage,{params});
-      case 'MentalRoutines':     return h(MentalRoutinesPage);
-      case 'MentalRoutinePlayer':return h(MentalRoutinePlayerPage,{params});
-      case 'Fitness':            return h(FitnessPage);
-      case 'WorkoutDetail':      return h(WorkoutDetailPage,{params});
-      case 'Timer':              return h(TimerPage);
-      case 'Schedule':           return h(SchedulePage);
-      case 'Progress':           return h(ProgressPage);
-      case 'SkillPaths':         return h(SkillPathsPage);
-      case 'ThirtyDay':          return h(ThirtyDayPage);
-      case 'Leaderboard':        return h(LeaderboardPage);
-      case 'Goals':              return h(GoalsPage);
-      case 'Profile':            return h(ProfilePage);
-      case 'Settings':           return h(SettingsPage);
-      case 'AICoach':            return h(AICoachPage);
-      case 'NinetyDay':          return h(NinetyDayPage);
-      case 'AIWorkout':          return h(AIWorkoutPage);
-      case 'MatchTracker':       return h(MatchTrackerPage);
-      case 'MiniMatch':          return h(MiniMatchPage);
-      case 'GetOut':             return h(GetOutPage);
-      case 'Quizzes':            return h(QuizzesPage);
-      case 'VideoAnalysis':      return h(VideoAnalysisPage);
-      case 'Performance':        return h(PerformancePage);
-      case 'MatchLogger':        return h(MatchLoggerPage);
-      case 'ReactionDrill':      return h(ReactionDrillPage);
-      default:                   return h(HomePage);
+      case 'Home':                return h(HomePage);
+      case 'Drills':              return h(DrillsPage);
+      case 'DrillDetail':         return h(DrillDetailPage,{params});
+      case 'PracticeSession':     return h(PracticeSessionBuilderPage);
+      case 'Mental':              return h(MentalPage);
+      case 'MentalPlayer':        return h(MentalPlayerPage,{params});
+      case 'MentalRoutines':      return h(MentalRoutinesPage,{params});
+      case 'MentalRoutinePlayer': return h(MentalRoutinePlayerPage,{params});
+      case 'Fitness':             return h(FitnessPage);
+      case 'WorkoutDetail':       return h(WorkoutDetailPage,{params});
+      case 'Timer':               return h(TimerPage);
+      case 'Schedule':            return h(SchedulePage);
+      case 'Progress':            return h(ProgressPage);
+      case 'SkillPaths':          return h(SkillPathsPage);
+      case 'ThirtyDay':           return h(ThirtyDayPage);
+      case 'Leaderboard':         return h(LeaderboardPage);
+      case 'Goals':               return h(GoalsPage);
+      case 'Profile':             return h(ProfilePage);
+      case 'Settings':            return h(SettingsPage);
+      case 'AICoach':             return h(AICoachPage);
+      case 'NinetyDay':           return h(NinetyDayPage);
+      case 'AIWorkout':           return h(AIWorkoutPage);
+      case 'MatchTracker':        return h(MatchTrackerPage);
+      case 'MiniMatch':           return h(MiniMatchPage);
+      case 'GetOut':              return h(GetOutPage);
+      case 'Quizzes':             return h(QuizzesPage);
+      case 'VideoAnalysis':       return h(VideoAnalysisPage);
+      case 'Performance':         return h(PerformancePage);
+      case 'MatchLogger':         return h(MatchLoggerPage);
+      case 'ReactionDrill':       return h(ReactionDrillPage);
+      default:                    return h(HomePage);
     }
   }
 
   return h(ThemeCtx.Provider,{value:theme},
+
     // ── DESKTOP LAYOUT (≥768px) ──────────────────────────────────
-    // Flex row: persistent sidebar on left, scrollable content on right
     isDesktop && !isFS && h('div',{style:{
-      display:'flex',flexDirection:'row',
-      height:'100dvh',overflow:'hidden',
+      display:'flex',
+      flexDirection:'row',
+      height:'100dvh',
+      overflow:'hidden',
       background:'#0d1117',
     }},
+      // Persistent sidebar — 260px fixed width
       h(DesktopSidebar,{currentPage:page}),
-      h('main',{style:{
-        flex:1,
-        height:'100dvh',
-        overflowY:'auto',
-        overflowX:'hidden',
-        background:dark?'#0d1117':'#f8fafc',
-        minWidth:0,  // prevent flex overflow
-      }},
-        // Inner wrapper with max-width for readability
-        h('div',{style:{maxWidth:920,margin:'0 auto',width:'100%',minHeight:'100%'}},
-          renderPage()
-        )
+
+      // Scrollable content — flex:1 fills ALL remaining width
+      h('main',{
+        id:'desktop-main',
+        style:{
+          flex:1,
+          height:'100dvh',
+          overflowY:'auto',
+          overflowX:'hidden',
+          background:dark?'#0d1117':'#f8fafc',
+          minWidth:0, // CRITICAL: prevents flex child from overflowing
+        }
+      },
+        // NO maxWidth restriction here — let page content use full width.
+        // Individual pages add their own padding as needed.
+        renderPage()
       )
     ),
 
-    // ── FULLSCREEN DESKTOP (mental player, etc) ──────────────────
-    isDesktop && isFS && h('div',{style:{minHeight:'100dvh',background:dark?'#0d1117':'#f8fafc'}},
+    // ── FULLSCREEN DESKTOP (mental player, routine player) ───────
+    isDesktop && isFS && h('div',{style:{
+      minHeight:'100dvh',
+      background:'#0d1117',
+    }},
       renderPage()
     ),
 
     // ── MOBILE LAYOUT (<768px) ───────────────────────────────────
-    !isDesktop && h('div',{style:{minHeight:'100dvh',background:dark?'#0d1117':'#f8fafc',display:'flex',flexDirection:'column'}},
-      // Top bar (mobile only)
+    !isDesktop && h('div',{style:{
+      minHeight:'100dvh',
+      background:dark?'#0d1117':'#f8fafc',
+      display:'flex',
+      flexDirection:'column',
+    }},
+      // Top bar
       !isFS && h('div',{style:{
         position:'fixed',top:0,left:0,right:0,zIndex:30,
         display:'flex',alignItems:'center',gap:12,
@@ -135,49 +147,44 @@ function AppRoot() {
         backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',
         borderBottom:'1px solid rgba(36,42,50,0.85)',
       }},
-        h('button',{onClick:()=>setMobileOpen(true),style:{
-          width:36,height:36,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',
-          background:'rgba(255,255,255,0.05)',border:'1px solid rgba(48,54,61,0.5)',flexShrink:0,cursor:'pointer'
-        }},
+        h('button',{
+          onClick:()=>setMobileOpen(true),
+          style:{width:36,height:36,borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',
+            background:'rgba(255,255,255,0.05)',border:'1px solid rgba(48,54,61,0.5)',flexShrink:0,cursor:'pointer',border:'none'}
+        },
           h(Icon,{n:'menu',cls:'w-5 h-5',style:{color:'#94a3b8'}})
         ),
         h('div',{style:{display:'flex',alignItems:'center',gap:8}},
           h(Icon,{n:'bat',cls:'w-4 h-4',style:{color:'#16a34a'}}),
-          h('span',{style:{fontSize:14,fontWeight:800,color:'#e6edf3',letterSpacing:'0.02em'}},'SMARTCRICK')
+          h('span',{style:{fontSize:14,fontWeight:800,color:'#e6edf3',letterSpacing:'0.02em'}}),'SMARTCRICK'
         ),
         h('div',{style:{flex:1}}),
-        (()=>{const s=DB.getProgress().current_streak||0;if(!s)return null;
-          return h('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:12,fontWeight:800,color:'#fb923c',background:'rgba(249,115,22,0.08)',border:'1px solid rgba(249,115,22,0.2)',padding:'4px 10px',borderRadius:6}},
+        (()=>{ const s=DB.getProgress().current_streak||0; if(!s) return null;
+          return h('div',{style:{display:'flex',alignItems:'center',gap:4,fontSize:12,fontWeight:800,color:'#fb923c',
+            background:'rgba(249,115,22,0.08)',border:'1px solid rgba(249,115,22,0.2)',padding:'4px 10px',borderRadius:6}},
             h(Icon,{n:'flame',cls:'w-3.5 h-3.5'}),s,'d');
         })()
       ),
 
-      // Mobile drawer
       !isFS && h(Sidebar,{open:mobileOpen,onClose:()=>setMobileOpen(false),currentPage:page}),
 
-      // Main content
       h('main',{style:{flex:1,minHeight:'100dvh',background:dark?'#0d1117':'#f8fafc'}},
         renderPage()
       ),
 
-      // Bottom nav
       !isFS && h(BottomNav,{page})
     )
   );
 }
 
-// ── Mount ─────────────────────────────────────────────────────────
+// Mount
 const rootEl = document.getElementById('root');
 if (rootEl) {
   try {
     createRoot(rootEl).render(h(ErrorBoundary,null,h(AppRoot)));
-    console.log('[SC] SmartCrick AI v3.1 mounted — desktop sidebar + mobile drawer');
+    console.log('[SC] SmartCrick v3.2 mounted');
   } catch(e) {
-    rootEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#94a3b8;font-family:system-ui;text-align:center;padding:2rem;background:#020617">
-      <div style="font-size:2rem;margin-bottom:1rem">⚠️</div>
-      <p style="font-size:1.125rem;font-weight:700;color:#f8fafc;margin-bottom:0.5rem">Failed to load</p>
-      <p style="font-size:0.875rem">${e.message}</p>
-    </div>`;
+    rootEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;color:#94a3b8;font-family:system-ui;text-align:center;padding:2rem;background:#020617"><p style="font-size:1.125rem;font-weight:700;color:#f8fafc">Failed to load: ${e.message}</p></div>`;
   }
 } else { console.error('SmartCrick: #root not found'); }
 })();
