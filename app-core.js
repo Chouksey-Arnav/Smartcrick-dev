@@ -250,6 +250,34 @@ const DB = {
   // ── Featured Drill (DR-3) ────────────────────────────────────
   getFeaturedDrill: function() { return this.get('featured_drill')||null; },
   setFeaturedDrill: function(v) { this.set('featured_drill',v); },
+
+  // ── Drill Favorites (P5-B) ────────────────────────────────────
+  getDrillFavorites: function() { return this.get('drill_favorites')||[]; },
+  toggleDrillFavorite: function(id) {
+    var f=this.getDrillFavorites();
+    var i=f.indexOf(id);
+    if(i===-1) f.push(id); else f.splice(i,1);
+    this.set('drill_favorites',f);
+    return f.slice();
+  },
+
+  // ── Drill Notes (P5-B) ────────────────────────────────────────
+  getDrillNotes: function() { return this.get('drill_notes')||{}; },
+  saveDrillNote: function(id, text) {
+    var notes=this.getDrillNotes();
+    if(text && text.trim()) notes[id]={text:text.trim(),updatedAt:new Date().toISOString()};
+    else delete notes[id];
+    this.set('drill_notes',notes);
+  },
+  getDrillNote: function(id) { return (this.getDrillNotes()[id])||null; },
+
+  // ── Prestige (P8-C) ──────────────────────────────────────────
+  getPrestige: function() { return this.get('prestige')||0; },
+  setPrestige: function(n) { this.set('prestige',n); },
+
+  // ── Monthly Challenge Progress (P5-E) ─────────────────────────
+  getMonthlyProgress: function() { return this.get('monthly_progress')||{}; },
+  saveMonthlyProgress: function(v) { this.set('monthly_progress',v); },
 };
 A.DB = DB;
 
@@ -271,6 +299,19 @@ function getLevelInfo(totalXP) {
 A.XP_LEVELS=XP_LEVELS; A.getLevelInfo=getLevelInfo;
 
 const BADGE_DEFS = {
+  // Onboarding / Profile
+  joined:        {icon:'rocket',  label:'SmartCrick Member', desc:'Joined the SmartCrick family'},
+  profile_done:  {icon:'user',    label:'Full Profile',      desc:'Completed your player profile'},
+  // Drill favorites
+  drillFav5:     {icon:'heart',   label:'Drill Collector',   desc:'Saved 5 favourite drills'},
+  drill_notes5:  {icon:'pencil',  label:'Note Taker',        desc:'Added notes to 5 drills'},
+  // Assessment
+  first_rating:  {icon:'target',  label:'Self-Aware',        desc:'Completed your first skill assessment'},
+  rating_80:     {icon:'star',    label:'Rated 80+',         desc:'Achieved a player rating over 80'},
+  // Prestige
+  prestige1:     {icon:'crown',   label:'Prestige I',        desc:'Reset XP for the first time — elite dedication'},
+  prestige2:     {icon:'crown',   label:'Prestige II',       desc:'Double prestige — legendary'},
+  prestige3:     {icon:'crown',   label:'Prestige III',      desc:'Triple prestige — you are the game'},
   // XP milestones
   first500:{icon:'zap',label:'First 500',desc:'Earned first 500 XP'},
   xp5k:{icon:'trophy',label:'5K Club',desc:'5,000 total XP'},
@@ -310,6 +351,19 @@ const BADGE_DEFS = {
 function checkBadges(p) {
   var b=[].concat(p.badges||[]);
   var add=function(id){ if(b.indexOf(id)===-1) b.push(id); };
+  // Drill favorites
+  var favs=DB.getDrillFavorites();
+  if(favs.length>=5) add('drillFav5');
+  // Drill notes
+  var notes=DB.getDrillNotes();
+  if(Object.keys(notes).length>=5) add('drill_notes5');
+  // Assessment
+  if(DB.get('last_assessment_date')) add('first_rating');
+  // Prestige
+  var prestige=DB.getPrestige();
+  if(prestige>=1) add('prestige1');
+  if(prestige>=2) add('prestige2');
+  if(prestige>=3) add('prestige3');
   // XP milestones
   if((p.total_xp||0)>=500)  add('first500');
   if((p.total_xp||0)>=5000) add('xp5k');
@@ -475,15 +529,22 @@ function awardXP(xp,minutes,source,completedKey,itemId) {
     if(wasNewDay&&p.current_streak>0&&p.current_streak%7===0){
       DB.setStreakTokens(DB.getStreakTokens()+1);
     }
-    p.total_xp=(p.total_xp||0)+xp;
+    // ── Streak XP multiplier (P5-H) ──────────────────────────────
+    var streak=p.current_streak||0;
+    var multiplier=streak>=30?1.5:streak>=14?1.3:streak>=7?1.2:streak>=3?1.1:1.0;
+    var finalXP=Math.round(xp*multiplier);
+    p.total_xp=(p.total_xp||0)+finalXP;
     p.practice_minutes=(p.practice_minutes||0)+mins;
     if(ck==='drill'&&iid){p.completed_drills=p.completed_drills||[];if(p.completed_drills.indexOf(iid)===-1)p.completed_drills.push(iid);p.drills_done=(p.drills_done||0)+1;}
     if(ck==='mental'&&iid){p.completed_mental=p.completed_mental||[];if(p.completed_mental.indexOf(iid)===-1)p.completed_mental.push(iid);p.mental_done=(p.mental_done||0)+1;}
     if(ck==='workout'&&iid){p.completed_workouts=p.completed_workouts||[];if(p.completed_workouts.indexOf(iid)===-1)p.completed_workouts.push(iid);p.workouts_done=(p.workouts_done||0)+1;}
     p.badges=checkBadges(p);
-    DB.saveProgress(p); DB.addXPEntry(xp,src);
+    DB.saveProgress(p); DB.addXPEntry(finalXP,src);
     window.dispatchEvent(new CustomEvent('sc_update'));
-    showXPFlash('+'+xp+' XP');
+    var flashText = multiplier>1
+      ? '+'+xp+' ×'+multiplier.toFixed(1)+' = +'+finalXP+' XP 🔥'
+      : '+'+finalXP+' XP';
+    showXPFlash(flashText);
     // First session of day event (for RET-6 celebration toast)
     if(wasNewDay&&src!=='checkin') {
       window.dispatchEvent(new CustomEvent('sc_first_session',{detail:{date:today}}));
