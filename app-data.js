@@ -1,3 +1,4 @@
+// Save as: app-data.js
 // ================================================================
 // SmartCrick AI — Data: Icons, Drills, Mental, Workouts, Paths
 // app-data.js  ·  loads after app-core.js
@@ -143,6 +144,7 @@ A.DRILLS = DRILLS;
 // ── Mental Session Categories ─────────────────────────────────────
 const MENT_CATS = [
   {id:'all',            label:'All',        icon:'brain',      from:'#6d28d9', to:'#4f46e5'},
+  {id:'favorites',      label:'Favourites', icon:'heart',      from:'#be123c', to:'#e11d48'},
   {id:'focus',          label:'Focus',      icon:'crosshair',  from:'#1d4ed8', to:'#4338ca'},
   {id:'confidence',     label:'Confidence', icon:'shield',     from:'#c2410c', to:'#d97706'},
   {id:'recovery',       label:'Recovery',   icon:'heart',      from:'#15803d', to:'#059669'},
@@ -167,14 +169,15 @@ const MI = {
 };
 A.MI = MI;
 
-function mkM(id,title,cat,dur,xp,premium=false) {
-  const mins=Math.floor(dur/60);
-  const n=Math.max(3,Math.min(6,Math.ceil(dur/90)));
-  const sd=Math.floor(dur/n);
-  const pool=MI[cat]||MI.focus;
-  const steps=pool.slice(0,n).map((instruction,i)=>({ instruction, duration_seconds:i===n-1?dur-sd*(n-1):sd }));
-  return { id,title,category:cat,duration_seconds:dur,xp_value:xp,is_premium:premium,
-    description:`A ${mins}-minute ${cat.replace(/-/g,' ')} session to build your mental game.`,steps };
+function mkM(id,title,cat,dur,xp,premium) {
+  var isPremium=premium===true;
+  var mins=Math.floor(dur/60);
+  var n=Math.max(3,Math.min(6,Math.ceil(dur/90)));
+  var sd=Math.floor(dur/n);
+  var pool=MI[cat]||MI.focus;
+  var steps=pool.slice(0,n).map(function(instruction,i){ return { instruction:instruction, duration_seconds:i===n-1?dur-sd*(n-1):sd }; });
+  return { id:id,title:title,category:cat,duration_seconds:dur,xp_value:xp,is_premium:isPremium,
+    description:'A '+mins+'-minute '+cat.replace(/-/g,' ')+' session to build your mental game.',steps:steps };
 }
 A.mkM = mkM;
 
@@ -251,7 +254,7 @@ A.FIT_DURS = FIT_DURS;
 
 // ── Workouts ──────────────────────────────────────────────────────
 function mkW(id,name,level,target,goal,durCat,exercises,durMin,xp) {
-  return {id,name,level,target,goal,duration_category:durCat,exercises,duration_minutes:durMin,xp_value:xp};
+  return {id:id,name:name,level:level,target:target,goal:goal,duration_category:durCat,exercises:exercises,duration_minutes:durMin,xp_value:xp};
 }
 A.mkW = mkW;
 
@@ -339,14 +342,14 @@ const WORKOUTS = [
 ];
 A.WORKOUTS = WORKOUTS;
 
-function findWorkouts(level, target, goal, durCat) {
-  const m=(w,lv,tg,gl,dc)=>w.level===lv&&(tg==='any'||w.target===tg)&&(gl==='any'||w.goal===gl)&&(dc==='any'||w.duration_category===dc);
-  let r=WORKOUTS.filter(w=>m(w,level,target,goal,durCat)); if(r.length) return r;
-  r=WORKOUTS.filter(w=>m(w,level,target,goal,'any')); if(r.length) return r;
-  r=WORKOUTS.filter(w=>m(w,level,target,'any','any')); if(r.length) return r;
-  r=WORKOUTS.filter(w=>m(w,level,'any','any','any')); if(r.length) return r;
-  const fb={pro:'advanced',advanced:'intermediate',intermediate:'beginner',beginner:'beginner'};
-  r=WORKOUTS.filter(w=>w.level===level||w.level===fb[level]);
+function findWorkouts(level,target,goal,durCat) {
+  var m=function(w,lv,tg,gl,dc){return w.level===lv&&(tg==='any'||w.target===tg)&&(gl==='any'||w.goal===gl)&&(dc==='any'||w.duration_category===dc);};
+  var r=WORKOUTS.filter(function(w){return m(w,level,target,goal,durCat);}); if(r.length) return r;
+  r=WORKOUTS.filter(function(w){return m(w,level,target,goal,'any');}); if(r.length) return r;
+  r=WORKOUTS.filter(function(w){return m(w,level,target,'any','any');}); if(r.length) return r;
+  r=WORKOUTS.filter(function(w){return m(w,level,'any','any','any');}); if(r.length) return r;
+  var fb={pro:'advanced',advanced:'intermediate',intermediate:'beginner',beginner:'beginner'};
+  r=WORKOUTS.filter(function(w){return w.level===level||w.level===fb[level];});
   return r.length?r:[WORKOUTS[0]];
 }
 A.findWorkouts = findWorkouts;
@@ -388,43 +391,44 @@ const SKILL_PATHS = [
 ];
 A.SKILL_PATHS = SKILL_PATHS;
 
-function generateWeekPlan(pathId, levelId) {
-  const path=SKILL_PATHS.find(p=>p.id===pathId);
-  const lv=path?.levels.find(l=>l.id===levelId);
+function generateWeekPlan(pathId,levelId) {
+  var path=SKILL_PATHS.find(function(p){return p.id===pathId;});
+  var lv=path&&path.levels.find(function(l){return l.id===levelId;});
   if(!path||!lv) return [];
-  const phases=['Foundation','Development','Integration','Performance','Mastery'];
-  const { dateStr, addDays } = A;
-  return phases.map((phase,wi)=>({
-    week:wi+1, phase, theme:`Week ${wi+1} — ${phase}`,
-    days:Array.from({length:7},(_,di)=>{
-      if(di===6) return { day:7,label:'Sun',isRest:true,activities:[] };
-      const isLight=di===2||di===4;
-      const activities=isLight
-        ?[{type:'mental',id:'m84',title:'Recovery & Reset',duration:'8 min',xp:65},{type:'drill',id:DRILLS.find(d=>d.category==='fitness')?.id||'fit001',title:'Light Conditioning',duration:'15 min',xp:60}]
-        :[{type:'drill',id:path.id==='batting'?'b001':path.id==='bowling'?'w001':'f001',title:lv.sampleDrills[di%lv.sampleDrills.length]||'Skill Session',duration:'20 min',xp:lv.xpPerDay*0.4|0},{type:'fitness',id:'wb001',title:'Cricket Fitness',duration:'20 min',xp:lv.xpPerDay*0.3|0},{type:'mental',id:'m50',title:'Mental Training',duration:'8 min',xp:lv.xpPerDay*0.3|0}];
-      return { day:di+1,label:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][di],isRest:false,activities,totalXP:activities.reduce((s,a)=>s+a.xp,0) };
-    })
-  }));
+  var phases=['Foundation','Development','Integration','Performance','Mastery'];
+  var dateStr=A.dateStr, addDays=A.addDays;
+  return phases.map(function(phase,wi){
+    return {week:wi+1,phase:phase,theme:'Week '+(wi+1)+' — '+phase,
+      days:Array.from({length:7},function(_,di){
+        if(di===6) return {day:7,label:'Sun',isRest:true,activities:[]};
+        var isLight=di===2||di===4;
+        var activities=isLight
+          ?[{type:'mental',id:'m84',title:'Recovery & Reset',duration:'8 min',xp:65},{type:'drill',id:DRILLS.find(function(d){return d.category==='fitness';})&&DRILLS.find(function(d){return d.category==='fitness';}).id||'fit001',title:'Light Conditioning',duration:'15 min',xp:60}]
+          :[{type:'drill',id:path.id==='batting'?'b001':path.id==='bowling'?'w001':'f001',title:lv.sampleDrills[di%lv.sampleDrills.length]||'Skill Session',duration:'20 min',xp:Math.floor(lv.xpPerDay*0.4)},{type:'fitness',id:'wb001',title:'Cricket Fitness',duration:'20 min',xp:Math.floor(lv.xpPerDay*0.3)},{type:'mental',id:'m50',title:'Mental Training',duration:'8 min',xp:Math.floor(lv.xpPerDay*0.3)}];
+        return {day:di+1,label:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][di],isRest:false,activities:activities,totalXP:activities.reduce(function(s,a){return s+a.xp;},0)};
+      })
+    };
+  });
 }
 A.generateWeekPlan = generateWeekPlan;
 
-function generateSmartSchedule(focusArea, trainingDays, intensity, weekMondayStr) {
-  const { getWeekMonday, dateStr, addDays, SCHED_TYPES } = A;
-  const monday = new Date(weekMondayStr+'T00:00:00');
-  const restPatterns = {3:[1,3,5,6], 4:[2,4,6], 5:[3,6], 6:[6], 7:[]};
-  const restDays = restPatterns[trainingDays]||[6];
-  const sessions=[];
-  for(let i=0;i<7;i++){
-    const d=new Date(monday); d.setDate(monday.getDate()+i);
-    const ds=dateStr(d);
-    if(restDays.includes(i)) continue;
-    const isHeavy=i%3===0;
-    const drillCat=focusArea==='allrounder'?['batting','bowling','fielding'][i%3]:focusArea;
-    const drillOptions=DRILLS.filter(d=>d.category===drillCat&&d.skill_level==='intermediate');
-    const drillPick=drillOptions[i%drillOptions.length]||DRILLS.find(d=>d.category===drillCat)||DRILLS[0];
-    const mentalOptions=MENTAL_SESSIONS.filter(m=>!m.is_premium);
-    const mentalPick=mentalOptions[i%mentalOptions.length]||MENTAL_SESSIONS[0];
-    const workoutPick=WORKOUTS.find(w=>w.level==='intermediate'&&w.goal===(isHeavy?'build-muscle':'improve-endurance'))||WORKOUTS[0];
+function generateSmartSchedule(focusArea,trainingDays,intensity,weekMondayStr) {
+  var monday=new Date(weekMondayStr+'T00:00:00');
+  var restPatterns={3:[1,3,5,6],4:[2,4,6],5:[3,6],6:[6],7:[]};
+  var restDays=restPatterns[trainingDays]||[6];
+  var sessions=[];
+  var dateStr=A.dateStr, SCHED_TYPES=A.SCHED_TYPES;
+  for(var i=0;i<7;i++){
+    var d=new Date(monday); d.setDate(monday.getDate()+i);
+    var ds=dateStr(d);
+    if(restDays.indexOf(i)!==-1) continue;
+    var isHeavy=i%3===0;
+    var drillCat=focusArea==='allrounder'?['batting','bowling','fielding'][i%3]:focusArea;
+    var drillOptions=DRILLS.filter(function(dd){return dd.category===drillCat&&dd.skill_level==='intermediate';});
+    var drillPick=drillOptions[i%drillOptions.length]||DRILLS.find(function(dd){return dd.category===drillCat;})||DRILLS[0];
+    var mentalOptions=MENTAL_SESSIONS.filter(function(m){return !m.is_premium;});
+    var mentalPick=mentalOptions[i%mentalOptions.length]||MENTAL_SESSIONS[0];
+    var workoutPick=WORKOUTS.find(function(w){return w.level==='intermediate'&&w.goal===(isHeavy?'build-muscle':'improve-endurance');})||WORKOUTS[0];
     sessions.push({id:'sch_'+Date.now()+'_'+i+'_a',date:ds,time:'07:00',type:'drill',title:drillPick.title,ref_id:drillPick.id,duration_minutes:drillPick.duration_minutes,xp_value:drillPick.xp_value,status:'pending',notes:'',color:SCHED_TYPES.drill.color});
     if(isHeavy) sessions.push({id:'sch_'+Date.now()+'_'+i+'_b',date:ds,time:'17:00',type:'fitness',title:workoutPick.name,ref_id:workoutPick.id,duration_minutes:workoutPick.duration_minutes,xp_value:workoutPick.xp_value,status:'pending',notes:'',color:SCHED_TYPES.fitness.color});
     sessions.push({id:'sch_'+Date.now()+'_'+i+'_c',date:ds,time:'19:00',type:'mental',title:mentalPick.title,ref_id:mentalPick.id,duration_minutes:Math.floor(mentalPick.duration_seconds/60),xp_value:mentalPick.xp_value,status:'pending',notes:'',color:SCHED_TYPES.mental.color});
@@ -434,14 +438,159 @@ function generateSmartSchedule(focusArea, trainingDays, intensity, weekMondayStr
 A.generateSmartSchedule = generateSmartSchedule;
 
 // ── 30-Day Challenge Data ─────────────────────────────────────────
-const DAY30 = Array.from({length:30},(_,i)=>({
-  day:i+1,
-  title:i%7===6?'Rest & Recover':['Batting Fundamentals','Mental Focus','Bowling Precision','Fielding Agility','Power Hitting','Match Mindset'][i%6],
-  type:i%7===6?'rest':['drill','mental','drill','fitness','drill','mental'][i%6],
-  xp:i%7===6?20:[60,50,70,65,90,55][i%6],
-  phase:i<7?'Foundation':i<14?'Development':i<21?'Integration':'Performance'
-}));
-A.DAY30 = DAY30;
+// WEEK_THEMES — visual config for each week
+const WEEK_THEMES = [
+  { week:1, theme:'Foundation',  color:'#3b82f6', bg:'rgba(59,130,246,0.10)',  border:'rgba(59,130,246,0.30)',  desc:'Build your training base. One rep at a time.' },
+  { week:2, theme:'Development', color:'#10b981', bg:'rgba(16,185,129,0.10)',  border:'rgba(16,185,129,0.30)',  desc:'Grow your game. Drill and mental working together.' },
+  { week:3, theme:'Pressure',    color:'#f97316', bg:'rgba(249,115,22,0.10)',   border:'rgba(249,115,22,0.30)',  desc:'Forge mental steel. Thrive where others crack.' },
+  { week:4, theme:'Elite',       color:'#f59e0b', bg:'rgba(245,158,11,0.10)',  border:'rgba(245,158,11,0.30)',  desc:'Become elite. This is what separates you.' },
+];
+A.WEEK_THEMES = WEEK_THEMES;
 
-console.log('[SC] app-data ready —', DRILLS.length, 'drills,', MENTAL_SESSIONS.length, 'sessions,', WORKOUTS.length, 'workouts');
+// SOCIAL_PROOF — mock % of players at each milestone day
+const SOCIAL_PROOF = { 10:72, 14:62, 20:51, 25:38, 28:29 };
+A.SOCIAL_PROOF = SOCIAL_PROOF;
+
+// DAY30_TASKS — 30 specific daily tasks (replaces generic DAY30)
+var DAY30_TASKS = [
+  // ── WEEK 1: Foundation (blue) — 1 item each ──────────────────
+  { day:1,  week:1, theme:'Foundation', weekColor:'#3b82f6', type:'drill',  isRest:false, isMilestone:false,
+    title:'Drive 10 Straight Balls',
+    desc:'Perfect the cover drive — the foundation of elite batting. Head still, high elbow, flowing follow-through.',
+    drillId:'b001', mentalId:null, xp:80, reflectionPrompt:null },
+  { day:2,  week:1, theme:'Foundation', weekColor:'#3b82f6', type:'mental', isRest:false, isMilestone:false,
+    title:'3-Minute Focus Burst',
+    desc:'Train your concentration muscle for just 3 minutes. Elite focus starts with small, consistent reps.',
+    drillId:null, mentalId:'m01', xp:50, reflectionPrompt:null },
+  { day:3,  week:1, theme:'Foundation', weekColor:'#3b82f6', type:'drill',  isRest:false, isMilestone:false,
+    title:'Defensive Block Foundation',
+    desc:'Build an unbreakable defensive technique. The base of every great innings starts here.',
+    drillId:'b006', mentalId:null, xp:55, reflectionPrompt:null },
+  { day:4,  week:1, theme:'Foundation', weekColor:'#3b82f6', type:'mental', isRest:false, isMilestone:false,
+    title:'5-4-3-2-1 Grounding',
+    desc:'Ground yourself in the present moment. Your pre-training ritual begins here — use it every session.',
+    drillId:null, mentalId:'m03', xp:50, reflectionPrompt:null },
+  { day:5,  week:1, theme:'Foundation', weekColor:'#3b82f6', type:'drill',  isRest:false, isMilestone:false,
+    title:'Line & Length Precision',
+    desc:'Every great bowler starts here. Perfect control creates perfect pressure. Own your line and length.',
+    drillId:'w001', mentalId:null, xp:65, reflectionPrompt:null },
+  { day:6,  week:1, theme:'Foundation', weekColor:'#3b82f6', type:'mental', isRest:false, isMilestone:false,
+    title:'4-7-8 Breath Lock',
+    desc:'Master the breath and you master the moment. This breathing technique is used by elite athletes worldwide.',
+    drillId:null, mentalId:'m80', xp:50, reflectionPrompt:null },
+  { day:7,  week:1, theme:'Foundation', weekColor:'#3b82f6', type:'rest',   isRest:true,  isMilestone:true,
+    title:'Foundation Recovery Day',
+    desc:'Rest IS training. Your body consolidates a full week of work today. Honour the recovery.',
+    drillId:null, mentalId:'m30', xp:20, reflectionPrompt:null },
+
+  // ── WEEK 2: Development (green) — 1 drill + 1 mental ─────────
+  { day:8,  week:2, theme:'Development', weekColor:'#10b981', type:'both', isRest:false, isMilestone:false,
+    title:'Cover Drive + Confidence',
+    desc:'Combine elite technique with belief. Feel your confidence physically building with every ball you hit.',
+    drillId:'b001', mentalId:'m21', xp:130, reflectionPrompt:null },
+  { day:9,  week:2, theme:'Development', weekColor:'#10b981', type:'both', isRest:false, isMilestone:false,
+    title:'Line & Length + Laser Focus',
+    desc:'Precision bowling drill paired with elite concentration training. Control the ball. Control the mind.',
+    drillId:'w001', mentalId:'m05', xp:120, reflectionPrompt:null },
+  { day:10, week:2, theme:'Development', weekColor:'#10b981', type:'both', isRest:false, isMilestone:false,
+    title:'Ground Fielding + Pre-Game Activation',
+    desc:'Athletic fielding combined with pre-performance mental readiness. Two pillars of match impact.',
+    drillId:'f001', mentalId:'m50', xp:115, reflectionPrompt:null },
+  { day:11, week:2, theme:'Development', weekColor:'#10b981', type:'both', isRest:false, isMilestone:false,
+    title:'Pull Shot Power + Energy Converter',
+    desc:'Turn those pre-session nerves into pure batting power. Nervous energy is just fuel waiting for direction.',
+    drillId:'b002', mentalId:'m51', xp:145, reflectionPrompt:null },
+  { day:12, week:2, theme:'Development', weekColor:'#10b981', type:'both', isRest:false, isMilestone:false,
+    title:'Outswing Mastery + Physiological Reset',
+    desc:'Technical swing bowling paired with a fast mental reset. Precision body and mind working as one.',
+    drillId:'w002', mentalId:'m61', xp:135, reflectionPrompt:null },
+  { day:13, week:2, theme:'Development', weekColor:'#10b981', type:'both', isRest:false, isMilestone:false,
+    title:'Cricket Sprints + Pressure Is Privilege',
+    desc:'Physical speed meets mental pressure mastery. The cricketers who sprint hardest think clearest under fire.',
+    drillId:'fit001', mentalId:'m63', xp:130, reflectionPrompt:null },
+  { day:14, week:2, theme:'Development', weekColor:'#10b981', type:'rest',  isRest:true,  isMilestone:true,
+    title:'Development Recovery Day',
+    desc:'Two full weeks in. Most people quit around here. You\'re not most people. Rest, rebuild, return stronger.',
+    drillId:null, mentalId:'m84', xp:30, reflectionPrompt:null },
+
+  // ── WEEK 3: Pressure (orange) — drill + mental + reflection ──
+  { day:15, week:3, theme:'Pressure', weekColor:'#f97316', type:'both', isRest:false, isMilestone:false,
+    title:'Sweep Shot + Pressure Is Privilege',
+    desc:'Spin domination drill with elite pressure mindset. When others tighten up, you open up.',
+    drillId:'b003', mentalId:'m63', xp:150,
+    reflectionPrompt:'What one thing will you do differently in your very next training session?' },
+  { day:16, week:3, theme:'Pressure', weekColor:'#f97316', type:'both', isRest:false, isMilestone:false,
+    title:'Yorker Mastery + Anchoring Peak State',
+    desc:'The most dangerous delivery in cricket, paired with peak state anchoring. Deliberate. Deadly. Elite.',
+    drillId:'w003', mentalId:'m53', xp:195,
+    reflectionPrompt:'Describe in one sentence how you handled pressure today.' },
+  { day:17, week:3, theme:'Pressure', weekColor:'#f97316', type:'both', isRest:false, isMilestone:false,
+    title:'Core Stability + Laser Focus',
+    desc:'Cricket core strength combined with elite concentration. Physical and mental precision as one system.',
+    drillId:'fit002', mentalId:'m05', xp:125,
+    reflectionPrompt:'What is your biggest mental strength as a cricketer right now?' },
+  { day:18, week:3, theme:'Pressure', weekColor:'#f97316', type:'both', isRest:false, isMilestone:false,
+    title:'Cut Shot + Nervous Energy Converter',
+    desc:'Attack every ball of width with authority — and convert every pre-session nerve into pure execution.',
+    drillId:'b004', mentalId:'m51', xp:140,
+    reflectionPrompt:'What shot or skill are you most confident in right now?' },
+  { day:19, week:3, theme:'Pressure', weekColor:'#f97316', type:'both', isRest:false, isMilestone:false,
+    title:'Throwing Accuracy + Game Day Activation',
+    desc:'Elite throw accuracy with match-day mental activation. The two skills that separate fielding units.',
+    drillId:'f002', mentalId:'m54', xp:135,
+    reflectionPrompt:'Name one thing you\'d tell your younger self about training.' },
+  { day:20, week:3, theme:'Pressure', weekColor:'#f97316', type:'both', isRest:false, isMilestone:false,
+    title:'Line & Length Revisit + Breath Control',
+    desc:'Revisit your bowling foundation under real pressure conditions with mastered breath control.',
+    drillId:'w001', mentalId:'m80', xp:115,
+    reflectionPrompt:'How does today\'s practice connect to your bigger cricket goal?' },
+  { day:21, week:3, theme:'Pressure', weekColor:'#f97316', type:'rest',  isRest:true,  isMilestone:true,
+    title:'Elite Recovery Day',
+    desc:'Three weeks of elite training. Today you breathe, restore, and reflect on everything you\'ve built.',
+    drillId:null, mentalId:'m84', xp:45,
+    reflectionPrompt:'What has this three-week journey taught you about yourself as a cricketer?' },
+
+  // ── WEEK 4: Elite (gold) — full sessions ─────────────────────
+  { day:22, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:false,
+    title:'T20 Power Hitting + Elite Anchoring',
+    desc:'Strike rates above 150. Anchored peak state. You\'re entering the territory most players never reach.',
+    drillId:'b005', mentalId:'m53', xp:185, reflectionPrompt:null },
+  { day:23, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:false,
+    title:'Death Bowling + Pressure Is Privilege',
+    desc:'The complete death bowler\'s toolkit. Pressure is your fuel. Elite bowlers want this moment.',
+    drillId:'w003', mentalId:'m63', xp:195, reflectionPrompt:null },
+  { day:24, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:false,
+    title:'High Catch Confidence + Game Day Activation',
+    desc:'Under the high ball with full belief. Match-day mental activation. Every catch is a match-saver.',
+    drillId:'f003', mentalId:'m54', xp:155, reflectionPrompt:null },
+  { day:25, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:false,
+    title:'Slog Sweep + Nervous Energy Converter',
+    desc:'Boundaries from anywhere in the ground. Convert every nerve into muscle memory.',
+    drillId:'b007', mentalId:'m51', xp:155, reflectionPrompt:null },
+  { day:26, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:false,
+    title:'Death Bowling Masterclass + Breath Control',
+    desc:'The complete death bowler arsenal. Mastered breath. Mastered nerves. Mastered game.',
+    drillId:'w010', mentalId:'m80', xp:200, reflectionPrompt:null },
+  { day:27, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:false,
+    title:'Explosive Leg Power + Laser Focus',
+    desc:'Peak athletic and mental conditioning in one session. The two pillars of elite performance.',
+    drillId:'fit004', mentalId:'m05', xp:165, reflectionPrompt:null },
+  { day:28, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:true,
+    title:'Pull Shot Power + Champion Pressure',
+    desc:'Dominant batting under championship pressure. 28 days in. You\'ve earned this session.',
+    drillId:'b002', mentalId:'m63', xp:155, reflectionPrompt:null },
+  { day:29, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:false,
+    title:'T20 Power + Elite Anchoring',
+    desc:'The second-to-last session. Peak batting power with anchored elite state. Almost there.',
+    drillId:'b005', mentalId:'m53', xp:185, reflectionPrompt:null },
+  { day:30, week:4, theme:'Elite', weekColor:'#f59e0b', type:'both', isRest:false, isMilestone:true,
+    title:'CHAMPION DAY — Power & Pressure',
+    desc:'30 days. One mission. Elite cricketer status. Today you prove it — not to anyone else, but to yourself.',
+    drillId:'b005', mentalId:'m63', xp:280, reflectionPrompt:null },
+];
+
+A.DAY30_TASKS = DAY30_TASKS;
+A.DAY30 = DAY30_TASKS; // backward compat
+
+console.log('[SC] app-data ready —', DRILLS.length, 'drills,', MENTAL_SESSIONS.length, 'sessions,', WORKOUTS.length, 'workouts,', DAY30_TASKS.length, 'challenge days');
 })();
