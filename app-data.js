@@ -592,5 +592,77 @@ var DAY30_TASKS = [
 A.DAY30_TASKS = DAY30_TASKS;
 A.DAY30 = DAY30_TASKS; // backward compat
 
-console.log('[SC] app-data ready —', DRILLS.length, 'drills,', MENTAL_SESSIONS.length, 'sessions,', WORKOUTS.length, 'workouts,', DAY30_TASKS.length, 'challenge days');
+// ── Monthly Challenges (P5-E) ─────────────────────────────────────
+// Keys by 'YYYY-MM' — current month auto-detected
+var MONTHLY_CHALLENGES = [
+  {
+    id: 'batting_month',
+    title: 'Batting Month',
+    theme: 'Master the Cover Drive',
+    color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)',
+    emoji: '🏏',
+    month: 5, // May
+    tasks: [
+      { id: 'bm1', type: 'drill',   drillId: 'b001', times: 5,   xp: 150, label: '5× Cover Drive Mastery sessions' },
+      { id: 'bm2', type: 'mental',  mentalId:'m21',  times: 3,   xp: 75,  label: '3× Confidence Countdown sessions' },
+      { id: 'bm3', type: 'xp',      target: 300,                 xp: 100, label: 'Earn 300 XP this month' },
+    ],
+    bonusXP: 75,
+    badgeId: 'batting_month',
+  },
+  {
+    id: 'bowling_month',
+    title: 'Bowling Month',
+    theme: 'Perfect Line & Length',
+    color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)',
+    emoji: '🎳',
+    month: 6, // June
+    tasks: [
+      { id: 'bow1', type: 'drill',  drillId: 'w001', times: 5,  xp: 130, label: '5× Line & Length Precision sessions' },
+      { id: 'bow2', type: 'drill',  drillId: 'w003', times: 3,  xp: 120, label: '3× Yorker Death Bowling sessions' },
+      { id: 'bow3', type: 'xp',     target: 300,                xp: 100, label: 'Earn 300 XP this month' },
+    ],
+    bonusXP: 75,
+    badgeId: 'bowling_month',
+  },
+  {
+    id: 'mental_month',
+    title: 'Mind Month',
+    theme: 'Build Your Elite Mindset',
+    color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.25)',
+    emoji: '🧠',
+    month: 7, // July
+    tasks: [
+      { id: 'men1', type: 'mental', mentalId:'m05',  times: 5,  xp: 100, label: '5× Laser Focus sessions' },
+      { id: 'men2', type: 'mental', mentalId:'m63',  times: 5,  xp: 100, label: '5× Pressure Is Privilege sessions' },
+      { id: 'men3', type: 'xp',     target: 250,                xp: 75,  label: 'Earn 250 XP this month' },
+    ],
+    bonusXP: 75,
+    badgeId: 'mental_month',
+  },
+  {
+    id: 'fielding_month',
+    title: 'Fielding Month',
+    theme: 'Become the Best Fielder on the Pitch',
+    color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.25)',
+    emoji: '🤸',
+    month: 8, // August
+    tasks: [
+      { id: 'fld1', type: 'drill',  drillId: 'f001', times: 5,  xp: 100, label: '5× Ground Fielding sessions' },
+      { id: 'fld2', type: 'drill',  drillId: 'f002', times: 3,  xp: 90,  label: '3× Throwing Accuracy sessions' },
+      { id: 'fld3', type: 'xp',     target: 300,                xp: 100, label: 'Earn 300 XP this month' },
+    ],
+    bonusXP: 75,
+    badgeId: 'fielding_month',
+  },
+];
+A.MONTHLY_CHALLENGES = MONTHLY_CHALLENGES;
+
+// Helper: get this month's challenge
+A.getCurrentMonthChallenge = function() {
+  var m = new Date().getMonth() + 1; // 1-12
+  return MONTHLY_CHALLENGES.find(function(c) { return c.month === m; }) || MONTHLY_CHALLENGES[0];
+};
+
+console.log('[SC] app-data ready —', DRILLS.length, 'drills,', MENTAL_SESSIONS.length, 'sessions,', WORKOUTS.length, 'workouts,', DAY30_TASKS.length, 'challenge days,', MONTHLY_CHALLENGES.length, 'monthly challenges');
 })();
