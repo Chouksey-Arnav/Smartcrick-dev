@@ -1,7 +1,9 @@
-// ================================================================
 // Save as: app-core.js
-// SmartCrick AI — Core v3.1
-// Added: getEncouragement(), mental rating DB, routine tracking DB
+// ================================================================
+// SmartCrick AI — Core v3.2
+// Added: 9 new DB methods, 7 new badges, calcMentalFitnessScore,
+//        getFeaturedDrillId, generateTodaysMission, streak tokens,
+//        first-session-of-day event, drill streak tracking
 // ================================================================
 (function () {
 'use strict';
@@ -48,9 +50,10 @@ function getRoute() {
   if (qs) qs.split('&').forEach(p => { const [k,v]=p.split('='); if(k) params[k]=decodeURIComponent(v||''); });
   return { page, params };
 }
-function nav(page, params={}) {
-  const qs = Object.keys(params).length ? '?'+Object.entries(params).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&') : '';
-  window.location.hash = `#/${page}${qs}`;
+function nav(page, params) {
+  var p = params || {};
+  const qs = Object.keys(p).length ? '?'+Object.entries(p).map(function(kv){return kv[0]+'='+encodeURIComponent(kv[1]);}).join('&') : '';
+  window.location.hash = '#/'+page+qs;
 }
 function useRoute() {
   const [route, setRoute] = useState(getRoute);
@@ -65,24 +68,24 @@ A.getRoute = getRoute; A.nav = nav; A.useRoute = useRoute;
 
 // ── LocalStorage DB ───────────────────────────────────────────────
 const DB = {
-  _k: k=>`sc_${k}`,
-  get(k) { try { const v=localStorage.getItem(this._k(k)); return v?JSON.parse(v):null; } catch { return null; } },
-  set(k,v) {
+  _k: function(k){ return 'sc_'+k; },
+  get: function(k) { try { var v=localStorage.getItem(this._k(k)); return v?JSON.parse(v):null; } catch(e) { return null; } },
+  set: function(k,v) {
     try { localStorage.setItem(this._k(k),JSON.stringify(v)); } catch(e) { console.warn('SC:ls write',k,e); }
     try {
       if(typeof getPouchDB==='function'&&typeof SC_SYNC_KEYS!=='undefined'){
         var _pdb=getPouchDB(),_fk=this._k(k);
         if(_pdb&&SC_SYNC_KEYS.indexOf(_fk)!==-1){var _did='sc::'+_fk,_val=v;
-          _pdb.get(_did).then(ex=>_pdb.put({...ex,value:_val,updatedAt:Date.now()}))
-          .catch(e=>{if(e&&e.name==='not_found')return _pdb.put({_id:_did,value:_val,createdAt:Date.now(),updatedAt:Date.now()});})
-          .catch(e=>console.warn('[SC]PouchDB:',k,e));}
+          _pdb.get(_did).then(function(ex){return _pdb.put(Object.assign({},ex,{value:_val,updatedAt:Date.now()}));})
+          .catch(function(e){if(e&&e.name==='not_found')return _pdb.put({_id:_did,value:_val,createdAt:Date.now(),updatedAt:Date.now()});})
+          .catch(function(e){console.warn('[SC]PouchDB:',k,e);});}
       }
     } catch(e){}
     return v;
   },
-  del(k) { try { localStorage.removeItem(this._k(k)); } catch {} },
+  del: function(k) { try { localStorage.removeItem(this._k(k)); } catch(e) {} },
 
-  getProgress() {
+  getProgress: function() {
     return Object.assign({
       total_xp:0,drills_done:0,mental_done:0,workouts_done:0,
       practice_minutes:0,current_streak:0,longest_streak:0,
@@ -91,59 +94,59 @@ const DB = {
       badges:[],skill_path_progress:{},thirtyDay_completed:{}
     }, this.get('progress')||{});
   },
-  saveProgress(v) { this.set('progress',v); },
+  saveProgress: function(v) { this.set('progress',v); },
 
-  getXPLog() { return this.get('xp_log')||[]; },
-  addXPEntry(xp,source) {
-    const log=this.getXPLog(), today=new Date().toISOString().slice(0,10);
-    log.push({date:today,xp,source,ts:Date.now()});
-    this.set('xp_log',log.filter(e=>e.ts>Date.now()-90*864e5));
+  getXPLog: function() { return this.get('xp_log')||[]; },
+  addXPEntry: function(xp,source) {
+    var log=this.getXPLog(), today=new Date().toISOString().slice(0,10);
+    log.push({date:today,xp:xp,source:source,ts:Date.now()});
+    this.set('xp_log',log.filter(function(e){return e.ts>Date.now()-90*864e5;}));
   },
-  getXPLast7Days() {
-    const log=this.getXPLog(), days=[];
-    for(let i=6;i>=0;i--){
-      const d=new Date(); d.setDate(d.getDate()-i);
-      const ds=d.toISOString().slice(0,10), label=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
-      days.push({date:ds,label,xp:log.filter(e=>e.date===ds).reduce((s,e)=>s+e.xp,0)});
+  getXPLast7Days: function() {
+    var log=this.getXPLog(), days=[];
+    for(var i=6;i>=0;i--){
+      var d=new Date(); d.setDate(d.getDate()-i);
+      var ds=d.toISOString().slice(0,10), label=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+      days.push({date:ds,label:label,xp:log.filter(function(e){return e.date===ds;}).reduce(function(s,e){return s+e.xp;},0)});
     }
     return days;
   },
-  getActivityHeatmap() {
-    const log=this.getXPLog(), map={}, days=[];
-    log.forEach(e=>{ map[e.date]=(map[e.date]||0)+e.xp; });
-    for(let i=29;i>=0;i--){
-      const d=new Date(); d.setDate(d.getDate()-i);
-      const date=d.toISOString().slice(0,10), xp=map[date]||0;
-      days.push({date,xp,level:xp===0?0:xp<50?1:xp<150?2:xp<300?3:4});
+  getActivityHeatmap: function() {
+    var log=this.getXPLog(), map={}, days=[];
+    log.forEach(function(e){ map[e.date]=(map[e.date]||0)+e.xp; });
+    for(var i=29;i>=0;i--){
+      var d=new Date(); d.setDate(d.getDate()-i);
+      var date=d.toISOString().slice(0,10), xp=map[date]||0;
+      days.push({date:date,xp:xp,level:xp===0?0:xp<50?1:xp<150?2:xp<300?3:4});
     }
     return days;
   },
 
-  getUser() { return this.get('user')||{}; },
-  setUser(v) { this.set('user',v); },
-  getGoals() { return this.get('goals')||[]; },
-  saveGoals(v) { this.set('goals',v); },
+  getUser: function() { return this.get('user')||{}; },
+  setUser: function(v) { this.set('user',v); },
+  getGoals: function() { return this.get('goals')||[]; },
+  saveGoals: function(v) { this.set('goals',v); },
 
-  getSchedule() { return this.get('schedule')||{sessions:[]}; },
-  saveSchedule(v) { this.set('schedule',v); },
-  getSessionsForDate(ds) { return (this.getSchedule().sessions||[]).filter(s=>s.date===ds); },
-  getSessionsForWeek(mondayStr) {
-    const s=this.getSchedule().sessions||[], start=new Date(mondayStr+'T00:00:00'), end=new Date(start);
+  getSchedule: function() { return this.get('schedule')||{sessions:[]}; },
+  saveSchedule: function(v) { this.set('schedule',v); },
+  getSessionsForDate: function(ds) { return (this.getSchedule().sessions||[]).filter(function(s){return s.date===ds;}); },
+  getSessionsForWeek: function(mondayStr) {
+    var s=this.getSchedule().sessions||[], start=new Date(mondayStr+'T00:00:00'), end=new Date(start);
     end.setDate(start.getDate()+7);
-    return s.filter(sess=>{const d=new Date(sess.date+'T00:00:00');return d>=start&&d<end;});
+    return s.filter(function(sess){var d=new Date(sess.date+'T00:00:00');return d>=start&&d<end;});
   },
-  addSession(sess) { const sch=this.getSchedule(); sch.sessions=[...(sch.sessions||[]),sess]; this.saveSchedule(sch); },
-  updateSession(id,updates) { const sch=this.getSchedule(); sch.sessions=(sch.sessions||[]).map(s=>s.id===id?{...s,...updates}:s); this.saveSchedule(sch); },
-  deleteSession(id) { const sch=this.getSchedule(); sch.sessions=(sch.sessions||[]).filter(s=>s.id!==id); this.saveSchedule(sch); },
+  addSession: function(sess) { var sch=this.getSchedule(); sch.sessions=[].concat(sch.sessions||[],[sess]); this.saveSchedule(sch); },
+  updateSession: function(id,updates) { var sch=this.getSchedule(); sch.sessions=(sch.sessions||[]).map(function(s){return s.id===id?Object.assign({},s,updates):s;}); this.saveSchedule(sch); },
+  deleteSession: function(id) { var sch=this.getSchedule(); sch.sessions=(sch.sessions||[]).filter(function(s){return s.id!==id;}); this.saveSchedule(sch); },
 
   // ── Drill Progress (D-A / D-B) ───────────────────────────────
-  getDrillProgress() { return this.get('drill_progress')||{}; },
-  saveDrillProgress(d) { this.set('drill_progress',d); },
-  logDrillAttempt(drillId,rawScore,targetScore,targetType) {
-    const prog=this.getDrillProgress();
-    if(!prog[drillId]) prog[drillId]={attempts:[],personalBest:0,personalBestPct:0,tier:'none',targetType,targetScore,firstAttemptDate:new Date().toISOString().slice(0,10)};
-    const pct=targetScore>0?Math.min(100,Math.round((rawScore/targetScore)*100)):0;
-    prog[drillId].attempts.push({date:new Date().toISOString().slice(0,10),score:rawScore,targetScore,pct,ts:Date.now()});
+  getDrillProgress: function() { return this.get('drill_progress')||{}; },
+  saveDrillProgress: function(d) { this.set('drill_progress',d); },
+  logDrillAttempt: function(drillId,rawScore,targetScore,targetType) {
+    var prog=this.getDrillProgress();
+    if(!prog[drillId]) prog[drillId]={attempts:[],personalBest:0,personalBestPct:0,tier:'none',targetType:targetType,targetScore:targetScore,firstAttemptDate:new Date().toISOString().slice(0,10)};
+    var pct=targetScore>0?Math.min(100,Math.round((rawScore/targetScore)*100)):0;
+    prog[drillId].attempts.push({date:new Date().toISOString().slice(0,10),score:rawScore,targetScore:targetScore,pct:pct,ts:Date.now()});
     if(prog[drillId].attempts.length>30) prog[drillId].attempts=prog[drillId].attempts.slice(-30);
     if(rawScore>prog[drillId].personalBest) prog[drillId].personalBest=rawScore;
     if(pct>prog[drillId].personalBestPct) prog[drillId].personalBestPct=pct;
@@ -153,47 +156,100 @@ const DB = {
     window.dispatchEvent(new CustomEvent('sc_update'));
     return prog[drillId];
   },
-  getSingleDrillProgress(id) { return this.getDrillProgress()[id]||null; },
-  getDrillTier(id) { return this.getDrillProgress()[id]?.tier||'none'; },
-  _calcDrillTier(attempts) {
+  getSingleDrillProgress: function(id) { return this.getDrillProgress()[id]||null; },
+  getDrillTier: function(id) { return (this.getDrillProgress()[id]||{}).tier||'none'; },
+  _calcDrillTier: function(attempts) {
     if(!attempts||!attempts.length) return 'none';
-    const hitOnce=attempts.some(a=>a.pct>=80);
+    var hitOnce=attempts.some(function(a){return a.pct>=80;});
     if(!hitOnce) return 'bronze';
-    let consec=0;
-    for(const a of attempts){ if(a.pct>=80){consec++;if(consec>=3) return 'gold';}else{consec=0;} }
+    var consec=0;
+    for(var i=0;i<attempts.length;i++){ if(attempts[i].pct>=80){consec++;if(consec>=3) return 'gold';}else{consec=0;} }
     return 'silver';
   },
-  getDrillRecentScores(id) { const d=this.getDrillProgress()[id]; return d?d.attempts.slice(-5).map(a=>({pct:a.pct,date:a.date})):[]},
+  getDrillRecentScores: function(id) { var d=this.getDrillProgress()[id]; return d?d.attempts.slice(-5).map(function(a){return {pct:a.pct,date:a.date};}):[]},
 
   // ── Mental Rating (M-D) ────────────────────────────────────────
-  getMentalRatings() { return this.get('mental_ratings')||[]; },
-  saveMentalRating(sessionId,rating) {
-    const ratings=this.getMentalRatings();
-    ratings.push({sessionId,rating,date:new Date().toISOString().slice(0,10),ts:Date.now()});
-    this.set('mental_ratings',ratings.filter(r=>r.ts>Date.now()-30*864e5)); // keep 30d
+  getMentalRatings: function() { return this.get('mental_ratings')||[]; },
+  saveMentalRating: function(sessionId,rating) {
+    var ratings=this.getMentalRatings();
+    ratings.push({sessionId:sessionId,rating:rating,date:new Date().toISOString().slice(0,10),ts:Date.now()});
+    this.set('mental_ratings',ratings.filter(function(r){return r.ts>Date.now()-30*864e5;}));
   },
-  getAverageMentalRating(days=7) {
-    const cutoff=Date.now()-days*864e5;
-    const recent=this.getMentalRatings().filter(r=>r.ts>cutoff&&r.rating);
+  getAverageMentalRating: function(days) {
+    var d=days||7, cutoff=Date.now()-d*864e5;
+    var recent=this.getMentalRatings().filter(function(r){return r.ts>cutoff&&r.rating;});
     if(!recent.length) return null;
-    return (recent.reduce((s,r)=>s+r.rating,0)/recent.length).toFixed(1);
+    return (recent.reduce(function(s,r){return s+r.rating;},0)/recent.length).toFixed(1);
   },
 
   // ── Routine Tracking (M-C) ─────────────────────────────────────
-  getCompletedRoutines() { return this.get('completed_routines')||[]; },
-  logRoutineComplete(routineId,bonusXP) {
-    const list=this.getCompletedRoutines();
-    list.push({routineId,date:new Date().toISOString().slice(0,10),bonusXP,ts:Date.now()});
+  getCompletedRoutines: function() { return this.get('completed_routines')||[]; },
+  logRoutineComplete: function(routineId,bonusXP) {
+    var list=this.getCompletedRoutines();
+    list.push({routineId:routineId,date:new Date().toISOString().slice(0,10),bonusXP:bonusXP,ts:Date.now()});
     this.set('completed_routines',list);
   },
 
   // ── Practice Session History (D-C) ────────────────────────────
-  getPracticeSessionHistory() { return this.get('practice_sessions')||[]; },
-  logPracticeSession(drillIds,totalXP,bonusXP) {
-    const list=this.getPracticeSessionHistory();
-    list.push({drillIds,totalXP,bonusXP,date:new Date().toISOString().slice(0,10),ts:Date.now()});
+  getPracticeSessionHistory: function() { return this.get('practice_sessions')||[]; },
+  logPracticeSession: function(drillIds,totalXP,bonusXP) {
+    var list=this.getPracticeSessionHistory();
+    list.push({drillIds:drillIds,totalXP:totalXP,bonusXP:bonusXP,date:new Date().toISOString().slice(0,10),ts:Date.now()});
     this.set('practice_sessions',list.slice(-50));
   },
+
+  // ── Challenge Shield (C-7) ────────────────────────────────────
+  getChallengeShield: function() { return this.get('challenge_shield')||{lastMissDate:null,shieldUsed:false}; },
+  saveChallengeShield: function(v) { this.set('challenge_shield',v); },
+
+  // ── Streak Tokens (RET-2) ─────────────────────────────────────
+  getStreakTokens: function() { return this.get('streak_tokens')||0; },
+  setStreakTokens: function(n) { this.set('streak_tokens',n); },
+
+  // ── Weekly XP Goal (RET-3) ────────────────────────────────────
+  getWeeklyXPGoal: function() { return this.get('weekly_xp_goal')||200; },
+  setWeeklyXPGoal: function(n) { this.set('weekly_xp_goal',n); },
+
+  // ── Today's Mission (RET-1) ───────────────────────────────────
+  getTodaysMission: function() { return this.get('todays_mission')||null; },
+  saveTodaysMission: function(v) { this.set('todays_mission',v); },
+
+  // ── Mental Favorites (MT-3) ───────────────────────────────────
+  getMentalFavorites: function() { return this.get('mental_favorites')||[]; },
+  toggleMentalFavorite: function(id) {
+    var f=this.getMentalFavorites();
+    var i=f.indexOf(id);
+    if(i===-1) f.push(id); else f.splice(i,1);
+    this.set('mental_favorites',f);
+    return f.slice();
+  },
+
+  // ── Drill Streaks (DR-2) ──────────────────────────────────────
+  getDrillStreaks: function() { return this.get('drill_streaks')||{}; },
+  updateDrillStreak: function(drillId) {
+    var st=this.getDrillStreaks();
+    var today=new Date().toISOString().slice(0,10);
+    var yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if(!st[drillId]) st[drillId]={streak:0,lastDate:null};
+    var ds=st[drillId];
+    if(ds.lastDate===today) return ds;
+    ds.streak=(ds.lastDate===yesterday)?ds.streak+1:1;
+    ds.lastDate=today;
+    this.set('drill_streaks',st);
+    return ds;
+  },
+
+  // ── Challenge Reflections (C-10) ─────────────────────────────
+  getChallengeReflections: function() { return this.get('challenge_reflections')||{}; },
+  saveChallengeReflection: function(dayNum,text) {
+    var r=this.getChallengeReflections();
+    r[dayNum]=text;
+    this.set('challenge_reflections',r);
+  },
+
+  // ── Featured Drill (DR-3) ────────────────────────────────────
+  getFeaturedDrill: function() { return this.get('featured_drill')||null; },
+  setFeaturedDrill: function(v) { this.set('featured_drill',v); },
 };
 A.DB = DB;
 
@@ -206,60 +262,104 @@ const XP_LEVELS = [
   {level:9,name:'World Class',min:40000,max:60000},{level:10,name:'Legend',min:60000,max:Infinity},
 ];
 function getLevelInfo(totalXP) {
-  const xp=totalXP||0; let lv=XP_LEVELS[0];
-  for(let i=XP_LEVELS.length-1;i>=0;i--){ if(xp>=XP_LEVELS[i].min){lv=XP_LEVELS[i];break;} }
-  const next=XP_LEVELS.find(l=>l.level===lv.level+1)||null;
-  const pct=next?Math.min(100,((xp-lv.min)/(next.min-lv.min))*100):100;
-  return {...lv,next,pct,xpToNext:next?Math.max(0,next.min-xp):0};
+  var xp=totalXP||0, lv=XP_LEVELS[0];
+  for(var i=XP_LEVELS.length-1;i>=0;i--){ if(xp>=XP_LEVELS[i].min){lv=XP_LEVELS[i];break;} }
+  var next=XP_LEVELS.filter(function(l){return l.level===lv.level+1;})[0]||null;
+  var pct=next?Math.min(100,((xp-lv.min)/(next.min-lv.min))*100):100;
+  return Object.assign({},lv,{next:next,pct:pct,xpToNext:next?Math.max(0,next.min-xp):0});
 }
 A.XP_LEVELS=XP_LEVELS; A.getLevelInfo=getLevelInfo;
 
 const BADGE_DEFS = {
+  // XP milestones
   first500:{icon:'zap',label:'First 500',desc:'Earned first 500 XP'},
   xp5k:{icon:'trophy',label:'5K Club',desc:'5,000 total XP'},
+  // Streaks
   streak3:{icon:'flame',label:'On Fire',desc:'3-day streak'},
   streak7:{icon:'flame',label:'Week Warrior',desc:'7-day streak'},
   streak14:{icon:'flame',label:'Fortnight',desc:'14-day streak'},
   streak30:{icon:'flame',label:'Monthly Legend',desc:'30 consecutive days'},
+  // Drills
   drills10:{icon:'bat',label:'Drill Starter',desc:'10 drills done'},
   drills50:{icon:'bat',label:'Drill Master',desc:'50 drills done'},
+  // Mental
   mental10:{icon:'brain',label:'Mind Builder',desc:'10 mental sessions'},
   mental25:{icon:'brain',label:'Mind Master',desc:'25 mental sessions'},
+  // Minutes
   min60:{icon:'clock',label:'First Hour',desc:'60 min of practice'},
   min600:{icon:'clock',label:'600 Min Club',desc:'600 min of practice'},
+  // Other
   workouts5:{icon:'dumbbell',label:'Fitness Start',desc:'5 workouts'},
   sched10:{icon:'calendar',label:'Scheduled Pro',desc:'10 scheduled sessions done'},
   drillSilver:{icon:'target',label:'Silver Driller',desc:'Hit a drill target metric'},
   drillGold:{icon:'star',label:'Gold Driller',desc:'Hit target 3 sessions in a row'},
   routine5:{icon:'brain',label:'Routine Runner',desc:'Completed 5 mental routines'},
   session5:{icon:'bat',label:'Session Builder',desc:'Built 5 practice sessions'},
+  // 30-Day Challenge milestones
+  week1:{icon:'target',label:'Foundation Week',desc:'Completed Week 1 of the 30-Day Challenge'},
+  week2:{icon:'target',label:'Development Week',desc:'Completed Week 2 of the 30-Day Challenge'},
+  week3:{icon:'flame',label:'Pressure Week',desc:'Completed Week 3 of the 30-Day Challenge'},
+  challenge_complete:{icon:'crown',label:'30-Day Champion',desc:'Completed the full 30-Day Challenge!'},
+  // Drill streaks
+  drillStreak3:{icon:'flame',label:'Drill Streak 3',desc:'3-day drill streak on one drill'},
+  drillStreak7:{icon:'flame',label:'Drill Streak 7',desc:'7-day streak — drilled like a pro!'},
+  // Mental consistency
+  mentalStreak3:{icon:'brain',label:'Focus Streak',desc:'3 consecutive days of mental training'},
 };
 
 function checkBadges(p) {
-  const b=[...(p.badges||[])];
-  const add=id=>{if(!b.includes(id))b.push(id);};
-  if((p.total_xp||0)>=500) add('first500');
+  var b=[].concat(p.badges||[]);
+  var add=function(id){ if(b.indexOf(id)===-1) b.push(id); };
+  // XP milestones
+  if((p.total_xp||0)>=500)  add('first500');
   if((p.total_xp||0)>=5000) add('xp5k');
-  if((p.current_streak||0)>=3) add('streak3');
-  if((p.current_streak||0)>=7) add('streak7');
+  // Streaks
+  if((p.current_streak||0)>=3)  add('streak3');
+  if((p.current_streak||0)>=7)  add('streak7');
   if((p.current_streak||0)>=14) add('streak14');
   if((p.current_streak||0)>=30) add('streak30');
+  // Drills
   if((p.drills_done||0)>=10) add('drills10');
   if((p.drills_done||0)>=50) add('drills50');
+  // Mental
   if((p.mental_done||0)>=10) add('mental10');
   if((p.mental_done||0)>=25) add('mental25');
-  if((p.practice_minutes||0)>=60) add('min60');
+  // Minutes
+  if((p.practice_minutes||0)>=60)  add('min60');
   if((p.practice_minutes||0)>=600) add('min600');
+  // Workouts
   if((p.workouts_done||0)>=5) add('workouts5');
-  const schedDone=(DB.getSchedule().sessions||[]).filter(s=>s.status==='complete').length;
+  // Schedule
+  var schedDone=(DB.getSchedule().sessions||[]).filter(function(s){return s.status==='complete';}).length;
   if(schedDone>=10) add('sched10');
-  const dp=DB.getDrillProgress();
-  if(Object.values(dp).some(d=>d.tier==='silver'||d.tier==='gold')) add('drillSilver');
-  if(Object.values(dp).some(d=>d.tier==='gold')) add('drillGold');
-  const routines=DB.getCompletedRoutines();
+  // Drill tiers
+  var dp=DB.getDrillProgress();
+  var dpVals=Object.keys(dp).map(function(k){return dp[k];});
+  if(dpVals.some(function(d){return d.tier==='silver'||d.tier==='gold';})) add('drillSilver');
+  if(dpVals.some(function(d){return d.tier==='gold';})) add('drillGold');
+  // Routines / sessions
+  var routines=DB.getCompletedRoutines();
   if(routines.length>=5) add('routine5');
-  const sessions=DB.getPracticeSessionHistory();
+  var sessions=DB.getPracticeSessionHistory();
   if(sessions.length>=5) add('session5');
+  // 30-Day Challenge milestones
+  var tdc=p.thirtyDay_completed||{};
+  var tdcCount=Object.keys(tdc).length;
+  if(tdcCount>=7)  add('week1');
+  if(tdcCount>=14) add('week2');
+  if(tdcCount>=21) add('week3');
+  if(tdcCount>=30) add('challenge_complete');
+  // Drill streaks
+  var dstreaks=DB.getDrillStreaks();
+  var dstreakVals=Object.keys(dstreaks).map(function(k){return dstreaks[k];});
+  if(dstreakVals.some(function(d){return d.streak>=3;})) add('drillStreak3');
+  if(dstreakVals.some(function(d){return d.streak>=7;})) add('drillStreak7');
+  // Mental consistency (3 consecutive days with mental XP)
+  var mRatings=DB.getMentalRatings();
+  var xpLog=DB.getXPLog();
+  var last3=[];
+  for(var mi=0;mi<3;mi++){var mdate=new Date();mdate.setDate(mdate.getDate()-mi);last3.push(mdate.toISOString().slice(0,10));}
+  if(last3.every(function(date){return xpLog.some(function(e){return e.date===date&&e.source==='mental';});})) add('mentalStreak3');
   return b;
 }
 A.BADGE_DEFS=BADGE_DEFS; A.checkBadges=checkBadges;
@@ -295,55 +395,118 @@ const _ENC = {
   silver_tier:"🥈 Silver tier achieved! One step closer to mastering this drill!",
 };
 
-let _encCounters = {};
-function getEncouragement(type, extra='') {
-  const pool = _ENC[type];
+var _encCounters = {};
+function getEncouragement(type, extra) {
+  var pool = _ENC[type];
   if(!pool) return extra || '';
   if(typeof pool==='string') return pool;
-  const key = type;
+  var key = type;
   if(!_encCounters[key]) _encCounters[key]=0;
-  const msg = pool[_encCounters[key] % pool.length];
+  var msg = pool[_encCounters[key] % pool.length];
   _encCounters[key]++;
   return msg;
 }
 A.getEncouragement = getEncouragement;
 
-function awardXP(xp,minutes=0,source='general',completedKey=null,itemId=null) {
+// ── Mental Fitness Score (MT-1) ───────────────────────────────────
+function calcMentalFitnessScore() {
+  var p=DB.getProgress();
+  var sessions=Math.min((p.mental_done||0)/50,1)*40;
+  var ratings=DB.getMentalRatings();
+  var recent=ratings.filter(function(r){return r.ts>Date.now()-7*864e5;});
+  var avgR=recent.length?(recent.reduce(function(s,r){return s+r.rating;},0)/recent.length)/5:0;
+  var ratingScore=avgR*30;
+  var xpLog=DB.getXPLast7Days();
+  var activeDays=xpLog.filter(function(d){return d.xp>0;}).length;
+  var consistencyScore=(activeDays/7)*30;
+  return Math.round(sessions+ratingScore+consistencyScore);
+}
+A.calcMentalFitnessScore = calcMentalFitnessScore;
+
+// ── Featured Drill ID (DR-3) ──────────────────────────────────────
+function getFeaturedDrillId() {
+  var now=new Date();
+  var start=new Date(now.getFullYear(),0,1);
+  var dayOfYear=Math.floor((now-start)/(86400000));
+  var weekNum=Math.ceil((dayOfYear+1)/7);
+  var stored=DB.getFeaturedDrill();
+  if(stored&&stored.weekNum===weekNum) return stored.drillId;
+  var drills=window.SC_APP.DRILLS;
+  if(!drills||!drills.length) return null;
+  var pick=drills[weekNum%drills.length];
+  if(pick) DB.setFeaturedDrill({weekNum:weekNum,drillId:pick.id});
+  return pick?pick.id:null;
+}
+A.getFeaturedDrillId = getFeaturedDrillId;
+
+// ── Today's Mission Generator (RET-1) ────────────────────────────
+function generateTodaysMission() {
+  var today=new Date().toISOString().slice(0,10);
+  var ex=DB.getTodaysMission();
+  if(ex&&ex.date===today) return ex;
+  var p=DB.getProgress();
+  var done=p.completed_drills||[], doneMental=p.completed_mental||[];
+  var drills=window.SC_APP.DRILLS||[];
+  var mental=window.SC_APP.MENTAL_SESSIONS||[];
+  var drillPick=drills.find(function(d){return !done.includes(d.id)&&d.category==='batting';})
+    ||drills.find(function(d){return !done.includes(d.id);})
+    ||(drills[0]||null);
+  var mentalPick=mental.find(function(m){return !doneMental.includes(m.id)&&!m.is_premium;})
+    ||(mental[0]||null);
+  var mission={date:today,drillId:drillPick?drillPick.id:null,mentalId:mentalPick?mentalPick.id:null,drillDone:false,mentalDone:false};
+  DB.saveTodaysMission(mission);
+  return mission;
+}
+A.generateTodaysMission = generateTodaysMission;
+
+// ── awardXP ───────────────────────────────────────────────────────
+function awardXP(xp,minutes,source,completedKey,itemId) {
+  var mins=minutes||0, src=source||'general', ck=completedKey||null, iid=itemId||null;
   try {
-    const p=DB.getProgress(), today=new Date().toISOString().slice(0,10), yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
-    if(source==='checkin'){if(p.last_checkin_date===today){console.log('SC:checkin dup');return p;} p.last_checkin_date=today;}
+    var p=DB.getProgress(), today=new Date().toISOString().slice(0,10), yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if(src==='checkin'){if(p.last_checkin_date===today){console.log('SC:checkin dup');return p;} p.last_checkin_date=today;}
+    // Track if this is the first award of the day
+    var wasNewDay=(p.last_active_date!==today);
     if(p.last_active_date===today){}
     else if(p.last_active_date===yesterday){p.current_streak=(p.current_streak||0)+1;p.longest_streak=Math.max(p.longest_streak||0,p.current_streak);}
     else{p.current_streak=1;p.longest_streak=Math.max(p.longest_streak||0,1);}
     p.last_active_date=today;
+    // Award streak token every 7-day milestone (once per day)
+    if(wasNewDay&&p.current_streak>0&&p.current_streak%7===0){
+      DB.setStreakTokens(DB.getStreakTokens()+1);
+    }
     p.total_xp=(p.total_xp||0)+xp;
-    p.practice_minutes=(p.practice_minutes||0)+minutes;
-    if(completedKey==='drill'&&itemId){p.completed_drills=p.completed_drills||[];if(!p.completed_drills.includes(itemId))p.completed_drills.push(itemId);p.drills_done=(p.drills_done||0)+1;}
-    if(completedKey==='mental'&&itemId){p.completed_mental=p.completed_mental||[];if(!p.completed_mental.includes(itemId))p.completed_mental.push(itemId);p.mental_done=(p.mental_done||0)+1;}
-    if(completedKey==='workout'&&itemId){p.completed_workouts=p.completed_workouts||[];if(!p.completed_workouts.includes(itemId))p.completed_workouts.push(itemId);p.workouts_done=(p.workouts_done||0)+1;}
+    p.practice_minutes=(p.practice_minutes||0)+mins;
+    if(ck==='drill'&&iid){p.completed_drills=p.completed_drills||[];if(p.completed_drills.indexOf(iid)===-1)p.completed_drills.push(iid);p.drills_done=(p.drills_done||0)+1;}
+    if(ck==='mental'&&iid){p.completed_mental=p.completed_mental||[];if(p.completed_mental.indexOf(iid)===-1)p.completed_mental.push(iid);p.mental_done=(p.mental_done||0)+1;}
+    if(ck==='workout'&&iid){p.completed_workouts=p.completed_workouts||[];if(p.completed_workouts.indexOf(iid)===-1)p.completed_workouts.push(iid);p.workouts_done=(p.workouts_done||0)+1;}
     p.badges=checkBadges(p);
-    DB.saveProgress(p); DB.addXPEntry(xp,source);
+    DB.saveProgress(p); DB.addXPEntry(xp,src);
     window.dispatchEvent(new CustomEvent('sc_update'));
-    showXPFlash(`+${xp} XP`);
+    showXPFlash('+'+xp+' XP');
+    // First session of day event (for RET-6 celebration toast)
+    if(wasNewDay&&src!=='checkin') {
+      window.dispatchEvent(new CustomEvent('sc_first_session',{detail:{date:today}}));
+    }
     return p;
   } catch(e){console.error('awardXP error:',e);return DB.getProgress();}
 }
 
 function showXPFlash(text) {
-  try{const el=document.createElement('div');el.className='xp-flash';el.textContent=text;document.body.appendChild(el);setTimeout(()=>el.remove(),1700);}catch{}
+  try{var el=document.createElement('div');el.className='xp-flash';el.textContent=text;document.body.appendChild(el);setTimeout(function(){el.remove();},1700);}catch(e){}
 }
 function fireConfetti() {
-  try{if(typeof confetti!=='undefined')confetti({particleCount:90,spread:70,origin:{y:.65},colors:['#10b981','#34d399','#6ee7b7','#fff']});}catch{}
+  try{if(typeof confetti!=='undefined')confetti({particleCount:90,spread:70,origin:{y:.65},colors:['#10b981','#34d399','#6ee7b7','#fff']});}catch(e){}
 }
 A.awardXP=awardXP; A.showXPFlash=showXPFlash; A.fireConfetti=fireConfetti;
 
 // ── Date utilities ────────────────────────────────────────────────
-function getWeekMonday(date){const d=new Date(date);d.setHours(0,0,0,0);const day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day));return d;}
+function getWeekMonday(date){var d=new Date(date);d.setHours(0,0,0,0);var day=d.getDay();d.setDate(d.getDate()+(day===0?-6:1-day));return d;}
 function dateStr(d){return d.toISOString().slice(0,10);}
-function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
-function formatDate(str){const d=new Date(str+'T00:00:00');return d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});}
+function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function formatDate(str){var d=new Date(str+'T00:00:00');return d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});}
 function isToday(str){return str===new Date().toISOString().slice(0,10);}
-function fmtTime(s){const hh=Math.floor(s/3600),mm=Math.floor((s%3600)/60),sec=s%60;if(hh>0)return `${hh}:${String(mm).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;return `${String(mm).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;}
+function fmtTime(s){var hh=Math.floor(s/3600),mm=Math.floor((s%3600)/60),sec=s%60;if(hh>0)return hh+':'+String(mm).padStart(2,'0')+':'+String(sec).padStart(2,'0');return String(mm).padStart(2,'0')+':'+String(sec).padStart(2,'0');}
 A.getWeekMonday=getWeekMonday; A.dateStr=dateStr; A.addDays=addDays;
 A.formatDate=formatDate; A.isToday=isToday; A.fmtTime=fmtTime;
 
@@ -357,5 +520,5 @@ const SCHED_TYPES = {
 };
 A.SCHED_TYPES=SCHED_TYPES;
 
-console.log('[SC] app-core v3.1 ready');
+console.log('[SC] app-core v3.2 ready');
 })();
