@@ -7,155 +7,117 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SmartCrick">
-  <meta name="description" content="SmartCrick AI — The ultimate cricket training platform for youth cricketers.">
+  <meta name="description" content="SmartCrick AI — Elite cricket training platform.">
   <title>SmartCrick AI</title>
-
-  <!-- PWA / Icons -->
   <link rel="apple-touch-icon" href="https://fav.farm/🏏">
   <link rel="icon" href="https://fav.farm/🏏">
-
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
-
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: { extend: {} },
-      corePlugins: { preflight: false }
-    };
-  </script>
-
-  <!-- App Styles -->
+  <script>tailwind.config={theme:{extend:{}},corePlugins:{preflight:false}};</script>
   <link rel="stylesheet" href="styles.css">
 
-  <!-- ── CDN Libraries ──────────────────────────────────────── -->
-  <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds. -->
+  <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds → infinite splash loop -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-
-  <!-- i18next -->
   <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-
-  <!-- Day.js -->
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.11/dayjs.min.js"></script>
-
-  <!-- Fuse.js -->
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.umd.min.js"></script>
-
-  <!-- canvas-confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-
-  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <!-- Mousetrap -->
   <script src="https://cdn.jsdelivr.net/npm/mousetrap@1.6.5/mousetrap.min.js"></script>
-
-  <!-- Tone.js -->
   <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
-
-  <!-- Brain.js (lazy-loaded via open source module) -->
-  <!-- Matter.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
-
-  <!-- GSAP 3 -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
 
-  <!-- ── App Modules (load order is critical) ──────────────── -->
-  <script src="sc_opensource.js"></script>   <!-- Open source library bridge -->
-  <script src="app-core.js"></script>        <!-- State, DB, XP, router, helpers -->
-  <script src="app-data.js"></script>        <!-- Drills, mental sessions, workouts, 30-day tasks -->
-  <script src="app-ui.js"></script>          <!-- Shared UI components (Icon, PageHeader, etc.) -->
-  <script src="app-onboard.js"></script>     <!-- P5-A: Onboarding wizard (5 screens) -->
-  <script src="app-assessment.js"></script>  <!-- P5-C: Skill assessment + radar chart -->
-  <script src="app-home.js"></script>        <!-- Home page + retention widgets -->
-  <script src="app-drills.js"></script>      <!-- Drills system -->
-  <script src="app-mental.js"></script>      <!-- Mental training system -->
-  <script src="app-fitness.js"></script>     <!-- Fitness/workout system -->
-  <script src="app-timer.js"></script>       <!-- Cricket timer -->
-  <script src="app-schedule.js"></script>    <!-- Schedule planner -->
-  <script src="app-skillpaths.js"></script>  <!-- Skill path programs -->
-  <script src="app-progress.js"></script>    <!-- Progress & badges -->
-  <script src="app-challenges.js"></script>  <!-- 30-Day Challenge -->
-  <script src="app-profile.js"></script>     <!-- Profile & settings -->
-  <script src="app-stubs.js"></script>       <!-- Additional pages (AI Coach, Quizzes, etc.) -->
-  <script src="app-root.js"></script>        <!-- Router + app shell — MUST BE LAST -->
+  <!--
+    ╔══════════════════════════════════════════════════╗
+    ║  SCRIPT LOAD ORDER IS CRITICAL — DO NOT CHANGE  ║
+    ╚══════════════════════════════════════════════════╝
+    1. sc_opensource.js  — open-source bridges
+    2. app-core.js       — DB, XP, router, helpers
+    3. app-data.js       — drills, sessions, workouts, 30-day data
+    4. app-ui.js         — shared components
+    5. app-onboard.js    — onboarding wizard
+    6. app-assessment.js — skill radar
+    7. app-home.js       — home page
+    8. app-drills.js     — drill system
+    9. app-mental.js     — mental training
+    10. app-fitness.js   — workouts
+    11. app-timer.js     — timers
+    12. app-schedule.js  — schedule (CORRECT file — not ProfilePage)
+    13. app-skillpaths.js
+    14. app-progress.js
+    15. app-challenges.js
+    16. app-profile.js
+    17. app-stubs.js
+    18. app-aicoach.js   — AI Coach (overrides stub)
+    19. app-daily-net.js — Daily Net feature
+    20. app-viral.js     — Cricket DNA
+    21. app-root.js      — MUST BE LAST (single IIFE, single root.render)
+  -->
+  <script src="sc_opensource.js"></script>
+  <script src="app-core.js"></script>
+  <script src="app-data.js"></script>
+  <script src="app-ui.js"></script>
+  <script src="app-onboard.js"></script>
+  <script src="app-assessment.js"></script>
+  <script src="app-home.js"></script>
+  <script src="app-drills.js"></script>
+  <script src="app-mental.js"></script>
+  <script src="app-fitness.js"></script>
+  <script src="app-timer.js"></script>
+  <script src="app-schedule.js"></script>
+  <script src="app-skillpaths.js"></script>
+  <script src="app-progress.js"></script>
+  <script src="app-challenges.js"></script>
+  <script src="app-profile.js"></script>
+  <script src="app-stubs.js"></script>
+  <script src="app-aicoach.js"></script>
+  <script src="app-daily-net.js"></script>
+  <script src="app-viral.js"></script>
+  <script src="app-root.js"></script>
 
   <style>
-    /* Prevent FOUC */
-    #root { min-height: 100dvh; background: #0d1117; }
-    /* Loading indicator */
+    #root { min-height:100dvh; background:#0d1117; }
     #sc-loading {
-      position: fixed; inset: 0; background: #0d1117;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center; z-index: 9999;
+      position:fixed; inset:0; background:#0d1117;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999;
     }
-    #sc-loading .logo { font-size: 3rem; margin-bottom: 1rem; }
-    #sc-loading .name {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 1.5rem; font-weight: 900;
-      color: #f0fdf4; letter-spacing: -0.03em; margin-bottom: 0.5rem;
-    }
-    #sc-loading .sub {
-      font-family: 'Inter', system-ui, sans-serif;
-      font-size: 0.75rem; color: #484f58; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
-    }
-    #sc-loading .dot-wrap { display: flex; gap: 6px; margin-top: 2rem; }
-    #sc-loading .dot {
-      width: 8px; height: 8px; border-radius: 50%; background: #16a34a;
-      animation: loadPulse 1.2s ease-in-out infinite;
-    }
-    #sc-loading .dot:nth-child(2) { animation-delay: 0.2s; }
-    #sc-loading .dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes loadPulse { 0%, 100% { opacity: 0.2; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1); } }
-    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    #sc-loading .logo  { font-size:3rem; margin-bottom:1rem; }
+    #sc-loading .name  { font-family:'Inter',system-ui,sans-serif; font-size:1.5rem; font-weight:900; color:#f0fdf4; letter-spacing:-.03em; margin-bottom:.5rem; }
+    #sc-loading .sub   { font-family:'Inter',system-ui,sans-serif; font-size:.75rem; color:#484f58; font-weight:600; text-transform:uppercase; letter-spacing:.08em; }
+    #sc-loading .dots  { display:flex; gap:6px; margin-top:2rem; }
+    #sc-loading .dot   { width:8px; height:8px; border-radius:50%; background:#16a34a; animation:lp 1.2s ease-in-out infinite; }
+    #sc-loading .dot:nth-child(2) { animation-delay:.2s; }
+    #sc-loading .dot:nth-child(3) { animation-delay:.4s; }
+    @keyframes lp { 0%,100%{opacity:.2;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} }
   </style>
 </head>
 <body>
-  <!-- Loading screen (hidden once React mounts) -->
   <div id="sc-loading">
     <div class="logo">🏏</div>
     <div class="name">SmartCrick AI</div>
     <div class="sub">Elite Cricket Training</div>
-    <div class="dot-wrap">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   </div>
-
-  <!-- React root -->
   <div id="root"></div>
-
   <script>
-    // Hide loading screen once React has mounted
-    (function() {
-      var observer = new MutationObserver(function(mutations) {
-        var root = document.getElementById('root');
-        if (root && root.children.length > 0) {
-          var loader = document.getElementById('sc-loading');
-          if (loader) {
-            loader.style.opacity = '0';
-            loader.style.transition = 'opacity 0.3s ease';
-            setTimeout(function() { loader.remove(); }, 350);
-          }
-          observer.disconnect();
+    (function(){
+      var ob = new MutationObserver(function(){
+        var r = document.getElementById('root');
+        if (r && r.children.length > 0) {
+          var l = document.getElementById('sc-loading');
+          if (l) { l.style.opacity='0'; l.style.transition='opacity .3s'; setTimeout(function(){ if(l.parentNode)l.remove(); },350); }
+          ob.disconnect();
         }
       });
-      observer.observe(document.getElementById('root'), { childList: true });
-
-      // Fallback: remove loader after 4s regardless
-      setTimeout(function() {
-        var loader = document.getElementById('sc-loading');
-        if (loader) loader.remove();
-      }, 4000);
+      var r = document.getElementById('root');
+      if (r) ob.observe(r,{childList:true});
+      setTimeout(function(){ var l=document.getElementById('sc-loading'); if(l&&l.parentNode)l.remove(); },6000);
     })();
   </script>
 </body>
