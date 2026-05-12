@@ -1,806 +1,317 @@
+// app-schedule.js v2.1 — Training Schedule Planner
+// Exports: A.SchedulePage
 (function() {
 'use strict';
 const { createElement:h, useState, useEffect, useRef, Fragment } = React;
-const A = window.SC_APP;
-const { DB, nav, awardXP } = A;
-const { Icon, XPBadge, PageHeader, BottomNav, TopBar } = A;
+const A   = window.SC_APP;
+const DB  = A.DB;
+const nav = A.nav;
+const { Icon, XPBadge, PageHeader } = A;
+const { DRILLS, MENTAL_SESSIONS, WORKOUTS, SCHED_TYPES, awardXP, fireConfetti } = A;
+const { getWeekMonday, dateStr, addDays, formatDate, isToday, fmtTime } = A;
 
-// ===== jsPDF TRAINING REPORT (P5-G) =====
-function generateTrainingReport() {
+var TYPE_COLORS = {
+  drill:   { label:'Cricket Drill',    color:'#3b82f6', bg:'rgba(59,130,246,.12)',   border:'rgba(59,130,246,.4)',  icon:'bat'      },
+  mental:  { label:'Mental Session',   color:'#a855f7', bg:'rgba(168,85,247,.12)',   border:'rgba(168,85,247,.4)', icon:'brain'    },
+  fitness: { label:'Fitness',          color:'#f97316', bg:'rgba(249,115,22,.12)',    border:'rgba(249,115,22,.4)', icon:'dumbbell' },
+  match:   { label:'Match Day',        color:'#f59e0b', bg:'rgba(245,158,11,.12)',    border:'rgba(245,158,11,.4)', icon:'wicket'   },
+  rest:    { label:'Rest & Recover',   color:'#16a34a', bg:'rgba(22,163,74,.08)',     border:'rgba(22,163,74,.25)', icon:'heart'    },
+  custom:  { label:'Custom Session',   color:'#8b949e', bg:'rgba(139,148,158,.12)',   border:'rgba(139,148,158,.4)',icon:'list'     },
+};
+
+// ── Pending session bridge (from Today's Mission "Start" btn) ─────
+function checkPendingSession() {
   try {
-    if (!window.jspdf) { console.error('[SC] jsPDF not loaded'); return; }
-    var jsPDF = window.jspdf.jsPDF;
-    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-    var p   = DB.getProgress() || {};
-    var user = DB.getUser() || {};
-    var info = A.getLevelInfo ? A.getLevelInfo(p.total_xp || 0) : { level: 1, name: 'Rookie', pct: 0 };
-    var goals = DB.getGoals ? DB.getGoals() : [];
-    var xpLog = DB.getXPLast7Days ? DB.getXPLast7Days() : [];
-    var drillProg = DB.getDrillProgress ? DB.getDrillProgress() : {};
-    var mentalAvg = DB.getAverageMentalRating ? DB.getAverageMentalRating(30) : 0;
-    var matchLogs = DB.get('match_logs') || [];
-    var rating = A.calcPlayerRating ? A.calcPlayerRating() : {};
-
-    var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-    var playerName = user.name || 'SmartCrick Player';
-    var filename = 'SmartCrick_Report_' + playerName.replace(/\s+/g, '_') + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
-
-    var W = 210; // A4 width in mm
-    var margin = 18;
-    var col = margin;
-
-    // ===== COLOR PALETTE =====
-    var GREEN  = [22, 163, 74];
-    var DARK   = [13, 17, 23];
-    var GRAY   = [107, 114, 128];
-    var LIGHT  = [229, 231, 235];
-    var GOLD   = [245, 158, 11];
-    var BLUE   = [59, 130, 246];
-    var PURPLE = [139, 92, 246];
-
-    // ===== HELPERS =====
-    function setColor(rgb) { doc.setTextColor(rgb[0], rgb[1], rgb[2]); }
-    function setFill(rgb)  { doc.setFillColor(rgb[0], rgb[1], rgb[2]); }
-    function setDraw(rgb)  { doc.setDrawColor(rgb[0], rgb[1], rgb[2]); }
-    function bold(size)    { doc.setFont('helvetica', 'bold'); doc.setFontSize(size); }
-    function normal(size)  { doc.setFont('helvetica', 'normal'); doc.setFontSize(size); }
-    function italic(size)  { doc.setFont('helvetica', 'italic'); doc.setFontSize(size); }
-
-    function sectionHeader(text, y) {
-      setFill(GREEN);
-      doc.roundedRect(margin, y, W - margin * 2, 7, 1, 1, 'F');
-      bold(10);
-      setColor([255, 255, 255]);
-      doc.text(text, margin + 3, y + 4.8);
-      return y + 12;
-    }
-
-    function hRule(y) {
-      setDraw([229, 231, 235]);
-      doc.setLineWidth(0.2);
-      doc.line(margin, y, W - margin, y);
-      return y + 4;
-    }
-
-    function statRow(label, value, y, valueColor) {
-      normal(9);
-      setColor(GRAY);
-      doc.text(label + ':', col, y);
-      bold(9);
-      setColor(valueColor || DARK);
-      doc.text(String(value), col + 65, y);
-      return y + 5;
-    }
-
-    function progressBar(x, y, w, h, pct, fillRgb) {
-      setFill([229, 231, 235]);
-      doc.roundedRect(x, y, w, h, h / 2, h / 2, 'F');
-      if (pct > 0) {
-        setFill(fillRgb || GREEN);
-        doc.roundedRect(x, y, Math.max(w * Math.min(pct, 1), 1), h, h / 2, h / 2, 'F');
-      }
-    }
-
-    // ===================================================================
-    // PAGE 1 — HEADER + PLAYER SUMMARY
-    // ===================================================================
-
-    // Header banner
-    setFill(DARK);
-    doc.rect(0, 0, W, 45, 'F');
-    setFill(GREEN);
-    doc.rect(0, 40, W, 3, 'F');
-
-    bold(22);
-    setColor(GREEN);
-    doc.text('SmartCrick', margin, 18);
-    bold(22);
-    setColor([255, 255, 255]);
-    doc.text(' AI', margin + 51, 18);
-
-    normal(9);
-    setColor([156, 163, 175]);
-    doc.text('Elite Cricket Training Platform', margin, 25);
-    doc.text('Training Report — Generated ' + dateStr, margin, 31);
-
-    // Player name large
-    bold(14);
-    setColor([255, 255, 255]);
-    doc.text(playerName, W - margin, 18, { align: 'right' });
-    normal(9);
-    setColor([156, 163, 175]);
-    doc.text((user.role || 'Cricketer') + ' · ' + (user.level || 'Club') + ' level', W - margin, 25, { align: 'right' });
-
-    var y = 55;
-
-    // ===== SECTION 1: PLAYER SUMMARY =====
-    y = sectionHeader('1. PLAYER SUMMARY', y);
-
-    // XP Level card
-    setFill([17, 24, 39]);
-    doc.roundedRect(margin, y, (W - margin * 2) / 2 - 3, 28, 2, 2, 'F');
-    bold(22);
-    setColor(GREEN);
-    doc.text('Level ' + info.level, margin + 4, y + 12);
-    bold(10);
-    setColor([255, 255, 255]);
-    doc.text(info.name || '', margin + 4, y + 18);
-    normal(8);
-    setColor(GRAY);
-    doc.text((p.total_xp || 0).toLocaleString() + ' XP total', margin + 4, y + 23);
-    progressBar(margin + 4, y + 24.5, (W - margin * 2) / 2 - 11, 2, (info.pct || 0) / 100, GREEN);
-
-    // Streak card
-    var col2 = margin + (W - margin * 2) / 2 + 3;
-    setFill([17, 24, 39]);
-    doc.roundedRect(col2, y, (W - margin * 2) / 2 - 3, 28, 2, 2, 'F');
-    bold(22);
-    setColor(GOLD);
-    doc.text((p.current_streak || 0) + ' days', col2 + 4, y + 12);
-    bold(10);
-    setColor([255, 255, 255]);
-    doc.text('Current Streak', col2 + 4, y + 18);
-    normal(8);
-    setColor(GRAY);
-    doc.text('Best: ' + (p.longest_streak || 0) + ' days', col2 + 4, y + 23);
-
-    y += 33;
-    y = statRow('Drills completed', p.drills_done || 0, y, BLUE);
-    y = statRow('Mental sessions', p.mental_done || 0, y, PURPLE);
-    y = statRow('Workouts done', p.workouts_done || 0, y, GREEN);
-    y = statRow('Practice minutes', (p.practice_minutes || 0).toLocaleString(), y, GRAY);
-    y = hRule(y);
-
-    // ===== SECTION 2: PLAYER RATING RADAR (text representation) =====
-    y = sectionHeader('2. SKILL RATINGS (6-Axis Assessment)', y);
-
-    var axes = [
-      { key: 'batting',     label: 'Batting',     color: BLUE },
-      { key: 'bowling',     label: 'Bowling',      color: [239, 68, 68] },
-      { key: 'fielding',    label: 'Fielding',     color: GREEN },
-      { key: 'fitness',     label: 'Fitness',      color: GOLD },
-      { key: 'mental',      label: 'Mental',       color: PURPLE },
-      { key: 'consistency', label: 'Consistency',  color: [20, 184, 166] },
-    ];
-
-    var axisW = (W - margin * 2) / 2 - 4;
-    var axisStartX = margin;
-    var col2Start = margin + (W - margin * 2) / 2 + 4;
-
-    axes.forEach(function(ax, i) {
-      var isRight = i % 2 === 1;
-      var xBase = isRight ? col2Start : axisStartX;
-      var score = Math.round(rating[ax.key] || 0);
-      var grade = score >= 80 ? 'Elite' : score >= 60 ? 'Strong' : score >= 40 ? 'Developing' : 'Beginner';
-
-      bold(8);
-      setColor(ax.color);
-      doc.text(ax.label, xBase, y);
-      normal(8);
-      setColor(DARK);
-      doc.text(score + '/100  ' + grade, xBase + 25, y);
-      progressBar(xBase, y + 1.5, axisW, 2.5, score / 100, ax.color);
-
-      if (isRight || i === axes.length - 1) { y += 9; }
-    });
-
-    bold(9);
-    setColor(GREEN);
-    doc.text('Overall Rating: ' + Math.round(rating.overall || 0) + '/100', margin, y + 2);
-    y = hRule(y + 6);
-
-    // ===== SECTION 3: 7-DAY XP LOG =====
-    y = sectionHeader('3. 7-DAY XP HISTORY', y);
-    normal(8);
-    setColor(GRAY);
-    doc.text('Date', margin, y);
-    doc.text('XP Earned', margin + 50, y);
-    doc.text('Visual', margin + 90, y);
-    y += 3;
-
-    var maxDayXP = Math.max.apply(null, xpLog.map(function(d) { return d.xp || 0; }).concat([1]));
-    xpLog.forEach(function(day) {
-      var barW = Math.round(((day.xp || 0) / maxDayXP) * 50);
-      normal(8);
-      setColor(DARK);
-      doc.text(day.date || '', margin, y);
-      bold(8);
-      setColor(day.xp > 0 ? GREEN : GRAY);
-      doc.text(String(day.xp || 0) + ' XP', margin + 50, y);
-      if (barW > 0) {
-        setFill(day.xp > 200 ? GREEN : day.xp > 50 ? BLUE : GRAY);
-        doc.rect(margin + 90, y - 3, barW, 3, 'F');
-      }
-      y += 5.5;
-    });
-    y = hRule(y);
-
-    // ===== SECTION 4: BADGES =====
-    y = sectionHeader('4. BADGES EARNED', y);
-    var earned = p.badges || [];
-    if (earned.length === 0) {
-      italic(9); setColor(GRAY); doc.text('No badges earned yet. Keep training!', margin, y); y += 7;
-    } else {
-      var cols4 = 4;
-      var colW4 = (W - margin * 2) / cols4;
-      earned.forEach(function(b, i) {
-        var def = A.BADGE_DEFS ? A.BADGE_DEFS[b] : null;
-        var label = def ? def.label : b;
-        var bx = margin + (i % cols4) * colW4;
-        var by = y + Math.floor(i / cols4) * 8;
-
-        setFill([17, 24, 39]);
-        doc.roundedRect(bx, by - 3.5, colW4 - 2, 7, 1, 1, 'F');
-        bold(6.5);
-        setColor(GOLD);
-        doc.text('🏅', bx + 1.5, by + 0.5);
-        normal(6.5);
-        setColor([229, 231, 235]);
-        doc.text(label.slice(0, 16), bx + 7, by + 0.5);
-      });
-      y += Math.ceil(earned.length / cols4) * 8 + 4;
-    }
-    y = hRule(y);
-
-    // Check if we need a new page
-    if (y > 240) { doc.addPage(); y = 20; }
-
-    // ===================================================================
-    // PAGE 2 (or continuation) — DRILLS + MENTAL + MATCHES
-    // ===================================================================
-
-    // ===== SECTION 5: DRILL PROGRESS =====
-    y = sectionHeader('5. TOP DRILL PROGRESS', y);
-
-    var allDrills = A.DRILLS || [];
-    var drillEntries = Object.keys(drillProg).map(function(id) {
-      var d = allDrills.find(function(x) { return x.id === id; });
-      var prog = drillProg[id];
-      return {
-        id: id,
-        name: d ? d.name : id,
-        attempts: (prog.attempts || []).length,
-        tier: DB.getDrillTier ? DB.getDrillTier(id) : 1,
-      };
-    }).sort(function(a, b) { return b.attempts - a.attempts; }).slice(0, 10);
-
-    if (drillEntries.length === 0) {
-      italic(9); setColor(GRAY); doc.text('No drills logged yet. Start training!', margin, y); y += 7;
-    } else {
-      drillEntries.forEach(function(dr, i) {
-        normal(8);
-        setColor(DARK);
-        doc.text((i + 1) + '. ' + dr.name.slice(0, 30), margin, y);
-        bold(8);
-        setColor(BLUE);
-        doc.text(dr.attempts + ' attempts', margin + 100, y);
-        var tierLabels = ['', 'Bronze', 'Silver', 'Gold', 'Platinum'];
-        setColor(dr.tier >= 3 ? GOLD : GRAY);
-        doc.text(tierLabels[dr.tier] || 'Bronze', margin + 130, y);
-        y += 5;
-      });
-    }
-    y = hRule(y);
-
-    // ===== SECTION 6: MENTAL SESSIONS =====
-    y = sectionHeader('6. MENTAL TRAINING', y);
-    y = statRow('Sessions completed', p.mental_done || 0, y, PURPLE);
-    y = statRow('Average mood rating', mentalAvg > 0 ? mentalAvg.toFixed(1) + '/5 ⭐' : 'No ratings yet', y, GOLD);
-    var mfScore = A.calcMentalFitnessScore ? A.calcMentalFitnessScore() : 0;
-    bold(9); setColor(PURPLE);
-    doc.text('Mental Fitness Score: ' + Math.round(mfScore) + '/100', margin, y);
-    progressBar(margin + 80, y - 3, 60, 3, mfScore / 100, PURPLE);
-    y += 6;
-    y = hRule(y);
-
-    // ===== SECTION 7: LAST 5 MATCHES =====
-    y = sectionHeader('7. RECENT MATCH LOGS', y);
-    var recentMatches = matchLogs.slice(-5).reverse();
-    if (recentMatches.length === 0) {
-      italic(9); setColor(GRAY); doc.text('No matches logged yet. Add matches via Match Logger.', margin, y); y += 7;
-    } else {
-      recentMatches.forEach(function(m, i) {
-        normal(8);
-        setColor(DARK);
-        var dateLabel = m.date || 'Unknown date';
-        var opponent = m.opponent || 'Unknown opponent';
-        var runs = (m.batting && m.batting.runs != null) ? m.batting.runs + ' runs' : '—';
-        var wkts = (m.bowling && m.bowling.wickets != null) ? m.bowling.wickets + ' wkts' : '—';
-        var result = m.result || '';
-        setColor(result === 'win' ? GREEN : result === 'loss' ? [239, 68, 68] : GRAY);
-        doc.text(dateLabel + ' vs ' + opponent.slice(0, 20), margin, y);
-        setColor(BLUE); doc.text('Bat: ' + runs, margin + 90, y);
-        setColor([239, 68, 68]); doc.text('Bowl: ' + wkts, margin + 125, y);
-        setColor(result === 'win' ? GREEN : GRAY);
-        doc.text(result.toUpperCase() || '—', margin + 155, y);
-        y += 5.5;
-      });
-    }
-    y = hRule(y);
-
-    // ===== SECTION 8: GOALS =====
-    y = sectionHeader('8. GOALS & PROGRESS', y);
-    var goalList = Array.isArray(goals) ? goals : [];
-    if (goalList.length === 0) {
-      italic(9); setColor(GRAY); doc.text('No goals set yet.', margin, y); y += 7;
-    } else {
-      goalList.slice(0, 6).forEach(function(g) {
-        normal(8); setColor(DARK);
-        var check = g.completed ? '✓' : '○';
-        setColor(g.completed ? GREEN : GRAY);
-        doc.text(check + ' ' + (g.text || '').slice(0, 55), margin, y);
-        y += 5;
-      });
-    }
-    y = hRule(y);
-
-    // ===== SECTION 9: COACH NOTES =====
-    if (y > 230) { doc.addPage(); y = 20; }
-    y = sectionHeader('9. COACH NOTES', y);
-    normal(8); setColor(GRAY);
-    doc.text('Date of review: _______________   Coach signature: _______________', margin, y); y += 10;
-    for (var ln = 0; ln < 8; ln++) {
-      setDraw([229, 231, 235]);
-      doc.setLineWidth(0.15);
-      doc.line(margin, y, W - margin, y);
-      y += 7;
-    }
-
-    // ===== FOOTER =====
-    var pageCount = doc.getNumberOfPages();
-    for (var pg = 1; pg <= pageCount; pg++) {
-      doc.setPage(pg);
-      normal(7); setColor(GRAY);
-      doc.text('SmartCrick AI · smartcricai.vercel.app · Page ' + pg + ' of ' + pageCount, W / 2, 290, { align: 'center' });
-      doc.text('Confidential — ' + playerName + ' · Generated ' + dateStr, W / 2, 294, { align: 'center' });
-      setFill(GREEN);
-      doc.rect(0, 297, W, 2, 'F');
-    }
-
-    doc.save(filename);
-
-    // Award XP for generating report
-    if (awardXP) awardXP(20, 0, 'report_gen', null, null);
-    if (A.showXPFlash) A.showXPFlash('+20 XP — Report generated!');
-
-  } catch(err) {
-    console.error('[SC] Report generation failed:', err);
-    alert('Could not generate report. Please check console for details.');
-  }
+    var raw = sessionStorage.getItem('sc_pending_session');
+    if (!raw) return null;
+    sessionStorage.removeItem('sc_pending_session');
+    return JSON.parse(raw);
+  } catch(e) { return null; }
 }
 
-// ===== PROFILE PAGE =====
-function ProfilePage(props) {
-  var [progress, setProgress] = useState(null);
-  var [user, setUser] = useState({});
-  var [prestige, setPrestige] = useState(0);
-  var [streakTokens, setStreakTokens] = useState(0);
-  var [goals, setGoals] = useState([]);
-  var [goalInput, setGoalInput] = useState('');
-  var [showPrestigeModal, setShowPrestigeModal] = useState(false);
-  var [reportGenerating, setReportGenerating] = useState(false);
-  var [activeTab, setActiveTab] = useState('overview');
-
-  function reload() {
-    var p = DB.getProgress() || {};
-    setProgress(p);
-    setUser(DB.getUser() || {});
-    setPrestige(DB.getPrestige ? DB.getPrestige() : 0);
-    setStreakTokens(DB.getStreakTokens ? DB.getStreakTokens() : 0);
-    setGoals(DB.getGoals ? DB.getGoals() || [] : []);
-  }
-
-  useEffect(function() {
-    reload();
-    function onUpdate() { reload(); }
-    window.addEventListener('sc_update', onUpdate);
-    return function() { window.removeEventListener('sc_update', onUpdate); };
-  }, []);
-
-  if (!progress) {
-    return h('div', { style: { paddingBottom: 100, background: '#0d1117', minHeight: '100dvh' } },
-      h(TopBar, { title: 'Profile' }),
-      h('div', { style: { textAlign: 'center', padding: '60px 20px', color: '#6b7280' } }, 'Loading...'),
-      h(BottomNav),
-    );
-  }
-
-  var levelInfo = A.getLevelInfo ? A.getLevelInfo(progress.total_xp || 0) : { level: 1, name: 'Rookie', pct: 0, xpToNext: 500, next: 'Net Warrior' };
-  var earned = progress.badges || [];
-  var badgeDefs = A.BADGE_DEFS || {};
-  var rating = A.calcPlayerRating ? A.calcPlayerRating() : {};
-  var mfScore = A.calcMentalFitnessScore ? A.calcMentalFitnessScore() : 0;
-  var xpLog = DB.getXPLast7Days ? DB.getXPLast7Days() : [];
-  var weekXP = xpLog.reduce(function(s, d) { return s + (d.xp || 0); }, 0);
-
-  // Streak multiplier
-  var streak = progress.current_streak || 0;
-  var multiplier = streak >= 30 ? 1.5 : streak >= 14 ? 1.3 : streak >= 7 ? 1.2 : streak >= 3 ? 1.1 : 1.0;
-
-  // Prestige visual
-  var prestigeLabels = ['', 'Gold ⭐', 'Diamond 💎', 'Rainbow 🌈'];
-  var prestigeColors = ['', '#f59e0b', '#a8b2c0', '#8b5cf6'];
-  var canPrestige = levelInfo.level >= 10;
-
-  function handlePrestige() {
-    if (!canPrestige) return;
-    var newPrestige = prestige + 1;
-    if (newPrestige > 3) { newPrestige = 3; }
-    DB.setPrestige(newPrestige);
-    var p2 = DB.getProgress();
-    p2.total_xp = 0;
-    var badgeKey = 'prestige' + newPrestige;
-    if (!p2.badges) p2.badges = [];
-    if (p2.badges.indexOf(badgeKey) === -1) p2.badges.push(badgeKey);
-    DB.saveProgress(p2);
-    setShowPrestigeModal(false);
-    if (A.fireConfetti) A.fireConfetti();
-    window.dispatchEvent(new CustomEvent('sc_update'));
-  }
-
-  function addGoal() {
-    if (!goalInput.trim()) return;
-    var g = { id: Date.now().toString(), text: goalInput.trim(), completed: false, created: new Date().toISOString().slice(0, 10) };
-    var updated = goals.concat([g]);
-    if (DB.saveGoals) DB.saveGoals(updated);
-    setGoals(updated);
-    setGoalInput('');
-    window.dispatchEvent(new CustomEvent('sc_update'));
-  }
-
-  function toggleGoal(id) {
-    var updated = goals.map(function(g) { return g.id === id ? Object.assign({}, g, { completed: !g.completed }) : g; });
-    if (DB.saveGoals) DB.saveGoals(updated);
-    setGoals(updated);
-  }
-
-  function deleteGoal(id) {
-    var updated = goals.filter(function(g) { return g.id !== id; });
-    if (DB.saveGoals) DB.saveGoals(updated);
-    setGoals(updated);
-  }
-
-  function handleDownloadReport() {
-    setReportGenerating(true);
-    setTimeout(function() {
-      generateTrainingReport();
-      setReportGenerating(false);
-    }, 100);
-  }
-
-  var tabStyle = function(t) {
-    return {
-      flex: 1, padding: '10px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500,
-      background: 'none', borderBottom: activeTab === t ? '2px solid #16a34a' : '2px solid transparent',
-      color: activeTab === t ? '#4ade80' : '#6b7280',
-      transition: 'all .15s',
-    };
-  };
-
-  // ===== RATING AXIS BARS =====
-  var axes = [
-    { key: 'batting', label: 'Batting', color: '#3b82f6' },
-    { key: 'bowling', label: 'Bowling', color: '#ef4444' },
-    { key: 'fielding', label: 'Fielding', color: '#10b981' },
-    { key: 'fitness', label: 'Fitness', color: '#f59e0b' },
-    { key: 'mental', label: 'Mental', color: '#8b5cf6' },
-    { key: 'consistency', label: 'Consistency', color: '#14b8a6' },
-  ];
-
-  return h('div', { style: { paddingBottom: 100, background: '#0d1117', minHeight: '100dvh' } },
-    h(TopBar, { title: 'Profile' }),
-
-    // ===== HERO CARD =====
-    h('div', { style: { margin: '14px 16px', padding: '20px 18px', background: 'linear-gradient(135deg,#0f2027,#1a2a1a)', borderRadius: 16, border: '1px solid rgba(22,163,74,.2)' } },
-      h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 } },
-        // Avatar
-        h('div', {
-          style: {
-            width: 56, height: 56, borderRadius: 16, flexShrink: 0,
-            background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 24, fontWeight: 700, color: '#fff',
-            border: prestige > 0 ? '2px solid ' + prestigeColors[prestige] : '2px solid rgba(22,163,74,.3)',
-            boxShadow: prestige > 0 ? '0 0 14px ' + prestigeColors[prestige] + '60' : 'none',
-          },
-          'aria-hidden': 'true',
-        }, (user.name || 'P').charAt(0).toUpperCase()),
-
-        h('div', { style: { flex: 1 } },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-            h('h2', { style: { fontSize: 18, fontWeight: 700, color: '#e5e7eb', margin: 0 } }, user.name || 'Player'),
-            prestige > 0 && h('span', {
-              style: { fontSize: 11, fontWeight: 600, color: prestigeColors[prestige], background: prestigeColors[prestige] + '20', padding: '2px 8px', borderRadius: 10, border: '1px solid ' + prestigeColors[prestige] + '40' },
-            }, 'P' + prestige + ' ' + prestigeLabels[prestige]),
-          ),
-          h('div', { style: { fontSize: 13, color: '#9ca3af', marginTop: 3 } },
-            (user.role || 'Cricketer') + ' · ' + (user.ageGroup || '') + ' · ' + (user.level || 'Club'),
-          ),
-          h('div', { style: { display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' } },
-            h('div', null,
-              h('div', { style: { fontSize: 11, color: '#6b7280' } }, 'Streak'),
-              h('div', { style: { fontSize: 16, fontWeight: 700, color: '#f59e0b' } }, streak + ' 🔥'),
-            ),
-            h('div', null,
-              h('div', { style: { fontSize: 11, color: '#6b7280' } }, 'Week XP'),
-              h('div', { style: { fontSize: 16, fontWeight: 700, color: '#4ade80' } }, weekXP.toLocaleString()),
-            ),
-            h('div', null,
-              h('div', { style: { fontSize: 11, color: '#6b7280' } }, 'Tokens'),
-              h('div', { style: { fontSize: 16, fontWeight: 700, color: '#8b5cf6' } }, streakTokens + ' 🎫'),
-            ),
-            multiplier > 1.0 && h('div', null,
-              h('div', { style: { fontSize: 11, color: '#6b7280' } }, 'XP Bonus'),
-              h('div', { style: { fontSize: 14, fontWeight: 700, color: '#ef4444' } }, multiplier + '× 🔥'),
-            ),
-          ),
-        ),
+// ── Session Card ──────────────────────────────────────────────────
+function SessionCard({ sess, onComplete, onDelete }) {
+  var tc = TYPE_COLORS[sess.type] || TYPE_COLORS.custom;
+  var done = sess.status === 'complete';
+  return h('div', { style:{ borderRadius:10, overflow:'hidden', border:'1px solid '+(done?'rgba(22,163,74,.3)':tc.border), background:done?'rgba(22,163,74,.06)':tc.bg, marginBottom:8 } },
+    h('div', { style:{ display:'flex', alignItems:'center', gap:10, padding:'12px 14px' } },
+      h('div', { style:{ width:36, height:36, borderRadius:8, background:tc.color+'20', border:'1px solid '+tc.color+'40', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 } },
+        h(Icon, { n:tc.icon, cls:'w-4 h-4', style:{ color:tc.color } })
       ),
-
-      // XP bar
-      h('div', { style: { marginBottom: 4 } },
-        h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
-          h('span', { style: { fontSize: 12, color: '#4ade80', fontWeight: 600 } }, 'Level ' + levelInfo.level + ' — ' + levelInfo.name),
-          h('span', { style: { fontSize: 12, color: '#6b7280' } }, (progress.total_xp || 0).toLocaleString() + ' XP'),
-        ),
-        h('div', { style: { height: 6, background: 'rgba(255,255,255,.08)', borderRadius: 3, overflow: 'hidden' },
-          role: 'progressbar', 'aria-valuenow': levelInfo.pct || 0, 'aria-valuemin': 0, 'aria-valuemax': 100,
-          'aria-label': 'Level ' + levelInfo.level + ' progress: ' + Math.round(levelInfo.pct || 0) + '%',
-        },
-          h('div', { style: { height: '100%', width: (levelInfo.pct || 0) + '%', background: '#16a34a', borderRadius: 3, transition: 'width .5s ease' } }),
-        ),
-        h('div', { style: { fontSize: 11, color: '#4b5563', marginTop: 4, textAlign: 'right' } },
-          (levelInfo.xpToNext || 0).toLocaleString() + ' XP to ' + (levelInfo.next || 'max level'),
-        ),
+      h('div', { style:{ flex:1, minWidth:0 } },
+        h('div', { style:{ fontSize:13, fontWeight:700, color:done?'#6b7280':'#f0fdf4', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textDecoration:done?'line-through':'none' } }, sess.title),
+        h('div', { style:{ fontSize:11, color:'#6b7280', marginTop:2 } }, [sess.time, sess.duration_minutes&&sess.duration_minutes+'min', sess.xp_value&&'+'+sess.xp_value+' XP'].filter(Boolean).join(' · ')),
       ),
-
-      // Prestige button
-      canPrestige && h('button', {
-        onClick: function() { setShowPrestigeModal(true); },
-        style: {
-          marginTop: 10, width: '100%', padding: '9px', borderRadius: 8,
-          background: 'linear-gradient(135deg,#f59e0b20,#ef444420)', border: '1px solid #f59e0b40',
-          color: '#f59e0b', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-        },
-        onFocus: function(e) { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,158,11,.3)'; },
-        onBlur:  function(e) { e.currentTarget.style.boxShadow = 'none'; },
-      }, '⚡ Ready to Prestige? — Reset to Level 1 and earn a prestige border'),
+      !done && h('button', {
+        onClick: function(){ onComplete(sess); },
+        'aria-label': 'Mark '+sess.title+' complete',
+        style:{ padding:'6px 12px', background:'#16a34a', color:'#fff', border:'none', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', flexShrink:0 },
+      }, '✓ Done'),
+      h('button', { onClick:function(){ onDelete(sess.id); }, 'aria-label':'Delete session', style:{ background:'none', border:'none', color:'#374151', cursor:'pointer', padding:'4px 6px', fontSize:16, flexShrink:0 } }, '×'),
     ),
-
-    // ===== TABS =====
-    h('div', { style: { display: 'flex', borderBottom: '1px solid rgba(255,255,255,.07)', margin: '0 16px' }, role: 'tablist' },
-      ['overview', 'skills', 'badges', 'goals'].map(function(t) {
-        var labels = { overview: 'Overview', skills: 'Skills', badges: 'Badges', goals: 'Goals' };
-        return h('button', { key: t, role: 'tab', 'aria-selected': activeTab === t ? 'true' : 'false', onClick: function() { setActiveTab(t); }, style: tabStyle(t) }, labels[t]);
-      })
-    ),
-
-    h('div', { style: { padding: '16px 16px 0' } },
-
-      // ===== OVERVIEW TAB =====
-      activeTab === 'overview' && h(Fragment, null,
-        // Stats grid
-        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 } },
-          [
-            { label: 'Drills done',   value: progress.drills_done || 0,   color: '#3b82f6' },
-            { label: 'Mental done',   value: progress.mental_done || 0,   color: '#8b5cf6' },
-            { label: 'Workouts',      value: progress.workouts_done || 0, color: '#10b981' },
-            { label: 'Best streak',   value: (progress.longest_streak || 0) + ' days', color: '#f59e0b' },
-            { label: 'Practice min',  value: (progress.practice_minutes || 0).toLocaleString(), color: '#6b7280' },
-            { label: 'Badges earned', value: earned.length, color: '#f59e0b' },
-          ].map(function(s, i) {
-            return h('div', {
-              key: i,
-              style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10, padding: '12px 14px' },
-            },
-              h('div', { style: { fontSize: 11, color: '#6b7280', marginBottom: 4 } }, s.label),
-              h('div', { style: { fontSize: 20, fontWeight: 700, color: s.color } }, s.value),
-            );
-          })
-        ),
-
-        // 7-day XP chart
-        h('div', { style: { marginBottom: 16, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: '14px' } },
-          h('div', { style: { fontSize: 13, fontWeight: 600, color: '#e5e7eb', marginBottom: 10 } }, 'Last 7 Days'),
-          h('div', { style: { display: 'flex', gap: 6, alignItems: 'flex-end', height: 60 },
-            role: 'img', 'aria-label': '7 day XP bar chart',
-          },
-            xpLog.map(function(d) {
-              var maxXP = Math.max.apply(null, xpLog.map(function(x) { return x.xp || 0; }).concat([1]));
-              var h2 = Math.max(((d.xp || 0) / maxXP) * 52, d.xp > 0 ? 4 : 1);
-              return h('div', { key: d.date, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
-                h('div', { style: { fontSize: 9, color: '#6b7280' } }, d.xp > 0 ? d.xp : ''),
-                h('div', { style: { width: '100%', height: h2 + 'px', background: d.xp > 0 ? '#16a34a' : 'rgba(255,255,255,.05)', borderRadius: 3, transition: 'height .4s' } }),
-                h('div', { style: { fontSize: 9, color: '#4b5563' } }, (d.date || '').slice(5)),
-              );
-            })
-          ),
-        ),
-
-        // Download report button
-        h('button', {
-          onClick: handleDownloadReport,
-          disabled: reportGenerating,
-          'aria-label': 'Download training report as PDF',
-          style: {
-            width: '100%', padding: '14px', borderRadius: 10, border: 'none',
-            background: reportGenerating ? 'rgba(255,255,255,.06)' : 'linear-gradient(135deg,#1a3a2a,#16a34a20)',
-            border: '1px solid rgba(22,163,74,.3)', color: reportGenerating ? '#6b7280' : '#4ade80',
-            fontSize: 14, fontWeight: 600, cursor: reportGenerating ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          },
-          onFocus: function(e) { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(22,163,74,.3)'; },
-          onBlur:  function(e) { e.currentTarget.style.boxShadow = 'none'; },
-        },
-          reportGenerating ? '⏳ Generating...' : '📄 Download Training Report (PDF)',
-        ),
-        h('p', { style: { fontSize: 11, color: '#4b5563', textAlign: 'center', marginTop: 6 } },
-          'Full 9-section PDF report · Earns +20 XP',
-        ),
-      ),
-
-      // ===== SKILLS TAB =====
-      activeTab === 'skills' && h('div', null,
-        h('div', { style: { marginBottom: 12 } },
-          h('div', { style: { fontSize: 20, fontWeight: 700, color: '#e5e7eb', textAlign: 'center' } },
-            Math.round(rating.overall || 0),
-          ),
-          h('div', { style: { fontSize: 12, color: '#6b7280', textAlign: 'center', marginBottom: 16 } }, 'Overall Rating'),
-        ),
-        axes.map(function(ax) {
-          var score = Math.round(rating[ax.key] || 0);
-          var grade = score >= 80 ? 'Elite' : score >= 60 ? 'Strong' : score >= 40 ? 'Developing' : 'Beginner';
-          return h('div', { key: ax.key, style: { marginBottom: 12 } },
-            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 } },
-              h('span', { style: { fontSize: 13, fontWeight: 500, color: '#e5e7eb' } }, ax.label),
-              h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
-                h('span', { style: { fontSize: 11, color: '#6b7280' } }, grade),
-                h('span', { style: { fontSize: 14, fontWeight: 700, color: ax.color } }, score),
-              ),
-            ),
-            h('div', { style: { height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3, overflow: 'hidden' },
-              role: 'progressbar', 'aria-valuenow': score, 'aria-valuemin': 0, 'aria-valuemax': 100,
-              'aria-label': ax.label + ': ' + score + ' out of 100',
-            },
-              h('div', { style: { height: '100%', width: score + '%', background: ax.color, borderRadius: 3 } }),
-            ),
-          );
-        }),
-
-        // Mental Fitness
-        h('div', { style: { marginTop: 16, padding: '14px', background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.2)', borderRadius: 10 } },
-          h('div', { style: { fontSize: 13, fontWeight: 600, color: '#c4b5fd', marginBottom: 8 } }, 'Mental Fitness Score'),
-          h('div', { style: { fontSize: 28, fontWeight: 700, color: '#8b5cf6', textAlign: 'center', marginBottom: 8 } }, Math.round(mfScore)),
-          h('div', { style: { height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3, overflow: 'hidden' } },
-            h('div', { style: { height: '100%', width: mfScore + '%', background: '#8b5cf6', borderRadius: 3 } }),
-          ),
-        ),
-      ),
-
-      // ===== BADGES TAB =====
-      activeTab === 'badges' && h('div', null,
-        earned.length === 0 ? (
-          h('div', { style: { textAlign: 'center', padding: '40px 20px', color: '#6b7280' } },
-            h('div', { style: { fontSize: 40, marginBottom: 8 } }, '🏅'),
-            h('div', { style: { fontSize: 14 } }, 'No badges yet. Start training to earn them!'),
-          )
-        ) : (
-          h('div', null,
-            h('div', { style: { fontSize: 13, color: '#6b7280', marginBottom: 12 } }, earned.length + ' badges earned'),
-            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }, role: 'list' },
-              earned.map(function(b) {
-                var def = badgeDefs[b] || { icon: '⭐', label: b, desc: '' };
-                return h('div', {
-                  key: b, role: 'listitem',
-                  style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 10, padding: '10px 12px' },
-                },
-                  h('div', { style: { fontSize: 18, marginBottom: 4 }, 'aria-hidden': 'true' }, '🏅'),
-                  h('div', { style: { fontSize: 12, fontWeight: 600, color: '#fbbf24' } }, def.label),
-                  h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 2 } }, def.desc || ''),
-                );
-              })
-            ),
-          )
-        ),
-      ),
-
-      // ===== GOALS TAB =====
-      activeTab === 'goals' && h('div', null,
-        // Add goal
-        h('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
-          h('input', {
-            value: goalInput,
-            onChange: function(e) { setGoalInput(e.target.value); },
-            onKeyDown: function(e) { if (e.key === 'Enter') addGoal(); },
-            placeholder: 'Add a new cricket goal...',
-            'aria-label': 'New goal text',
-            style: {
-              flex: 1, padding: '10px 12px',
-              background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)',
-              borderRadius: 8, color: '#e5e7eb', fontSize: 14, outline: 'none',
-            },
-          }),
-          h('button', {
-            onClick: addGoal, 'aria-label': 'Add goal',
-            style: { padding: '10px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 600 },
-          }, '+'),
-        ),
-
-        // Goals list
-        goals.length === 0 ? (
-          h('div', { style: { textAlign: 'center', padding: '30px 20px', color: '#6b7280' } },
-            h('div', { style: { fontSize: 13 } }, 'No goals yet. What do you want to achieve?'),
-          )
-        ) : (
-          h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 }, role: 'list', 'aria-label': 'Your cricket goals' },
-            goals.map(function(g) {
-              return h('div', {
-                key: g.id, role: 'listitem',
-                style: {
-                  display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px',
-                  background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10,
-                },
-              },
-                h('button', {
-                  onClick: function() { toggleGoal(g.id); },
-                  'aria-checked': g.completed ? 'true' : 'false', role: 'checkbox',
-                  'aria-label': (g.completed ? 'Mark incomplete: ' : 'Mark complete: ') + g.text,
-                  style: {
-                    width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                    background: g.completed ? '#16a34a' : 'transparent',
-                    border: '2px solid ' + (g.completed ? '#16a34a' : '#374151'),
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, color: '#fff',
-                  },
-                }, g.completed ? '✓' : ''),
-                h('div', { style: { flex: 1 } },
-                  h('div', { style: { fontSize: 13, color: g.completed ? '#6b7280' : '#e5e7eb', textDecoration: g.completed ? 'line-through' : 'none' } }, g.text),
-                  g.created && h('div', { style: { fontSize: 11, color: '#4b5563', marginTop: 2 } }, 'Added ' + g.created),
-                ),
-                h('button', {
-                  onClick: function() { deleteGoal(g.id); },
-                  'aria-label': 'Delete goal: ' + g.text,
-                  style: { background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: 16, padding: '0 4px' },
-                }, '×'),
-              );
-            })
-          )
-        ),
-      ),
-    ),
-
-    // ===== PRESTIGE CONFIRMATION MODAL =====
-    showPrestigeModal && h('div', {
-      role: 'alertdialog', 'aria-modal': 'true', 'aria-label': 'Prestige confirmation',
-      style: { position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(0,0,0,.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 },
-    },
-      h('div', { style: { background: '#161b27', borderRadius: 16, padding: '28px 24px', maxWidth: 340, width: '100%', textAlign: 'center', border: '1px solid rgba(245,158,11,.3)' } },
-        h('div', { style: { fontSize: 40, marginBottom: 12 } }, '⚡'),
-        h('h3', { style: { fontSize: 18, fontWeight: 700, color: '#f59e0b', marginBottom: 8 } }, 'Ready to Prestige?'),
-        h('p', { style: { fontSize: 13, color: '#9ca3af', lineHeight: 1.6, marginBottom: 20 } },
-          'This resets your XP to 0 and your level to 1. You keep all your badges and unlock a prestigious badge border. This is for elite players who have mastered SmartCrick.',
-        ),
-        h('div', { style: { background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 8, padding: '10px', marginBottom: 20, fontSize: 12, color: '#fbbf24' } },
-          'Prestige ' + (prestige + 1) + ' reward: ' + prestigeLabels[Math.min(prestige + 1, 3)] + ' badge border',
-        ),
-        h('div', { style: { display: 'flex', gap: 10 } },
-          h('button', {
-            onClick: function() { setShowPrestigeModal(false); },
-            style: { flex: 1, padding: '12px', background: 'rgba(255,255,255,.06)', border: 'none', borderRadius: 8, color: '#9ca3af', fontSize: 14, cursor: 'pointer' },
-          }, 'Cancel'),
-          h('button', {
-            onClick: handlePrestige,
-            style: { flex: 1, padding: '12px', background: 'linear-gradient(135deg,#92400e,#f59e0b)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
-          }, 'Prestige Now ⚡'),
-        ),
-      ),
-    ),
-
-    h(BottomNav),
   );
 }
 
-A.ProfilePage = ProfilePage;
-A.generateTrainingReport = generateTrainingReport;
-console.log('[SC] app-profile.js v3.2 — Profile + jsPDF report + prestige ready');
+// ── Add Session Modal ─────────────────────────────────────────────
+function AddSessionModal({ date, onSave, onClose }) {
+  var [type,     setType]     = useState('drill');
+  var [title,    setTitle]    = useState('');
+  var [time,     setTime]     = useState('07:00');
+  var [refId,    setRefId]    = useState('');
+  var [notes,    setNotes]    = useState('');
+  var tc = TYPE_COLORS[type]||TYPE_COLORS.custom;
+
+  // Auto-suggestions by type
+  var suggestions = {
+    drill:   (DRILLS||[]).slice(0,6).map(function(d){ return { id:d.id, label:d.title, xp:d.xp_value, dur:d.duration_minutes }; }),
+    mental:  (MENTAL_SESSIONS||[]).slice(0,6).map(function(m){ return { id:m.id, label:m.title, xp:m.xp_value, dur:Math.round(m.duration_seconds/60) }; }),
+    fitness: (WORKOUTS||[]).slice(0,6).map(function(w){ return { id:w.id, label:w.name, xp:w.xp_value, dur:w.duration_minutes }; }),
+    match:   [], rest:[], custom:[],
+  };
+  var sugg = suggestions[type]||[];
+  var [selectedSugg, setSelectedSugg] = useState(null);
+
+  function handleSugg(s) {
+    setSelectedSugg(s); setTitle(s.label); setRefId(s.id);
+  }
+
+  function handleSave() {
+    if (!title.trim()) return;
+    var xp = selectedSugg ? selectedSugg.xp : 60;
+    var dur = selectedSugg ? selectedSugg.dur : 20;
+    onSave({
+      id: 'sch_' + Date.now(),
+      date: date, time: time, type: type,
+      title: title.trim(), ref_id: refId || null,
+      duration_minutes: dur, xp_value: xp,
+      status: 'pending', notes: notes, color: tc.color,
+    });
+  }
+
+  return h('div', { style:{ position:'fixed', inset:0, zIndex:60, background:'rgba(0,0,0,.8)', backdropFilter:'blur(6px)', display:'flex', alignItems:'flex-end', justifyContent:'center' }, onClick:onClose },
+    h('div', { onClick:function(e){e.stopPropagation();}, style:{ width:'100%', maxWidth:520, background:'#161b22', borderRadius:'20px 20px 0 0', border:'1px solid rgba(48,54,61,.9)', borderBottom:'none', padding:'0 20px 40px', maxHeight:'85vh', overflowY:'auto' } },
+      h('div', { style:{ width:40, height:4, borderRadius:2, background:'rgba(75,85,99,.6)', margin:'12px auto 20px' } }),
+      h('h3', { style:{ fontSize:17, fontWeight:800, color:'#f0fdf4', marginBottom:16 } }, 'Add Session — '+formatDate(date)),
+
+      // Type selector
+      h('div', { style:{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:6, marginBottom:16 } },
+        ['drill','mental','fitness','match','rest','custom'].map(function(t) {
+          var ttc = TYPE_COLORS[t], isSel = type===t;
+          return h('button', { key:t, onClick:function(){setType(t);setTitle('');setRefId('');setSelectedSugg(null);},
+            style:{ padding:'8px 4px', borderRadius:8, border:'1px solid '+(isSel?ttc.color:'rgba(48,54,61,.9)'), background:isSel?ttc.bg:'rgba(22,27,34,.9)', cursor:'pointer', fontFamily:'inherit', fontSize:11, fontWeight:700, color:isSel?ttc.color:'#6b7280' } },
+            ttc.label,
+          );
+        })
+      ),
+
+      // Quick picks
+      sugg.length > 0 && h('div', { style:{ marginBottom:14 } },
+        h('div', { style:{ fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:8 } }, 'Quick Pick'),
+        h('div', { style:{ display:'flex', flexDirection:'column', gap:6 } },
+          sugg.map(function(s) {
+            return h('button', { key:s.id, onClick:function(){handleSugg(s);},
+              style:{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:8, border:'1px solid '+(selectedSugg&&selectedSugg.id===s.id?tc.color:'rgba(48,54,61,.9)'), background:selectedSugg&&selectedSugg.id===s.id?tc.bg:'rgba(22,27,34,.9)', cursor:'pointer', textAlign:'left', fontFamily:'inherit' } },
+              h('div', { style:{ flex:1, fontSize:12, fontWeight:600, color:'#f0fdf4' } }, s.label),
+              h(XPBadge, { xp: s.xp }),
+            );
+          })
+        ),
+      ),
+
+      // Title input
+      h('div', { style:{ marginBottom:12 } },
+        h('label', { htmlFor:'sess-title', style:{ display:'block', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6 } }, 'Session Title'),
+        h('input', { id:'sess-title', type:'text', value:title, onChange:function(e){setTitle(e.target.value);}, placeholder:'e.g. Cover Drive Mastery', style:{ width:'100%', padding:'11px 14px', background:'rgba(22,27,34,.9)', border:'1px solid rgba(48,54,61,.9)', borderRadius:9, color:'#f0fdf4', fontSize:14, fontFamily:'inherit', outline:'none', boxSizing:'border-box' } }),
+      ),
+
+      // Time
+      h('div', { style:{ marginBottom:16 } },
+        h('label', { htmlFor:'sess-time', style:{ display:'block', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6 } }, 'Start Time'),
+        h('input', { id:'sess-time', type:'time', value:time, onChange:function(e){setTime(e.target.value);}, style:{ width:'100%', padding:'11px 14px', background:'rgba(22,27,34,.9)', border:'1px solid rgba(48,54,61,.9)', borderRadius:9, color:'#f0fdf4', fontSize:14, fontFamily:'inherit', outline:'none', boxSizing:'border-box' } }),
+      ),
+
+      h('button', { onClick:handleSave, disabled:!title.trim(), style:{ width:'100%', padding:'13px', background:title.trim()?tc.color:'rgba(48,54,61,.5)', color:'#fff', border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor:title.trim()?'pointer':'not-allowed', opacity:title.trim()?1:0.5 } }, 'Add to Schedule'),
+    ),
+  );
+}
+
+// ── Week nav header ───────────────────────────────────────────────
+function WeekNav({ monday, onPrev, onNext }) {
+  var sunday = addDays(monday, 6);
+  var label  = dateStr(monday).slice(5).replace('-','/') + ' – ' + dateStr(sunday).slice(5).replace('-','/');
+  var isCurrent = dateStr(monday) === dateStr(getWeekMonday(new Date()));
+  return h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'rgba(22,27,34,.9)', borderBottom:'1px solid rgba(48,54,61,.9)' } },
+    h('button', { onClick:onPrev, 'aria-label':'Previous week', style:{ background:'rgba(48,54,61,.5)', border:'1px solid rgba(75,85,99,.5)', borderRadius:8, padding:'6px 12px', color:'#8b949e', cursor:'pointer', fontSize:12, fontWeight:600 } }, '‹ Prev'),
+    h('div', { style:{ textAlign:'center' } },
+      h('div', { style:{ fontSize:13, fontWeight:700, color:'#f0fdf4' } }, label),
+      isCurrent && h('div', { style:{ fontSize:10, color:'#16a34a', fontWeight:700 } }, 'This Week'),
+    ),
+    h('button', { onClick:onNext, 'aria-label':'Next week', style:{ background:'rgba(48,54,61,.5)', border:'1px solid rgba(75,85,99,.5)', borderRadius:8, padding:'6px 12px', color:'#8b949e', cursor:'pointer', fontSize:12, fontWeight:600 } }, 'Next ›'),
+  );
+}
+
+// ── Daily Net integration in schedule ────────────────────────────
+function DailyNetScheduleRow() {
+  var today = new Date().toISOString().slice(0,10);
+  var saved = DB.get('dn_'+today);
+  var done  = !!saved;
+  return h('div', { style:{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:9, border:'1px solid rgba(79,70,229,.3)', background:'rgba(79,70,229,.07)', marginBottom:8 } },
+    h('div', { style:{ width:36, height:36, borderRadius:8, background:'rgba(79,70,229,.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 } }, h('span', { style:{fontSize:18} }, '🏏')),
+    h('div', { style:{ flex:1 } },
+      h('div', { style:{ fontSize:13, fontWeight:700, color:done?'#6b7280':'#f0fdf4', textDecoration:done?'line-through':'none' } }, 'The Daily Net'),
+      h('div', { style:{ fontSize:11, color:'#6b7280', marginTop:2 } }, done ? 'Score: '+saved.score+'/5 ✓' : '5 cricket questions · ~2 min'),
+    ),
+    !done && h('button', { onClick:function(){nav('DailyNet');}, style:{ padding:'6px 12px', background:'#4f46e5', color:'#fff', border:'none', borderRadius:7, fontSize:11, fontWeight:700, cursor:'pointer', flexShrink:0 } }, 'Play →'),
+    done && h('span', { style:{ fontSize:11, fontWeight:700, color:'#4ade80', flexShrink:0 } }, '✓ Done'),
+  );
+}
+
+// ── Main Schedule Page ────────────────────────────────────────────
+function SchedulePage() {
+  var [monday,    setMonday]    = useState(function(){ return getWeekMonday(new Date()); });
+  var [schedule,  setSchedule]  = useState(function(){ return DB.getSchedule(); });
+  var [showAdd,   setShowAdd]   = useState(false);
+  var [addDate,   setAddDate]   = useState(null);
+  var [toast,     setToast]     = useState('');
+  var today = new Date().toISOString().slice(0,10);
+
+  useEffect(function(){
+    var pending = checkPendingSession();
+    if (pending) { completePendingSession(pending); }
+  }, []);
+  useEffect(function(){
+    var onUpdate = function(){ setSchedule(DB.getSchedule()); };
+    window.addEventListener('sc_update', onUpdate);
+    return function(){ window.removeEventListener('sc_update', onUpdate); };
+  }, []);
+
+  function completePendingSession(pending) {
+    var xp = pending.xp_value || 60;
+    awardXP(xp, pending.duration_minutes||15, pending.type||'drill', pending.type==='drill'?'drill':pending.type==='mental'?'mental':null, pending.ref_id||null);
+    if (pending.schedule_id) DB.updateSession(pending.schedule_id, { status:'complete' });
+    setSchedule(DB.getSchedule());
+    showToast('✓ Session complete! +' + xp + ' XP');
+  }
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(function(){ setToast(''); }, 2500);
+  }
+
+  function handleComplete(sess) {
+    DB.updateSession(sess.id, { status:'complete' });
+    var xp = sess.xp_value||60;
+    awardXP(xp, sess.duration_minutes||15, sess.type, sess.type==='drill'?'drill':sess.type==='mental'?'mental':null, sess.ref_id||null);
+    // If it's a drill/mental ref, navigate into it
+    if (sess.type==='drill' && sess.ref_id) {
+      sessionStorage.setItem('sc_pending_session', JSON.stringify(Object.assign({},sess,{schedule_id:sess.id})));
+      nav('DrillDetail', { id: sess.ref_id });
+    } else if (sess.type==='mental' && sess.ref_id) {
+      sessionStorage.setItem('sc_pending_session', JSON.stringify(Object.assign({},sess,{schedule_id:sess.id})));
+      nav('MentalPlayer', { id: sess.ref_id });
+    } else if (sess.type==='fitness' && sess.ref_id) {
+      sessionStorage.setItem('sc_pending_session', JSON.stringify(Object.assign({},sess,{schedule_id:sess.id})));
+      nav('WorkoutDetail', { id: sess.ref_id });
+    } else {
+      fireConfetti();
+      setSchedule(DB.getSchedule());
+      showToast('✓ '+sess.title+' complete! +'+xp+' XP');
+      window.dispatchEvent(new CustomEvent('sc_update'));
+    }
+  }
+
+  function handleDelete(id) { DB.deleteSession(id); setSchedule(DB.getSchedule()); }
+
+  function handleSave(sess) {
+    DB.addSession(sess);
+    setSchedule(DB.getSchedule());
+    setShowAdd(false);
+    showToast('Added: ' + sess.title);
+  }
+
+  // iCal export
+  function exportICal() {
+    var sessions = (schedule.sessions||[]);
+    if (!sessions.length) { alert('No sessions to export.'); return; }
+    var lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SmartCrick AI//EN','CALSCALE:GREGORIAN'];
+    sessions.forEach(function(s) {
+      var dtStr = s.date.replace(/-/g,'') + 'T' + (s.time||'070000').replace(':','') + '00';
+      lines.push('BEGIN:VEVENT','UID:smartcrick-'+s.id,'DTSTART:'+dtStr,'DURATION:PT'+(s.duration_minutes||20)+'M','SUMMARY:'+s.title+' [SmartCrick]','DESCRIPTION:+'+s.xp_value+' XP · '+s.type,'END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    var blob = new Blob([lines.join('\r\n')],{type:'text/calendar'});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a'); a.href=url; a.download='SmartCrick_Schedule.ics'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Build 7-day array for current week
+  var days = Array.from({length:7}, function(_,i) {
+    var d = addDays(monday, i), ds = dateStr(d);
+    var sessions = (schedule.sessions||[]).filter(function(s){ return s.date===ds; }).sort(function(a,b){ return (a.time||'00:00').localeCompare(b.time||'00:00'); });
+    return { date:ds, label:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i], sessions:sessions, isToday:ds===today };
+  });
+
+  var totalXP   = (schedule.sessions||[]).reduce(function(s,x){ return s+(x.xp_value||0); }, 0);
+  var doneSess  = (schedule.sessions||[]).filter(function(s){ return s.status==='complete'; }).length;
+  var totalSess = (schedule.sessions||[]).length;
+
+  return h('div', { style:{ paddingBottom:100, background:'#0d1117', minHeight:'100dvh' } },
+    h(PageHeader, { title:'Training Schedule', subtitle:'Plan · Track · Improve', gradient:'linear-gradient(135deg,#0f766e,#0891b2)',
+      actions: h('div', { style:{display:'flex',gap:8} },
+        h('button', { onClick:exportICal, title:'Export to calendar', style:{background:'rgba(255,255,255,.12)',border:'none',borderRadius:8,padding:'7px 10px',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700} }, '📅 iCal'),
+        h('button', { onClick:function(){setAddDate(today);setShowAdd(true);}, 'aria-label':'Add session', style:{background:'rgba(255,255,255,.15)',border:'none',borderRadius:8,padding:'7px 12px',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700} }, '+ Add'),
+      ),
+    }),
+
+    h(WeekNav, { monday:monday, onPrev:function(){setMonday(addDays(monday,-7));}, onNext:function(){setMonday(addDays(monday,7));} }),
+
+    // Week stats
+    h('div', { style:{ display:'flex', gap:8, padding:'12px 16px', borderBottom:'1px solid rgba(48,54,61,.9)' } },
+      [{label:'Sessions',value:totalSess,color:'#8b949e'},{label:'Completed',value:doneSess,color:'#16a34a'},{label:'Total XP',value:totalXP,color:'#f59e0b'}].map(function(s){
+        return h('div', { key:s.label, style:{ flex:1, textAlign:'center', padding:'8px', background:'rgba(22,27,34,.9)', borderRadius:8, border:'1px solid rgba(48,54,61,.9)' } },
+          h('div', { style:{ fontSize:18, fontWeight:800, color:s.color } }, s.value),
+          h('div', { style:{ fontSize:10, color:'#484f58', fontWeight:700, textTransform:'uppercase', marginTop:2 } }, s.label),
+        );
+      })
+    ),
+
+    // Daily Net row (today only)
+    h('div', { style:{ padding:'10px 16px 0' } },
+      h(DailyNetScheduleRow),
+    ),
+
+    // Days
+    h('div', { style:{ padding:'0 16px 16px' } },
+      days.map(function(day) {
+        return h('div', { key:day.date, style:{ marginBottom:12 } },
+          // Day header
+          h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 } },
+            h('div', { style:{ display:'flex', alignItems:'center', gap:8 } },
+              h('div', { style:{ width:32, height:32, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:13, background:day.isToday?'#16a34a':'rgba(48,54,61,.5)', color:'#fff' } }, day.label),
+              h('div', { style:{ fontSize:12, color:day.isToday?'#4ade80':'#6b7280', fontWeight:day.isToday?700:500 } }, day.date.slice(5).replace('-','/')),
+              day.isToday && h('span', { style:{ fontSize:10, background:'rgba(22,163,74,.15)', color:'#16a34a', padding:'2px 7px', borderRadius:4, fontWeight:700 } }, 'TODAY'),
+            ),
+            h('button', { onClick:function(){setAddDate(day.date);setShowAdd(true);},'aria-label':'Add session on '+day.date, style:{ background:'rgba(48,54,61,.4)', border:'1px solid rgba(75,85,99,.4)', borderRadius:6, padding:'3px 9px', color:'#6b7280', cursor:'pointer', fontSize:11, fontWeight:700 } }, '+ Add'),
+          ),
+          // Sessions
+          day.sessions.length===0
+            ? h('div', { style:{ padding:'8px 12px', borderRadius:8, border:'1px dashed rgba(48,54,61,.6)', color:'#374151', fontSize:12, textAlign:'center' } }, 'Rest or add a session')
+            : day.sessions.map(function(sess) {
+                return h(SessionCard, { key:sess.id, sess:sess, onComplete:handleComplete, onDelete:handleDelete });
+              }),
+        );
+      })
+    ),
+
+    // Add modal
+    showAdd && h(AddSessionModal, { date:addDate, onSave:handleSave, onClose:function(){setShowAdd(false);} }),
+
+    // Toast
+    toast && h('div', { role:'status','aria-live':'polite', style:{ position:'fixed', bottom:90, left:16, right:16, zIndex:90, background:'#16a34a', color:'#fff', padding:'12px 18px', borderRadius:10, fontWeight:700, fontSize:14, textAlign:'center', boxShadow:'0 6px 24px rgba(22,163,74,.5)' } }, toast),
+  );
+}
+
+A.SchedulePage = SchedulePage;
+console.log('[SC] app-schedule.js v2.1 — SchedulePage + Daily Net row ready');
 })();
