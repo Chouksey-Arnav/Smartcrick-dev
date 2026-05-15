@@ -7,8 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SmartCrick">
-  <meta name="description" content="SmartCrick AI — Elite cricket training platform.">
-  <title>SmartCrick AI</title>
+  <meta name="description" content="SmartCrick — Elite cricket training platform.">
+  <title>SmartCrick</title>
   <link rel="apple-touch-icon" href="https://fav.farm/🏏">
   <link rel="icon" href="https://fav.farm/🏏">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,7 @@
   <script>tailwind.config={theme:{extend:{}},corePlugins:{preflight:false}};</script>
   <link rel="stylesheet" href="styles.css">
 
-  <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds -->
+  <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds. -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
@@ -33,39 +33,102 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
 
+  <style>
+    /* ── CRITICAL LAYOUT STYLES (inline so they load before scripts) ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #0d1117; }
+    #root { min-height: 100dvh; background: #0d1117; }
+
+    /* Desktop sidebar: 260px fixed left column, hidden on mobile */
+    .sc-desktop-sidebar {
+      display: none; /* mobile: hidden */
+      flex-shrink: 0;
+      width: 260px;
+      position: sticky;
+      top: 0;
+      height: 100dvh;
+      overflow: hidden;
+    }
+    @media (min-width: 768px) {
+      .sc-desktop-sidebar { display: block; }
+    }
+
+    /* Mobile-only elements: hidden on desktop (768px+) */
+    .sc-mobile-only { display: block; }
+    @media (min-width: 768px) {
+      .sc-mobile-only { display: none !important; }
+    }
+
+    /* On desktop, remove bottom padding that was for BottomNav */
+    @media (min-width: 768px) {
+      .pb-28 { padding-bottom: 2rem !important; }
+    }
+
+    /* Splash loader */
+    #sc-loading {
+      position: fixed; inset: 0; background: #0d1117;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; z-index: 9999;
+    }
+    #sc-loading .sc-logo  { font-size: 3rem; margin-bottom: 1rem; }
+    #sc-loading .sc-name  { font-family: 'Inter', system-ui, sans-serif; font-size: 1.5rem; font-weight: 900; color: #f0fdf4; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    #sc-loading .sc-sub   { font-family: 'Inter', system-ui, sans-serif; font-size: 0.75rem; color: #484f58; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+    #sc-loading .sc-dots  { display: flex; gap: 6px; margin-top: 2rem; }
+    #sc-loading .sc-dot   { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; animation: scDotPulse 1.2s ease-in-out infinite; }
+    #sc-loading .sc-dot:nth-child(2) { animation-delay: 0.2s; }
+    #sc-loading .sc-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes scDotPulse { 0%, 100% { opacity: 0.2; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1); } }
+  </style>
+</head>
+<body>
+
+  <!-- Splash screen — removed when React mounts content into #root -->
+  <div id="sc-loading" role="status" aria-label="Loading SmartCrick">
+    <div class="sc-logo" aria-hidden="true">🏏</div>
+    <div class="sc-name">SmartCrick</div>
+    <div class="sc-sub">Elite Cricket Training</div>
+    <div class="sc-dots" aria-hidden="true">
+      <div class="sc-dot"></div>
+      <div class="sc-dot"></div>
+      <div class="sc-dot"></div>
+    </div>
+  </div>
+
+  <div id="root"></div>
+
   <!--
-    ╔══════════════════════════════════════════════════╗
-    ║  SCRIPT LOAD ORDER IS CRITICAL ║
-    ╚══════════════════════════════════════════════════╝
-    1.  sc_opensource.js   open-source bridges
-    2.  app-core.js        DB, XP, router, helpers
-    3.  app-data.js        drills, sessions, workouts, 30-day data
-    4.  app-ui.js          shared components
-    5.  app-onboard.js     onboarding wizard
-    6.  app-assessment.js  skill radar
-    7.  app-home.js        home page
-    8.  app-drills.js      drill system
-    9.  app-mental.js      mental training
-    10. app-fitness.js     workouts
-    11. app-timer.js       timers
-    12. app-schedule.js    schedule
-    13. app-skillpaths.js
-    14. app-progress.js
-    15. app-challenges.js
-    16. app-profile.js
-    17. app-stubs.js       stub pages (overridden by files below)
-    18. app-aicoach.js     AI Coach (overrides stub)
-    19. app-daily-net.js   Daily Net
-    20. app-viral.js       Cricket DNA
-    21. app-matchlogger.js Match Logger V2     <- NEW Session 6
-    22. app-performance.js Performance V2     <- NEW Session 6
-    23. app-quizzes.js     Quizzes V2         <- NEW Session 6
-    24. app-root.js        MUST BE LAST
+    SCRIPT LOAD ORDER IS CRITICAL — DO NOT CHANGE
+    1.  sc_opensource.js   — open-source bridges
+    2.  app-core.js        — DB, XP, router, helpers
+    3.  app-data.js        — drills, sessions, workouts, data
+    4.  app-ui.js          — shared components (Sidebar, DesktopSidebar, etc.)
+    5.  app-ui-patch.js    — adds TopBar, MoreMenu, fixes BottomNav ← NEW FIX
+    6.  app-onboard.js     — onboarding wizard
+    7.  app-assessment.js  — skill radar
+    8.  app-home.js        — home page
+    9.  app-drills.js      — drill system
+    10. app-mental.js      — mental training
+    11. app-fitness.js     — workouts
+    12. app-timer.js       — timers
+    13. app-schedule.js    — schedule
+    14. app-skillpaths.js
+    15. app-progress.js
+    16. app-challenges.js
+    17. app-profile.js
+    18. app-stubs.js       — stub pages
+    19. app-aicoach.js     — AI Coach
+    20. app-daily-net.js   — Daily Net
+    21. app-viral.js       — Cricket DNA
+    22. app-matchlogger.js — Match Logger V2
+    23. app-performance.js — Performance Analytics V2
+    24. app-quizzes.js     — Quizzes V2
+    25. app-root.js        — MUST BE LAST
   -->
   <script src="sc_opensource.js"></script>
   <script src="app-core.js"></script>
   <script src="app-data.js"></script>
   <script src="app-ui.js"></script>
+  <script src="app-ui-patch.js"></script>
   <script src="app-onboard.js"></script>
   <script src="app-assessment.js"></script>
   <script src="app-home.js"></script>
@@ -87,43 +150,31 @@
   <script src="app-quizzes.js"></script>
   <script src="app-root.js"></script>
 
-  <style>
-    #root { min-height:100dvh; background:#0d1117; }
-    #sc-loading {
-      position:fixed; inset:0; background:#0d1117;
-      display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999;
-    }
-    #sc-loading .logo  { font-size:3rem; margin-bottom:1rem; }
-    #sc-loading .name  { font-family:'Inter',system-ui,sans-serif; font-size:1.5rem; font-weight:900; color:#f0fdf4; letter-spacing:-.03em; margin-bottom:.5rem; }
-    #sc-loading .sub   { font-family:'Inter',system-ui,sans-serif; font-size:.75rem; color:#484f58; font-weight:600; text-transform:uppercase; letter-spacing:.08em; }
-    #sc-loading .dots  { display:flex; gap:6px; margin-top:2rem; }
-    #sc-loading .dot   { width:8px; height:8px; border-radius:50%; background:#16a34a; animation:lp 1.2s ease-in-out infinite; }
-    #sc-loading .dot:nth-child(2) { animation-delay:.2s; }
-    #sc-loading .dot:nth-child(3) { animation-delay:.4s; }
-    @keyframes lp { 0%,100%{opacity:.2;transform:scale(.7)} 50%{opacity:1;transform:scale(1)} }
-  </style>
-</head>
-<body>
-  <div id="sc-loading">
-    <div class="logo">🏏</div>
-    <div class="name">SmartCrick AI</div>
-    <div class="sub">Elite Cricket Training</div>
-    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-  </div>
-  <div id="root"></div>
   <script>
-    (function(){
-      var ob = new MutationObserver(function(){
+    // Remove splash when React renders content into #root
+    (function() {
+      var loader = document.getElementById('sc-loading');
+      if (!loader) return;
+
+      // MutationObserver: remove as soon as content appears
+      var ob = new MutationObserver(function() {
         var r = document.getElementById('root');
         if (r && r.children.length > 0) {
-          var l = document.getElementById('sc-loading');
-          if (l) { l.style.opacity='0'; l.style.transition='opacity .3s'; setTimeout(function(){ if(l.parentNode)l.remove(); },350); }
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.3s ease';
+          setTimeout(function() {
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+          }, 350);
           ob.disconnect();
         }
       });
-      var r = document.getElementById('root');
-      if (r) ob.observe(r,{childList:true});
-      setTimeout(function(){ var l=document.getElementById('sc-loading'); if(l&&l.parentNode)l.remove(); },6000);
+      var root = document.getElementById('root');
+      if (root) ob.observe(root, { childList: true });
+
+      // Hard timeout: remove after 8s regardless
+      setTimeout(function() {
+        if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+      }, 8000);
     })();
   </script>
 </body>
