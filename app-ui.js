@@ -396,5 +396,197 @@ A.BottomNav = BottomNav;
 function SectionLabel({children}){ return h('div',{className:'sc-section-label'},children); }
 A.SectionLabel = SectionLabel;
 
+// ================================================================
+// APP-UI ADDITIONS — paste these into app-ui.js BEFORE the final
+// console.log('[SC] app-ui...') line
+// Fixes: adds TopBar, adds MoreMenu, fixes BottomNav props
+// ================================================================
+
+// ── TOP BAR (mobile header) ───────────────────────────────────────
+// Shown on mobile only — hidden on desktop via CSS .sc-topbar
+function TopBar(props) {
+  var page = props.page;
+  var title = props.title;
+  var onMenuOpen = props.onMenuOpen;
+  var onBack = props.onBack;
+  var right = props.right;
+  var label = title || page || 'SmartCrick AI';
+
+  var [scrolled, setScrolled] = React.useState(false);
+  React.useEffect(function() {
+    var el = document.querySelector('.sc-main-column') || window;
+    function onScroll() { setScrolled((el.scrollTop || window.scrollY) > 8); }
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return function() { el.removeEventListener('scroll', onScroll); };
+  }, []);
+
+  return h('header', {
+    className: 'sc-topbar',
+    style: {
+      position: 'fixed',
+      top: 0, left: 0, right: 0,
+      zIndex: 30,
+      height: 'calc(52px + env(safe-area-inset-top,0px))',
+      paddingTop: 'env(safe-area-inset-top,0px)',
+      background: scrolled ? 'rgba(8,11,15,0.98)' : 'rgba(8,11,15,0.94)',
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      borderBottom: scrolled ? '1px solid rgba(36,42,50,0.95)' : '1px solid rgba(36,42,50,0.5)',
+      transition: 'border-color 0.2s, background 0.2s',
+    }
+  },
+    h('div', {
+      style: {
+        display: 'flex', alignItems: 'center', height: 52,
+        padding: '0 4px 0 8px', gap: 4,
+      }
+    },
+      // Left: hamburger or back
+      onBack
+        ? h('button', {
+            onClick: onBack,
+            'aria-label': 'Go back',
+            style: {
+              width: 40, height: 40, borderRadius: 10, display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0,
+            }
+          },
+            h(Icon, { n: 'arrowL', cls: 'w-5 h-5', style: { color: '#9ca3af' } })
+          )
+        : h('button', {
+            onClick: onMenuOpen,
+            'aria-label': 'Open navigation menu',
+            style: {
+              width: 40, height: 40, borderRadius: 10, display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0,
+            }
+          },
+            h(Icon, { n: 'menu', cls: 'w-5 h-5', style: { color: '#9ca3af' } })
+          ),
+
+      // Center: logo + title
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 } },
+        h('div', {
+          'aria-hidden': 'true',
+          style: {
+            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+            background: 'linear-gradient(135deg,#16a34a,#0d9488)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 0 1px rgba(22,163,74,0.3)',
+          }
+        },
+          h(Icon, { n: 'bat', cls: 'w-4 h-4', style: { color: '#fff' } })
+        ),
+        h('span', {
+          style: {
+            fontSize: label === 'SmartCrick AI' ? 15 : 14,
+            fontWeight: label === 'SmartCrick AI' ? 800 : 700,
+            color: '#f0fdf4',
+            letterSpacing: label === 'SmartCrick AI' ? '-0.02em' : '-0.01em',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }
+        }, label === 'SmartCrick AI' ? 'SmartCrick AI' : label)
+      ),
+
+      // Right: actions slot
+      right
+        ? h('div', { style: { display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 } }, right)
+        : h('div', { style: { width: 40, flexShrink: 0 } }) // spacer for symmetry
+    )
+  );
+}
+A.TopBar = TopBar;
+
+// ── MORE MENU — delegates to Sidebar ─────────────────────────────
+// Backward-compat: app-root.js previously referenced MoreMenu.
+// Now app-root.js uses A.Sidebar directly, but keep this as fallback.
+function MoreMenu(props) {
+  return h(A.Sidebar, { open: true, onClose: props.onClose || function(){}, currentPage: '' });
+}
+A.MoreMenu = MoreMenu;
+
+// ── FIXED BOTTOM NAV ─────────────────────────────────────────────
+// Changes: accepts 'page' prop (not 'currentPage'), 4 tabs: Today/Train/Progress/You
+// Adds className 'sc-bottomnav' for CSS responsive hiding on desktop
+function BottomNav(props) {
+  // Accept both 'page' and 'currentPage' for backward compat
+  var activePage = props.page || props.currentPage || '';
+
+  var items = [
+    { n: 'home',     label: 'Today',    pg: 'Home' },
+    { n: 'bat',      label: 'Train',    pg: 'Drills' },
+    { n: 'barChart', label: 'Progress', pg: 'Progress' },
+    { n: 'user',     label: 'You',      pg: 'Profile' },
+  ];
+
+  return h('nav', {
+    className: 'sc-bottomnav',
+    'aria-label': 'Main navigation',
+    style: {
+      position: 'fixed',
+      bottom: 0, left: 0, right: 0,
+      zIndex: 40,
+      background: 'rgba(8,11,15,0.97)',
+      backdropFilter: 'blur(24px) saturate(1.8)',
+      WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
+      borderTop: '1px solid rgba(36,42,50,0.9)',
+      paddingBottom: 'env(safe-area-inset-bottom,0px)',
+    }
+  },
+    h('div', { style: { display: 'flex', alignItems: 'center', height: 58 } },
+      items.map(function(item) {
+        var active = activePage === item.pg;
+        return h('button', {
+          key: item.pg,
+          onClick: function() { A.nav(item.pg); },
+          'aria-label': item.label,
+          'aria-current': active ? 'page' : undefined,
+          style: {
+            flex: 1,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 3, height: '100%', position: 'relative',
+            background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+            outline: 'none',
+          }
+        },
+          // Top accent bar for active
+          active && h('div', {
+            'aria-hidden': 'true',
+            style: {
+              position: 'absolute', top: 0, left: '50%',
+              transform: 'translateX(-50%)',
+              width: 20, height: 2.5,
+              background: '#16a34a',
+              borderRadius: '0 0 3px 3px',
+            }
+          }),
+          h(Icon, {
+            n: item.n,
+            cls: 'w-5 h-5',
+            style: {
+              color: active ? '#4ade80' : '#374151',
+              transition: 'color 0.15s',
+              transform: active ? 'scale(1.05)' : 'scale(1)',
+            }
+          }),
+          h('span', {
+            style: {
+              fontSize: 10,
+              fontWeight: active ? 700 : 500,
+              color: active ? '#4ade80' : '#374151',
+              transition: 'color 0.15s',
+              letterSpacing: '-0.01em',
+            }
+          }, item.label)
+        );
+      })
+    )
+  );
+}
+A.BottomNav = BottomNav;
+
+// (End of app-ui additions — the existing console.log('[SC] app-ui...') line follows below)  
 console.log('[SC] app-ui v3.1 ready — inline sidebar, DesktopSidebar exported');
 })();
