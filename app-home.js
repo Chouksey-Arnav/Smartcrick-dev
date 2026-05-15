@@ -257,10 +257,7 @@ function HomePage() {
   var maxMomentum=Math.max.apply(null,momentum.map(function(d){return d.xp;}).concat([1]));
 
   return h('div',{style:{background:'#0d1117',minHeight:'100dvh',paddingBottom:100}},
-    h(TopBar,{title:'SmartCrick AI',right:h('div',{style:{display:'flex',gap:6}},
-      h('button',{onClick:function(){nav('Assessment');},'aria-label':'Skill assessment',style:{background:'rgba(255,255,255,.06)',border:'none',borderRadius:8,padding:'6px 10px',color:'#9ca3af',cursor:'pointer',fontSize:13}},'🎯'),
-      h('button',{onClick:function(){nav('ThirtyDay');},'aria-label':'30-day challenge',style:{background:'rgba(255,255,255,.06)',border:'none',borderRadius:8,padding:'6px 10px',color:'#9ca3af',cursor:'pointer',fontSize:13}},'🏆'),
-    )}),
+    
 
     // ── Hero ─────────────────────────────────────────────────────
     h('div',{style:{padding:'16px 16px 12px',background:'linear-gradient(180deg,rgba(22,163,74,.07) 0%,transparent 100%)'}},
