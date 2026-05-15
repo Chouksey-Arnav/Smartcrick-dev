@@ -642,3 +642,145 @@ img, video, iframe { max-width: 100%; }
   min-width: 0;
   overflow-x: hidden;
 }
+/* ================================================================
+   LAYOUT FIX — Append to styles.css
+   Fixes: sidebar on mobile, responsive two-column desktop layout
+   Generated: Session 7 fixes
+================================================================ */
+
+/* ── App layout wrapper ─────────────────────────────────────────── */
+/* Mobile: single column stack */
+/* Desktop (768px+): two-column flex row */
+.sc-app-layout {
+  display: flex;
+  flex-direction: row;    /* sidebar on left */
+  min-height: 100dvh;
+  background: #0d1117;
+}
+
+/* Main content column — fills remaining space */
+.sc-main-column {
+  flex: 1;
+  min-width: 0;          /* prevent flex child overflow */
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ── Desktop sidebar wrapper ────────────────────────────────────── */
+/* Hidden on mobile — only appears at 768px+ */
+.sc-desktop-sidebar-wrap {
+  display: none;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .sc-desktop-sidebar-wrap {
+    display: block;
+    width: 260px;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+/* ── Mobile TopBar ──────────────────────────────────────────────── */
+/* Shown on mobile — hidden on desktop */
+.sc-topbar {
+  display: flex;           /* visible by default (mobile) */
+}
+
+@media (min-width: 768px) {
+  .sc-topbar {
+    display: none !important;    /* hidden on desktop — sidebar handles nav */
+  }
+}
+
+/* ── Mobile BottomNav ───────────────────────────────────────────── */
+/* Shown on mobile — hidden on desktop */
+.sc-bottomnav {
+  display: flex;           /* visible by default (mobile) */
+}
+
+@media (min-width: 768px) {
+  .sc-bottomnav {
+    display: none !important;    /* hidden on desktop — sidebar handles nav */
+  }
+}
+
+/* ── Page content area ──────────────────────────────────────────── */
+.sc-page-content {
+  flex: 1;
+  min-height: 100vh;
+}
+
+/* When TopBar is shown (mobile), add top padding to avoid overlap */
+.sc-page-content--topbar {
+  padding-top: calc(52px + env(safe-area-inset-top, 0px));
+}
+
+/* On desktop, no TopBar — remove top padding */
+@media (min-width: 768px) {
+  .sc-page-content--topbar {
+    padding-top: 0;
+  }
+}
+
+/* ── Fix PageHeader safe-area on desktop ────────────────────────── */
+/* PageHeader uses max(3.5rem, calc(3.5rem + env(safe-area-inset-top))) */
+/* On desktop inside the sidebar layout, reduce the top padding */
+@media (min-width: 768px) {
+  .page-header,
+  [class*="page-header"] {
+    padding-top: 1.75rem !important;
+  }
+}
+
+/* ── Fix pb-28 (bottom padding for BottomNav) on desktop ────────── */
+/* Pages add pb-28 for the mobile BottomNav, not needed on desktop */
+@media (min-width: 768px) {
+  .pb-28 {
+    padding-bottom: 2rem !important;
+  }
+}
+
+/* ── Sidebar Drawer — ensure it doesn't show behind desktop sidebar */
+/* On desktop, the sidebar backdrop should be hidden              */
+@media (min-width: 768px) {
+  /* The mobile sidebar drawer is still rendered (for state management)
+     but its backdrop and panel are kept off-screen */
+}
+
+/* ── Fix double BottomNav gap ───────────────────────────────────── */
+/* Ensure only one BottomNav is visible at a time */
+/* app-home.js renders its own BottomNav — hide the one from AppShell if dupe */
+.sc-main-column nav + nav {
+  display: none;
+}
+
+/* ── Improved card depth on desktop ───────────────────────────────── */
+@media (min-width: 768px) {
+  .stat-card,
+  .pro-card {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+}
+
+/* ── TopBar safe-area support ───────────────────────────────────── */
+.sc-topbar {
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+}
+
+/* ── Smooth sidebar animation ───────────────────────────────────── */
+.sc-desktop-sidebar-wrap {
+  transition: none; /* sticky — no animation needed */
+}
+
+/* ── Prevent content shift when sidebar opens on mobile ─────────── */
+body.sc-menu-open {
+  overflow: hidden;
+}
