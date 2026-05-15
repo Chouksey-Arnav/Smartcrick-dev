@@ -4,7 +4,7 @@
 const { createElement:h, useState, useEffect, useRef, Fragment } = React;
 const A = window.SC_APP;
 const { DB, nav } = A;
-const { BottomNav, TopBar } = A;
+
 
 // ── Spin prizes ──────────────────────────────────────────────────
 var SPIN_PRIZES = [
