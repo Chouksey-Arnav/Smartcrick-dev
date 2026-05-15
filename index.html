@@ -18,7 +18,7 @@
   <script>tailwind.config={theme:{extend:{}},corePlugins:{preflight:false}};</script>
   <link rel="stylesheet" href="styles.css">
 
-  <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds → infinite splash loop -->
+  <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js"></script>
@@ -35,29 +35,32 @@
 
   <!--
     ╔══════════════════════════════════════════════════╗
-    ║  SCRIPT LOAD ORDER IS CRITICAL — DO NOT CHANGE  ║
+    ║  SCRIPT LOAD ORDER IS CRITICAL ║
     ╚══════════════════════════════════════════════════╝
-    1. sc_opensource.js  — open-source bridges
-    2. app-core.js       — DB, XP, router, helpers
-    3. app-data.js       — drills, sessions, workouts, 30-day data
-    4. app-ui.js         — shared components
-    5. app-onboard.js    — onboarding wizard
-    6. app-assessment.js — skill radar
-    7. app-home.js       — home page
-    8. app-drills.js     — drill system
-    9. app-mental.js     — mental training
-    10. app-fitness.js   — workouts
-    11. app-timer.js     — timers
-    12. app-schedule.js  — schedule (CORRECT file — not ProfilePage)
+    1.  sc_opensource.js   open-source bridges
+    2.  app-core.js        DB, XP, router, helpers
+    3.  app-data.js        drills, sessions, workouts, 30-day data
+    4.  app-ui.js          shared components
+    5.  app-onboard.js     onboarding wizard
+    6.  app-assessment.js  skill radar
+    7.  app-home.js        home page
+    8.  app-drills.js      drill system
+    9.  app-mental.js      mental training
+    10. app-fitness.js     workouts
+    11. app-timer.js       timers
+    12. app-schedule.js    schedule
     13. app-skillpaths.js
     14. app-progress.js
     15. app-challenges.js
     16. app-profile.js
-    17. app-stubs.js
-    18. app-aicoach.js   — AI Coach (overrides stub)
-    19. app-daily-net.js — Daily Net feature
-    20. app-viral.js     — Cricket DNA
-    21. app-root.js      — MUST BE LAST (single IIFE, single root.render)
+    17. app-stubs.js       stub pages (overridden by files below)
+    18. app-aicoach.js     AI Coach (overrides stub)
+    19. app-daily-net.js   Daily Net
+    20. app-viral.js       Cricket DNA
+    21. app-matchlogger.js Match Logger V2     <- NEW Session 6
+    22. app-performance.js Performance V2     <- NEW Session 6
+    23. app-quizzes.js     Quizzes V2         <- NEW Session 6
+    24. app-root.js        MUST BE LAST
   -->
   <script src="sc_opensource.js"></script>
   <script src="app-core.js"></script>
@@ -79,6 +82,9 @@
   <script src="app-aicoach.js"></script>
   <script src="app-daily-net.js"></script>
   <script src="app-viral.js"></script>
+  <script src="app-matchlogger.js"></script>
+  <script src="app-performance.js"></script>
+  <script src="app-quizzes.js"></script>
   <script src="app-root.js"></script>
 
   <style>
