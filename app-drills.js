@@ -621,7 +621,7 @@ function DrillDetailPage({ params }) {
               transition:'border-color 0.15s',
             },
             onFocus:function(e){e.target.style.borderColor='#16a34a';e.target.style.boxShadow='0 0 0 3px rgba(22,163,74,0.15)';},
-            onBlur2:function(e){e.target.style.borderColor='rgba(48,54,61,0.9)';e.target.style.boxShadow='none';},
+            onBlur:function(e){e.target.style.borderColor='rgba(48,54,61,0.9)';e.target.style.boxShadow='none';}
           }),
           h('p',{style:{fontSize:10,color:'#374151',marginTop:5}},'Notes auto-save when you leave this field. Private to you.')
         );
