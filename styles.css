@@ -784,3 +784,123 @@ img, video, iframe { max-width: 100%; }
 body.sc-menu-open {
   overflow: hidden;
 }
+/* ================================================================
+   APPEND TO BOTTOM OF styles.css
+   SmartCrick Desktop Layout Fix v1.1
+   Fixes: content not filling full width on desktop screens
+================================================================ */
+
+/* ── Core: ensure body + root fill full viewport ────────────────── */
+html, body {
+  width: 100%;
+  min-height: 100dvh;
+}
+#root {
+  width: 100%;
+  min-height: 100dvh;
+}
+
+/* ── App layout: full-width flex row ─────────────────────────────── */
+/* The outer wrapper in app-root.js is a flex row.
+   This guarantees it stretches edge-to-edge. */
+#root > div:first-child {
+  width: 100%;
+  min-height: 100dvh;
+}
+
+/* ── Desktop sidebar: fixed left, sticky-scroll ─────────────────── */
+.sc-desktop-sidebar {
+  display: none;
+  flex-shrink: 0;
+  width: 260px;
+  /* Position the sidebar so it stays on screen while content scrolls */
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .sc-desktop-sidebar {
+    display: block;
+  }
+}
+
+/* ── Main content column: fills all remaining horizontal space ───── */
+/* On desktop the main column should grow to fill width after sidebar */
+@media (min-width: 768px) {
+  /* Page content should use 100% of the available column width */
+  .sc-page-content,
+  #root [style*="flex: 1"],
+  #root [style*="flex:1"] {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Remove excess bottom padding (no BottomNav on desktop) */
+  .pb-28,
+  [class*="pb-28"] {
+    padding-bottom: 2rem !important;
+  }
+
+  /* PageHeader: reduce top safe-area padding on desktop */
+  [style*="safe-area-inset-top"] {
+    padding-top: 1.75rem !important;
+  }
+}
+
+/* ── Tablet breakpoint: slightly narrower sidebar ───────────────── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .sc-desktop-sidebar {
+    width: 220px;
+  }
+}
+
+/* ── Desktop page max-width for readability on ultra-wide screens ── */
+/* Content beyond 1200px is given a max-width center-container */
+@media (min-width: 1280px) {
+  /* Optional: uncomment to cap content width on ultra-wide monitors */
+  /* .sc-main-column { max-width: 1200px; } */
+}
+
+/* ── Mobile: restore proper sizing ──────────────────────────────── */
+@media (max-width: 767px) {
+  .sc-desktop-sidebar {
+    display: none !important;
+  }
+  .sc-mobile-only {
+    display: block !important;
+  }
+  .sc-bottomnav {
+    display: flex !important;
+  }
+  .sc-topbar {
+    display: flex !important;
+  }
+}
+
+/* ── Desktop: hide mobile-only chrome ───────────────────────────── */
+@media (min-width: 768px) {
+  .sc-mobile-only {
+    display: none !important;
+  }
+  .sc-bottomnav {
+    display: none !important;
+  }
+  .sc-topbar {
+    display: none !important;
+  }
+}
+
+/* ── Overflow fix: only hide horizontal overflow, not vertical ───── */
+/* Prevents content from being clipped vertically on desktop */
+body {
+  overflow-x: hidden;
+  overflow-y: auto; /* allow page-level scrolling */
+}
+
+/* ── Daily Reward Modal accessibility ──────────────────────────── */
+/* Ensure modal is always above sidebar/header on desktop */
+[style*="z-index: 9500"],
+[style*="z-index:9500"] {
+  z-index: 9500 !important;
+}
