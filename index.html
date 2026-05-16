@@ -34,14 +34,14 @@
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
 
   <style>
-    /* ── CRITICAL LAYOUT STYLES (inline so they load before scripts) ── */
+    /* ── CRITICAL LAYOUT STYLES ── */
     *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; background: #0d1117; }
-    #root { min-height: 100dvh; background: #0d1117; }
+    html, body { margin: 0; padding: 0; background: #0d1117; width: 100%; }
+    #root { min-height: 100dvh; background: #0d1117; width: 100%; }
 
-    /* Desktop sidebar: 260px fixed left column, hidden on mobile */
+    /* Desktop sidebar placeholder */
     .sc-desktop-sidebar {
-      display: none; /* mobile: hidden */
+      display: none;
       flex-shrink: 0;
       width: 260px;
       position: sticky;
@@ -53,14 +53,10 @@
       .sc-desktop-sidebar { display: block; }
     }
 
-    /* Mobile-only elements: hidden on desktop (768px+) */
+    /* Mobile-only — hidden on desktop */
     .sc-mobile-only { display: block; }
     @media (min-width: 768px) {
       .sc-mobile-only { display: none !important; }
-    }
-
-    /* On desktop, remove bottom padding that was for BottomNav */
-    @media (min-width: 768px) {
       .pb-28 { padding-bottom: 2rem !important; }
     }
 
@@ -82,7 +78,6 @@
 </head>
 <body>
 
-  <!-- Splash screen — removed when React mounts content into #root -->
   <div id="sc-loading" role="status" aria-label="Loading SmartCrick">
     <div class="sc-logo" aria-hidden="true">🏏</div>
     <div class="sc-name">SmartCrick</div>
@@ -97,32 +92,10 @@
   <div id="root"></div>
 
   <!--
-    SCRIPT LOAD ORDER IS CRITICAL — DO NOT CHANGE
-    1.  sc_opensource.js   — open-source bridges
-    2.  app-core.js        — DB, XP, router, helpers
-    3.  app-data.js        — drills, sessions, workouts, data
-    4.  app-ui.js          — shared components (Sidebar, DesktopSidebar, etc.)
-    5.  app-ui-patch.js    — adds TopBar, MoreMenu, fixes BottomNav ← NEW FIX
-    6.  app-onboard.js     — onboarding wizard
-    7.  app-assessment.js  — skill radar
-    8.  app-home.js        — home page
-    9.  app-drills.js      — drill system
-    10. app-mental.js      — mental training
-    11. app-fitness.js     — workouts
-    12. app-timer.js       — timers
-    13. app-schedule.js    — schedule
-    14. app-skillpaths.js
-    15. app-progress.js
-    16. app-challenges.js
-    17. app-profile.js
-    18. app-stubs.js       — stub pages
-    19. app-aicoach.js     — AI Coach
-    20. app-daily-net.js   — Daily Net
-    21. app-viral.js       — Cricket DNA
-    22. app-matchlogger.js — Match Logger V2
-    23. app-performance.js — Performance Analytics V2
-    24. app-quizzes.js     — Quizzes V2
-    25. app-root.js        — MUST BE LAST
+    SCRIPT LOAD ORDER — DO NOT CHANGE
+    New: app-daily-reward.js added BEFORE app-root.js
+         app-home.js updated (v4.1) — use the new file
+         app-root.js updated (v5.1) — use the new file
   -->
   <script src="sc_opensource.js"></script>
   <script src="app-core.js"></script>
@@ -148,6 +121,7 @@
   <script src="app-matchlogger.js"></script>
   <script src="app-performance.js"></script>
   <script src="app-quizzes.js"></script>
+  <script src="app-daily-reward.js"></script>
   <script src="app-root.js"></script>
 
   <script>
@@ -155,8 +129,6 @@
     (function() {
       var loader = document.getElementById('sc-loading');
       if (!loader) return;
-
-      // MutationObserver: remove as soon as content appears
       var ob = new MutationObserver(function() {
         var r = document.getElementById('root');
         if (r && r.children.length > 0) {
@@ -170,8 +142,6 @@
       });
       var root = document.getElementById('root');
       if (root) ob.observe(root, { childList: true });
-
-      // Hard timeout: remove after 8s regardless
       setTimeout(function() {
         if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
       }, 8000);
