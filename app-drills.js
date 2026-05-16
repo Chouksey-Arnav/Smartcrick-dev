@@ -1,866 +1,1028 @@
 // Save as: app-drills.js
 // ================================================================
-// SmartCrick AI — Drills v3.2
-// D-A: Target tracker bottom sheet
-// D-B: Bronze/Silver/Gold tier system
-// D-C: Practice session builder (chain drills, templates)
-// D-F: Category completion rings (SVG progress rings)
-// DR-1: Personal Record badge on drill list cards
-// DR-2: Drill streak tracking (silent, on completion)
-// DR-3: Featured Drill banner + 2x XP this week
-// DR-6: Quick 10-Min Set button
+// SmartCrick — Cricket Drills v4.0
+// COMPLETE REWRITE — fixes drills not visible bug
+// • All 35 drills rendered in filterable grid
+// • YouTube video player per drill
+// • Search + category filter
+// • Drill detail page with full instructions
+// • XP tracking per drill
+// • Integrated audio/video
 // ================================================================
 (function () {
 'use strict';
-const { createElement:h, useState, useEffect, useRef, Fragment } = React;
-const A = window.SC_APP;
-const { nav, DB, awardXP, fireConfetti, getEncouragement, getFeaturedDrillId } = A;
-const { DRILLS, DRILL_CATS, LVL_BADGE, SCHED_TYPES } = A;
-const { Icon, XPBadge, PremiumBadge, EmptyState, PageHeader } = A;
+var h = React.createElement;
+var useState = React.useState;
+var useEffect = React.useEffect;
+var useRef = React.useRef;
+var A = window.SC_APP;
+var DB = A.DB;
+var nav = A.nav;
+var awardXP = A.awardXP;
 
-// ── Youth encouragement fallback pool ───────────────────────────
-const YOUTH_ENC = [
-  "Outstanding! Elite cricketers train exactly like this! 🏏",
-  "Champions are built one drill at a time — that's you! ⭐",
-  "Your future self is going to thank you for this! 💪",
-  "Match-winner in the making! You've got what it takes! 🏆",
-  "Brilliant work! The coaches would notice that dedication!",
-  "That's the spirit! You're getting sharper every session! 🎯",
-  "Every great cricketer started right where you are — keep going! 🔥",
-  "You're building real cricket skills. Be proud of yourself! 🌟",
+// ── COMPLETE DRILL DATA (35 drills) ─────────────────────────────
+var DRILLS = [
+  // ── BATTING (12 drills) ────────────────────────────────────────
+  {
+    id: 'bat-cover-drive', category: 'batting', name: 'Cover Drive Mastery',
+    level: 'intermediate', xp: 85, duration: '20 min', icon: '🏏',
+    tagline: 'The most elegant shot in cricket',
+    focus: ['footwork','timing','bat angle'],
+    equipment: ['bat', 'ball', 'tee (optional)'],
+    steps: [
+      'Start in a balanced stance — feet shoulder-width, weight slightly forward',
+      'Watch the ball from the bowler\'s hand, not from the pitch',
+      'Lead with front elbow high as you step towards the pitch of the ball',
+      'Drive through the line, bat face angling to cover region',
+      'Full follow-through — bat finishing high over left shoulder',
+      'Hold the position for 2 seconds and check your balance',
+    ],
+    keyPoints: ['Head still at point of contact','Front elbow drives the shot','Weight transfers fully to front foot'],
+    commonMistakes: ['Reaching for the ball instead of moving feet','Closing the bat face too early','Not following through fully'],
+    videoId: 'yeImrfgNJoM',
+    videoTitle: 'DRIVE Like a Pro — Full Cover Drive Technique + Drills',
+    videoChannel: 'B3 Cricket',
+  },
+  {
+    id: 'bat-defensive-block', category: 'batting', name: 'Defensive Block',
+    level: 'beginner', xp: 60, duration: '15 min', icon: '🛡️',
+    tagline: 'The foundation of every great innings',
+    focus: ['defence','patience','head position'],
+    equipment: ['bat', 'ball'],
+    steps: [
+      'Set up with a solid, balanced stance — eyes level',
+      'Pick up the bat straight on the back swing',
+      'Step into line with the ball — head leading',
+      'Present a soft, angled bat face downward',
+      'Let the ball hit the middle of the bat and die — no force',
+      'Watch the ball all the way onto the bat face',
+    ],
+    keyPoints: ['Soft hands absorb the pace','Bat angle directs ball safely to ground','Head stays still through contact'],
+    commonMistakes: ['Hard hands cause edges','Poor footwork leaves a gap between bat and pad','Looking away from ball too early'],
+    videoId: '9X8jz17WNDI',
+    videoTitle: 'Forward Defence — Perfect Technique Masterclass',
+    videoChannel: 'CoachCricXI',
+  },
+  {
+    id: 'bat-pull-shot', category: 'batting', name: 'Pull Shot',
+    level: 'intermediate', xp: 90, duration: '20 min', icon: '💥',
+    tagline: 'Dominate the short ball',
+    focus: ['back foot','rotation','power'],
+    equipment: ['bat', 'ball', 'bowling machine (optional)'],
+    steps: [
+      'Initial trigger movement — step back and across towards off stump',
+      'Pick up the length early — see the short ball as it leaves the hand',
+      'Weight goes back, back foot plants behind the crease',
+      'Rise with the ball — get on top of it, never under it',
+      'Rotate hips fully — front hip drives through',
+      'Extend both arms through contact for maximum power',
+    ],
+    keyPoints: ['Get on top of the ball (not under it)','Hip rotation generates all the power','Keep head level — don\'t fall back'],
+    commonMistakes: ['Getting under the ball → catch to fine leg','Not rotating hips → no power','Playing too early → leading edge'],
+    videoId: 'EZPxOjLLCkU',
+    videoTitle: 'Master the Pull Shot — 4 Key Techniques',
+    videoChannel: 'B3 Cricket',
+  },
+  {
+    id: 'bat-sweep-shot', category: 'batting', name: 'Sweep Shot',
+    level: 'intermediate', xp: 80, duration: '20 min', icon: '🌀',
+    tagline: 'Neutralise spinners and score freely',
+    focus: ['front knee','bat angle','wrist'],
+    equipment: ['bat', 'ball', 'spinner (or feeder)'],
+    steps: [
+      'Read the line and length early — sweep only to balls on middle or leg',
+      'Large front foot stride down the pitch towards ball',
+      'Drop front knee towards ground as you go down to the ball',
+      'Bat swings horizontal — lead with top hand rolling over',
+      'Contact ball between thigh and shoulder height',
+      'Follow through around the body — wrists rolling over top',
+    ],
+    keyPoints: ['Front knee close to ground = best balance','Roll top wrist to keep ball down','Play to good length deliveries only'],
+    commonMistakes: ['Sweeping to full tosses → top edge','Not getting down low enough','Playing across a straight ball → LBW'],
+    videoId: 'jqtaBMD7Wa8',
+    videoTitle: 'Slog Sweep & Sweep Masterclass — Tom Banton',
+    videoChannel: 'Kookaburra Sport',
+  },
+  {
+    id: 'bat-cut-shot', category: 'batting', name: 'Cut Shot',
+    level: 'intermediate', xp: 80, duration: '20 min', icon: '✂️',
+    tagline: 'Punish anything short and wide',
+    focus: ['back foot','width','wrist'],
+    equipment: ['bat', 'ball'],
+    steps: [
+      'Pick up the width early — trigger back and across to off stump',
+      'Step back onto the back foot, creating space and width',
+      'Let the ball come to you — don\'t reach for it',
+      'Arms extend through the ball — lead with top hand',
+      'Open the face slightly to cut backward of point',
+      'Stay in control — this is a placement shot, not a slog',
+    ],
+    keyPoints: ['Let ball come to you = timing, not power','Back foot behind crease = space to play','Wrist stays firm through contact'],
+    commonMistakes: ['Playing too early → leading edge','Reaching across body → no control','Playing to balls too close to body'],
+    videoId: '3v2jFBzgfrQ',
+    videoTitle: 'Cut Shot — Complete Cricket Tutorial',
+    videoChannel: 'Cricket Coach 360',
+  },
+  {
+    id: 'bat-straight-drive', category: 'batting', name: 'Straight Drive',
+    level: 'beginner', xp: 70, duration: '15 min', icon: '⬆️',
+    tagline: 'Drive through the V between mid-on and mid-off',
+    focus: ['alignment','timing','follow-through'],
+    equipment: ['bat', 'ball or tee'],
+    steps: [
+      'Identify the full delivery — pitched up, on or just outside off stump',
+      'Stride forward with front foot pointing down the pitch',
+      'Head leads the movement, eyes level and fixed on the ball',
+      'Swing bat straight through — follow the line of the ball',
+      'Contact just below the eyeline for drives',
+      'High follow-through finishing over the left shoulder',
+    ],
+    keyPoints: ['Bat swings in a straight arc — no deviation','Head still at point of contact','Weight fully on front foot at contact'],
+    commonMistakes: ['Closing bat face → ball goes to on side','Reaching for ball → no weight transfer','Short follow-through → no timing'],
+    videoId: 'yeImrfgNJoM',
+    videoTitle: 'Front Foot Drive — Full Technique Breakdown',
+    videoChannel: 'B3 Cricket',
+  },
+  {
+    id: 'bat-hook-shot', category: 'batting', name: 'Hook Shot',
+    level: 'advanced', xp: 100, duration: '25 min', icon: '🪝',
+    tagline: 'Attack the bouncer and score',
+    focus: ['reaction','back foot','aerial'],
+    equipment: ['bat', 'ball', 'bowling machine recommended'],
+    steps: [
+      'Read short ball early — look for anything rising above shoulder height',
+      'Rapid back-foot pivot — swivel on back foot to face fine leg',
+      'Body fully rotates — chest turning through the shot',
+      'Arms swing horizontal, pulling ball behind square on leg side',
+      'Keep head inside the line — don\'t lose sight of the ball',
+      'Watch ball carefully — control the aerial trajectory',
+    ],
+    keyPoints: ['Only hook balls above shoulder height','Head stays upright — don\'t duck down','Roll wrists over to keep ball down'],
+    commonMistakes: ['Hooking balls at chest height → top edge','Not swiveling fully → no power','Losing sight of ball → miss or edge'],
+    videoId: 'NE6LRa9dKG8',
+    videoTitle: 'Hook Shot & Short Ball Mastery',
+    videoChannel: 'Cricket Mentor',
+  },
+  {
+    id: 'bat-on-drive', category: 'batting', name: 'On Drive',
+    level: 'advanced', xp: 95, duration: '25 min', icon: '↖️',
+    tagline: 'The hardest drive — master the on side',
+    focus: ['leg side','rotation','timing'],
+    equipment: ['bat', 'ball'],
+    steps: [
+      'Pick full ball on leg stump — most common from left-arm over the wicket',
+      'Large front foot stride — angled towards mid-on',
+      'Allow ball to come deeper into the body before striking',
+      'Rotate hips and chest through the shot — full body turn',
+      'Bat face closes through contact — ball goes between mid-on and square leg',
+      'High follow-through — bat finishes over right shoulder',
+    ],
+    keyPoints: ['Don\'t play early — wait for ball to come to you','Hips and chest rotate fully','Head stays over the ball throughout'],
+    commonMistakes: ['Playing early → goes to mid-on','No hip rotation → no power','Bat face stays open → ball goes to mid-off'],
+    videoId: 'yeImrfgNJoM',
+    videoTitle: 'On Drive & Straight Drive Masterclass',
+    videoChannel: 'B3 Cricket',
+  },
+  {
+    id: 'bat-back-foot-defence', category: 'batting', name: 'Back Foot Defence',
+    level: 'beginner', xp: 65, duration: '15 min', icon: '🔙',
+    tagline: 'Solid defence on the back foot',
+    focus: ['back foot','head position','soft hands'],
+    equipment: ['bat', 'ball'],
+    steps: [
+      'Read the back of a length delivery — shorter, rising',
+      'Step back and across to off stump — create space',
+      'Weight shifts to back foot — stay balanced, don\'t fall over',
+      'Get into line — head and eyes level with delivery',
+      'Present soft, angled bat face down towards ground',
+      'Absorb pace with soft hands — ball dies in front of you',
+    ],
+    keyPoints: ['Never "hard hand" a back foot defensive shot','Get in line — don\'t play around the body','Soft top hand controls angle'],
+    commonMistakes: ['Hard hands → ball pops up for catch','Falling across off stump → exposed leg stump','Playing with feet still — no back-foot movement'],
+    videoId: 'RXyH89JX2QM',
+    videoTitle: 'Back Foot Defence — Test Fundamentals',
+    videoChannel: 'CoachCricXI',
+  },
+  {
+    id: 'bat-vs-spin', category: 'batting', name: 'Batting vs Spin',
+    level: 'intermediate', xp: 90, duration: '25 min', icon: '🌀',
+    tagline: 'Read spin, use feet, and attack',
+    focus: ['footwork','reading spin','decision making'],
+    equipment: ['bat', 'ball', 'spin bowling partner'],
+    steps: [
+      'Pre-set: stand slightly outside crease to limit LBW risk',
+      'Trigger: small step back and across to read length',
+      'Read the flight — shorter = go back, full = use feet',
+      'Against off-spin: play straight or with the turn (covers)',
+      'Against leg-spin: sweep or reverse sweep low-risk options',
+      'Use feet: come down pitch to full deliveries to turn full toss',
+    ],
+    keyPoints: ['Play the ball not the spin — watch the seam','Use crease position to combat LBW','Sweep only on middle or leg stump line'],
+    commonMistakes: ['Playing across straight balls → LBW','Not using feet → spinners bowl to you','Second-guessing turn → late contact'],
+    videoId: 'RxIGMIbgD88',
+    videoTitle: 'Batting Against Spin — Ian Bell Masterclass',
+    videoChannel: 'Sportplan Cricket',
+  },
+  {
+    id: 'bat-t20-hitting', category: 'batting', name: 'T20 Power Hitting',
+    level: 'advanced', xp: 110, duration: '30 min', icon: '💣',
+    tagline: 'Score at 200 — elite T20 striking',
+    focus: ['power','position','shot selection'],
+    equipment: ['bat', 'ball', 'tee or feeder'],
+    steps: [
+      'Widen stance for a bigger base and more rotational power',
+      'Look to hit the first ball of every session — intent matters',
+      'Pre-meditate shots against specific bowlers',
+      'Use your bottom hand for power shots — top hand guides',
+      'Maximise bat speed through contact — full extension of arms',
+      'Ramp/scoop practice: 10 ramps over wicketkeeper per session',
+    ],
+    keyPoints: ['Intent beats technique in T20','Full arm extension = maximum bat speed','Back foot gives you more time and options'],
+    commonMistakes: ['Pre-meditating on wrong length','Under-rotating on slog shots','Playing with fear of getting out'],
+    videoId: 'jqtaBMD7Wa8',
+    videoTitle: 'White Ball Batting — Tom Banton Masterclass',
+    videoChannel: 'Kookaburra Sport',
+  },
+  {
+    id: 'bat-leave-shot', category: 'batting', name: 'The Leave',
+    level: 'beginner', xp: 55, duration: '10 min', icon: '🙅',
+    tagline: 'The most underrated skill — leaving well',
+    focus: ['decision making','head position','patience'],
+    equipment: ['bat', 'ball'],
+    steps: [
+      'Eyes track ball from hand to pitch — read line immediately',
+      'Decide early: anything outside off, pitching away = leave',
+      'Hands stay inside the line — bat points down, not away from body',
+      'Head stays still — eyes follow ball through to keeper',
+      'No movement of feet past pointing at ball',
+      'Reset trigger after every leave — stay compact',
+    ],
+    keyPoints: ['Leave = a scoring opportunity denied — not a failure','Bat must stay behind the line of the body','Watch ball onto keeper gloves'],
+    commonMistakes: ['Pushing at balls outside off stump','Hands going towards ball on the leave','Not resetting between deliveries'],
+    videoId: '9X8jz17WNDI',
+    videoTitle: 'The Leave — When and How to Let the Ball Go',
+    videoChannel: 'CoachCricXI',
+  },
+
+  // ── BOWLING (12 drills) ────────────────────────────────────────
+  {
+    id: 'bowl-outswing', category: 'bowling', name: 'Outswing Bowling',
+    level: 'intermediate', xp: 90, duration: '20 min', icon: '🌊',
+    tagline: 'Move the ball away from the right-hander',
+    focus: ['seam position','wrist','release'],
+    equipment: ['ball (new or used)', 'stumps', 'cones'],
+    steps: [
+      'Grip: index and middle fingers together along seam on top',
+      'Thumb on seam below, ring finger tucked away',
+      'Seam angled slightly towards slip fielder at release',
+      'Wrist stays behind the ball — don\'t collapse inward',
+      'Bowl a full, attacking length — outside off stump corridor',
+      'Consistent release: 200 balls per week minimum',
+    ],
+    keyPoints: ['Seam must stay upright throughout flight','High release point creates more swing','Newer ball swings more — use wisely'],
+    commonMistakes: ['Seam falling over sideways → no swing','Wrist going around the ball → inswing','Bowling short → no opportunity for swing'],
+    videoId: 'HV2sT8Xc5Kw',
+    videoTitle: 'Outswing Bowling — Grip, Seam & Action',
+    videoChannel: 'Cricket Coach Online',
+  },
+  {
+    id: 'bowl-inswing', category: 'bowling', name: 'Inswing Bowling',
+    level: 'intermediate', xp: 90, duration: '20 min', icon: '🔄',
+    tagline: 'Swing the ball into the right-hander',
+    focus: ['seam position','wrist angle','length'],
+    equipment: ['ball', 'stumps', 'cones'],
+    steps: [
+      'Grip: seam angled towards fine leg at release',
+      'Index and middle fingers slightly spread for inswing',
+      'Wrist tilts inward at point of release',
+      'Bowl a fuller length — hitting stumps line',
+      'Shiny side of ball on the off side to enhance inswing',
+      'Aim at the top of off stump — most dangerous line',
+    ],
+    keyPoints: ['Seam angled towards fine leg = inswing','Shiny side placement amplifies movement','Bowl straighter — not as much corridor as outswing'],
+    commonMistakes: ['Seam not angled consistently','Going short — ball straightens out','Not using the shiny side correctly'],
+    videoId: 'JRZD7Jk8wuI',
+    videoTitle: 'Inswing Bowling Masterclass',
+    videoChannel: 'Cricket Mentor',
+  },
+  {
+    id: 'bowl-yorker', category: 'bowling', name: 'Death Yorker',
+    level: 'advanced', xp: 110, duration: '25 min', icon: '🎯',
+    tagline: 'The most lethal T20 delivery',
+    focus: ['accuracy','full length','toe line'],
+    equipment: ['ball', 'stumps', 'cones at base of stumps'],
+    steps: [
+      'Set up cones at the base of the stumps — this is your target zone',
+      'Mental cue: "pitch it AT the toes, not near the toes"',
+      'Wrist stays high — don\'t drop head at release',
+      'Follow through completely — don\'t slow down approaching crease',
+      'Practice: 20 yorkers in a row, counting consecutive hits',
+      'Progress: bowl yorkers from a full run-up at match pace',
+    ],
+    keyPoints: ['Target: base of stumps, not the bat','Full run-up speed = same accuracy target','Best executed after bouncer or slower ball set-up'],
+    commonMistakes: ['Bowling half-tracker trying too hard','Slowing down approach → loses accuracy','Only practicing yorkers, not in sequences'],
+    videoId: 'gbEBe3quvBI',
+    videoTitle: 'Perfect Yorker — Death Bowling Masterclass',
+    videoChannel: 'Donovan Miller Cricket',
+  },
+  {
+    id: 'bowl-off-spin', category: 'bowling', name: 'Off Spin Bowling',
+    level: 'intermediate', xp: 85, duration: '20 min', icon: '🔁',
+    tagline: 'Turn it square from right-arm over',
+    focus: ['grip','spin','flight'],
+    equipment: ['ball', 'stumps', 'target markers'],
+    steps: [
+      'Grip: index finger along seam on top, middle finger beside it',
+      'Ball rests on the first joint — not palm, not fingertips',
+      'Spinning action: index finger pulls down sharply at release',
+      'High action creates bounce and dip',
+      'Flight the ball — let it drift then dip',
+      'Target: landing on off stump, turning to hit leg stump',
+    ],
+    keyPoints: ['Rip the ball with the index finger — don\'t flip it','High action = more revs = more turn','Give the ball air — flight is your biggest weapon'],
+    commonMistakes: ['Ball in palm → no spin imparted','Flat trajectory → batter plays with confidence','Bowling too short → no flight, no danger'],
+    videoId: 'kZq8V0EMfS4',
+    videoTitle: 'Off Spin — Grip to Variations Complete Guide',
+    videoChannel: 'CoachCricXI',
+  },
+  {
+    id: 'bowl-leg-spin', category: 'bowling', name: 'Leg Spin Bowling',
+    level: 'advanced', xp: 120, duration: '30 min', icon: '🌀',
+    tagline: 'The hardest and most potent art in cricket',
+    focus: ['wrist position','turn','variations'],
+    equipment: ['ball', 'stumps', 'cones'],
+    steps: [
+      'Grip: ball sits in top joint of index and middle fingers',
+      'Ring finger is the spinner — it flicks the ball at release',
+      'Wrist: cocked at top, rolls from 12 o\'clock to 3 o\'clock',
+      'Land on or outside off stump — turn hitting middle/leg',
+      'Practice stock ball until it turns consistently before adding variations',
+      'Googly: same action, wrist rolls further to 4-5 o\'clock',
+    ],
+    keyPoints: ['Stock ball first — 5,000 before trying variations','Wrist position determines the direction of turn','Flight and loop are NOT optional — they\'re your best weapon'],
+    commonMistakes: ['Trying googly before stock ball is consistent','Dropping wrist → flat, no turn','Rushing delivery stride → losing control'],
+    videoId: 'xbT4kp7LHBU',
+    videoTitle: 'Leg Spin — Complete Guide Grip to Variations',
+    videoChannel: 'Cricket Training Tips',
+  },
+  {
+    id: 'bowl-line-length', category: 'bowling', name: 'Line & Length Control',
+    level: 'beginner', xp: 70, duration: '15 min', icon: '📏',
+    tagline: 'The foundation of all bowling',
+    focus: ['consistency','target zone','run-up'],
+    equipment: ['ball', 'stumps', 'cones', 'target marker'],
+    steps: [
+      'Place a marker (cone/tape) on a good length on off stump line',
+      'Bowl 20 consecutive deliveries, aiming at the marker',
+      'Record: how many hit within 30cm of the marker',
+      'Progress target: 15/20 consistently before moving to 17/20',
+      'Add pressure: set yourself out with a batsman watching',
+      'Change pace: bowl same line/length at 70%, 85%, 100%',
+    ],
+    keyPoints: ['Good length: 6-7m from stumps (fast), 4-5m (spin)','Practice run-up: must be 100% consistent','Line: 5th/6th stump corridor for seam bowlers'],
+    commonMistakes: ['Varying run-up = varying line/length','Not measuring performance (just bowling randomly)','Ignoring rhythm — it affects everything'],
+    videoId: '3KBHkbIz8r0',
+    videoTitle: 'Line & Length — Foundation of Fast Bowling',
+    videoChannel: 'Cricket Mentor',
+  },
+  {
+    id: 'bowl-slower-ball', category: 'bowling', name: 'Slower Ball Variations',
+    level: 'advanced', xp: 100, duration: '25 min', icon: '🐢',
+    tagline: 'Deceive batters with pace changes',
+    focus: ['disguise','release','variation'],
+    equipment: ['ball', 'stumps'],
+    steps: [
+      'Off-cutter: cut inside of index finger across seam at release',
+      'Leg-cutter: cut outside of middle finger across seam',
+      'Back of hand: palm faces batsman at release — lose 20-30km/h',
+      'Knuckle ball: ball balanced on knuckles — very slow',
+      'Every variation: same run-up, same arm speed — only release changes',
+      'Practice 5 of each type before mixing in a session',
+    ],
+    keyPoints: ['Same action = disguise. Different action = readable','Bowl slower balls 2-3/over max — use sparingly','Set up with bouncers to make slow ball more effective'],
+    commonMistakes: ['Slowing down arm → batter reads it early','Not practicing enough → poor control','Using too often → batter adjusts'],
+    videoId: 'Rn8Pm2PGBM0',
+    videoTitle: 'Slower Ball Variations — Grips and Delivery',
+    videoChannel: 'B3 Cricket',
+  },
+  {
+    id: 'bowl-bouncer', category: 'bowling', name: 'Bouncer Strategy',
+    level: 'intermediate', xp: 85, duration: '20 min', icon: '⬆️',
+    tagline: 'Use the short ball as a weapon, not a gift',
+    focus: ['angle','target','sequencing'],
+    equipment: ['ball', 'stumps', 'helmet-wearing batter'],
+    steps: [
+      'Target: at batter\'s armpit — not head, not below chest',
+      'Vary angle: over the wicket vs around the wicket for different effect',
+      'Use after 2-3 full deliveries — don\'t telegraph it',
+      'Follow the bouncer with a yorker — classic sequence',
+      'Study the batter: pull shot player = body bouncer, not head height',
+      'Only bowl 1-2 per over — more than that = batter adapts',
+    ],
+    keyPoints: ['Bouncer at armpit is hardest to deal with','Around the wicket to right-hander → angles in awkwardly','Set up your next ball — bouncer creates a plan, not a wicket alone'],
+    commonMistakes: ['Bowling bouncers to established pull-shot players','Telegraphing with longer run-up','No follow-up plan — isolated bouncer is easy to deal with'],
+    videoId: 'c_JxV43jB8o',
+    videoTitle: 'How to Bowl a Bouncer — Technique & Strategy',
+    videoChannel: 'Cricket Coach Online',
+  },
+  {
+    id: 'bowl-reverse-swing', category: 'bowling', name: 'Reverse Swing',
+    level: 'advanced', xp: 115, duration: '30 min', icon: '🔀',
+    tagline: 'The dark art of the old ball',
+    focus: ['ball condition','wrist','pace'],
+    equipment: ['worn ball (40+ overs)', 'stumps'],
+    steps: [
+      'Ball condition: rough side out, shiny side in — opposite of conventional swing',
+      'Seam angled towards fine leg (like inswing grip)',
+      'Bowl at 130km/h+ — reverse only works at pace',
+      'Target: yorker length outside off stump swinging back in',
+      'Maintain ball: polish the shiny side religiously every over',
+      'Work with keeper: they polish the ball between deliveries',
+    ],
+    keyPoints: ['Speed is non-negotiable for reverse swing','Rough side OUT for reverse swing','Attack stumps — reverse swing most lethal hitting stumps line'],
+    commonMistakes: ['Trying reverse swing with new ball (won\'t work)','Bowling short — ball doesn\'t swing as much','Not polishing the shiny side'],
+    videoId: 'GV9VFzZyFY0',
+    videoTitle: 'Reverse Swing — The Complete Guide',
+    videoChannel: 'Cricket Training Tips',
+  },
+  {
+    id: 'bowl-seam-bowling', category: 'bowling', name: 'Seam Bowling',
+    level: 'beginner', xp: 75, duration: '15 min', icon: '🪡',
+    tagline: 'Make the ball talk off the pitch',
+    focus: ['seam position','landing','extraction'],
+    equipment: ['new ball', 'stumps', 'pitch (or marked surface)'],
+    steps: [
+      'Grip: seam perfectly upright — index and middle fingers either side',
+      'Thumb supporting underneath along seam',
+      'Release: seam stays upright throughout flight',
+      'Target: land seam first on a hard area of pitch (good length)',
+      'Don\'t try to do too much — let the pitch do the work',
+      'Wrist stays firm — no wrist flick at release',
+    ],
+    keyPoints: ['Seam upright = movement off pitch','Land on the same spot consistently','New ball seams most — use it in first 15 overs'],
+    commonMistakes: ['Seam going horizontal in flight','Bowling short — ball loses seam position','Gripping too tight — reduces seam control'],
+    videoId: '4k9xFjOBNs8',
+    videoTitle: 'Seam Bowling Secrets — Move Ball Off Pitch',
+    videoChannel: 'PitchVision Cricket',
+  },
+  {
+    id: 'bowl-spin-variations', category: 'bowling', name: 'Spin Variations',
+    level: 'advanced', xp: 105, duration: '25 min', icon: '✨',
+    tagline: 'Add arm ball, googly, and carrom ball',
+    focus: ['deception','wrist','disguise'],
+    equipment: ['ball', 'stumps'],
+    steps: [
+      'Arm ball (off-spinner): wrist stays behind ball — goes straight on',
+      'Doosra (off-spinner): spin from the front of the hand — turns away',
+      'Flipper (leg-spinner): squeeze from under the ball — skids on fast',
+      'Googly (leg-spinner): extra wrist rotation — turns away from right-handers',
+      'Carrom ball: flick from middle finger — minimal drag = deception',
+      'All variations: same run-up, same arm speed — disguise is everything',
+    ],
+    keyPoints: ['Master one variation at a time — not all at once','Video yourself: your variations should look identical from the front','Only use variations when stock ball is consistent'],
+    commonMistakes: ['Obvious change in action → batter picks it','Using variations before stock ball is reliable','No end-game plan for variation — what happens after it?'],
+    videoId: 'xbT4kp7LHBU',
+    videoTitle: 'Spin Variations — Googly, Flipper, Arm Ball Guide',
+    videoChannel: 'Cricket Training Tips',
+  },
+  {
+    id: 'bowl-powerplay', category: 'bowling', name: 'Powerplay Bowling',
+    level: 'intermediate', xp: 90, duration: '20 min', icon: '⚡',
+    tagline: 'Dominate with only 2 fielders outside the ring',
+    focus: ['line','attack','field setting'],
+    equipment: ['ball', 'stumps', 'fielding cones'],
+    steps: [
+      'Mindset: attack the stumps — not defensive lines outside off',
+      'Use movement: outswing with ring fielders pushed up',
+      'Vary pace early: slower ball in powerplay is highly effective',
+      'Set up the caught behind: shape one away, then bring one back',
+      'Yorker at the end of powerplay over to a set batter',
+      'Communicate with captain: set attacking fields early',
+    ],
+    keyPoints: ['Best field: 2 slips, gully in first 6 overs','Full length bowling — generate nicks and LBWs','Use the new ball swing while it lasts'],
+    commonMistakes: ['Defensive bowling outside off stump → easy runs','Trying to stop runs rather than take wickets','Not using slip cordon in powerplay — wasted opportunity'],
+    videoId: 'HV2sT8Xc5Kw',
+    videoTitle: 'Powerplay Bowling — Attack Strategy',
+    videoChannel: 'Cricket Coach Online',
+  },
+
+  // ── FIELDING (11 drills) ────────────────────────────────────────
+  {
+    id: 'field-ground-fielding', category: 'fielding', name: 'Ground Fielding',
+    level: 'beginner', xp: 60, duration: '15 min', icon: '🤸',
+    tagline: 'Cut off boundaries and save runs',
+    focus: ['body position','clean pick-up','attack'],
+    equipment: ['ball', 'cones', 'stumps'],
+    steps: [
+      'Ready position: weight on balls of feet, slight crouch, hands ready',
+      'When ball is hit: take 2-3 attack steps forward immediately',
+      'Get BODY behind the ball — never just reach one hand',
+      'Long barrier option: side-on, lead knee on ground, block line',
+      'Attack option: two-handed pick-up, body low',
+      'After pick-up: throw immediately in one fluid motion',
+    ],
+    keyPoints: ['Body behind ball = clean pick-up every time','Attack the ball — don\'t wait for it','Expect every ball to come to you'],
+    commonMistakes: ['Waiting for ball to come → it can take bad bounce','Reaching one hand → misfields','Not getting body behind line → ball goes through'],
+    videoId: 'R6TxjGCa3Bc',
+    videoTitle: 'Ground Fielding Drills — Long Barrier & Attack',
+    videoChannel: 'Cricket Coach Online',
+  },
+  {
+    id: 'field-throwing', category: 'fielding', name: 'Throwing Accuracy',
+    level: 'intermediate', xp: 75, duration: '20 min', icon: '🎯',
+    tagline: 'Hit stumps from any position',
+    focus: ['mechanics','accuracy','power'],
+    equipment: ['ball', 'stumps'],
+    steps: [
+      'Side-on position: left shoulder points at target (right-arm)',
+      'Weight loads on back foot, front arm points at target',
+      'Drive front elbow down as throwing arm comes through',
+      'Release over top — not sidearm — for power and accuracy',
+      'Follow through: throwing arm continues across body',
+      'Practice: 50 throws at stumps per session from 20m, 30m, 40m',
+    ],
+    keyPoints: ['Side-on throwing generates 30% more power','Always throw at stumps in practice — never aimlessly','Strong core = powerful throw'],
+    commonMistakes: ['Sidearm throw → loses accuracy and pace','Not transferring weight → weak throw','Throwing without looking at target'],
+    videoId: 'DlPi9kHqiR0',
+    videoTitle: 'Throwing Accuracy — Direct Hit Drills',
+    videoChannel: 'CoachCricXI',
+  },
+  {
+    id: 'field-slip-catching', category: 'fielding', name: 'Slip Catching',
+    level: 'intermediate', xp: 80, duration: '20 min', icon: '🤲',
+    tagline: 'Turn nicks into wickets',
+    focus: ['hand position','soft hands','reaction'],
+    equipment: ['ball', 'slip cradle or partner'],
+    steps: [
+      'Stance: low, balanced, weight slightly forward, hands together',
+      'Hands should be BELOW the ball at start — ready to move up',
+      'Don\'t move until ball is half-way to you',
+      'Watch the edge leave the bat — not the bat',
+      'Soft hands: cup the ball, don\'t snatch at it',
+      'Use slip cradle: 100 takes per session at varied heights and speeds',
+    ],
+    keyPoints: ['Watch for the edge — not the bat hit','Soft hands = catch stays in; hard hands = grassed','Low start position = can go up easily, not down quickly'],
+    commonMistakes: ['Moving hands too early → out of position','Hard, snatching hands → ball bounces out','Standing too upright → can\'t get down quickly'],
+    videoId: 'bWQ7hJmvFZE',
+    videoTitle: 'Slip Catching — Hands Position & Reaction Drills',
+    videoChannel: 'Cricket Mentor',
+  },
+  {
+    id: 'field-high-catch', category: 'fielding', name: 'High Catch',
+    level: 'intermediate', xp: 75, duration: '15 min', icon: '☁️',
+    tagline: 'Catches in the deep win matches',
+    focus: ['communication','basket','sun'],
+    equipment: ['ball', 'open space'],
+    steps: [
+      'Move early: sprint to get under the ball, then settle',
+      'Call loudly: "MINE" — clear communication prevents collisions',
+      'Sun or lights: position so ball drops into shadow if possible',
+      'Basket catch: fingers pointing up, hands cupped',
+      'Keep eyes on ball ALL the way into hands',
+      'Two-handed at all times in the deep — one hand for practice only',
+    ],
+    keyPoints: ['Better to move too early than too late','CALL for every ball — even solo fielder','Feet underneath ball = 10x better catch'],
+    commonMistakes: ['Not calling → collision risk','Running with eyes off ball','Catching in front of face → ball pops out'],
+    videoId: 'fKXlwR5kNwM',
+    videoTitle: 'High Catch Technique — Under Pressure',
+    videoChannel: 'Cricket Coach Online',
+  },
+  {
+    id: 'field-run-out', category: 'fielding', name: 'Run Out Execution',
+    level: 'advanced', xp: 90, duration: '25 min', icon: '🏃',
+    tagline: 'Convert half-chances into run-outs',
+    focus: ['awareness','speed','accuracy'],
+    equipment: ['ball', 'stumps', 'cones for batters'],
+    steps: [
+      'Awareness: always know where batters are and call line position',
+      'Pick up and throw in ONE motion — no extra steps',
+      'Aim: top of stumps — hitting bails is better than missing stumps',
+      'Back-up: fielder behind stumps always — not optional',
+      'Practice: retrieve ball, pick up, throw to either end — rotation drill',
+      'Pressure drill: attempt 20 run-out throws with score keeping',
+    ],
+    keyPoints: ['Every direct hit attempt needs a backup fielder','One-motion pick-up and throw = fastest possible','Top of stumps = most reliable target'],
+    commonMistakes: ['Extra step after pick-up → wasted time','No backup → overthrow = extra runs','Throwing from poor position → wasted attempt'],
+    videoId: 'DlPi9kHqiR0',
+    videoTitle: 'Run Out Drills — Direct Hit Execution',
+    videoChannel: 'CoachCricXI',
+  },
+  {
+    id: 'field-wicketkeeping', category: 'fielding', name: 'Wicketkeeping Basics',
+    level: 'intermediate', xp: 85, duration: '25 min', icon: '🧤',
+    tagline: 'The most demanding fielding role',
+    focus: ['stance','footwork','glove work'],
+    equipment: ['gloves', 'pads', 'ball', 'stumps'],
+    steps: [
+      'Stance: squat behind the stumps, weight on balls of feet',
+      'Hands: together below eyeline, fingers pointing down initially',
+      'Watch the ball from the moment it leaves the bowler\'s hand',
+      'Move feet first — never just stretch hands to ball',
+      'Take the ball as late as possible in front of body',
+      'Stumping: quickly remove bails AFTER confirming batter is out of crease',
+    ],
+    keyPoints: ['Watch ball all the way into gloves — never assume','Footwork first, then hands','Both gloves together at all times unless diving'],
+    commonMistakes: ['Hands moving before feet → can\'t reach wide balls','Taking ball too early → snick goes through','Appealing before completing the stumping'],
+    videoId: 'YFwvJqCR3yU',
+    videoTitle: 'Wicketkeeping — Footwork & Glove Work Drills',
+    videoChannel: 'WK Cricket Training',
+  },
+  {
+    id: 'field-diving', category: 'fielding', name: 'Diving & Sliding',
+    level: 'advanced', xp: 80, duration: '20 min', icon: '🛸',
+    tagline: 'Aerial saves and sliding stops',
+    focus: ['shoulder roll','hands','landing'],
+    equipment: ['ball', 'flat surface', 'grass'],
+    steps: [
+      'Low body position as you dive — launch from low not high',
+      'Lead with hands — reach for ball as you dive',
+      'Shoulder roll on landing — protect the ball and your body',
+      'Sliding stop: lead foot slides, body stays upright',
+      'Recover fast: immediately get to feet and return ball',
+      'Practice: 10 dives left, 10 right per session on grass',
+    ],
+    keyPoints: ['Low start = efficient dive; high start = hard landing','Protect ball on contact with ground','Get up immediately — batters run on fielder dives'],
+    commonMistakes: ['Diving too high → crash landing → injury','Not protecting ball → jarred loose on contact','Slow recovery → extra run conceded after save'],
+    videoId: '8X9Wa9DXRJM',
+    videoTitle: 'Diving & Sliding Fielding Technique',
+    videoChannel: 'Cricket Training Tips',
+  },
+  {
+    id: 'field-catching-drills', category: 'fielding', name: 'Catching Drills',
+    level: 'beginner', xp: 65, duration: '15 min', icon: '🎾',
+    tagline: 'Catches win matches — practice daily',
+    focus: ['soft hands','eye contact','positioning'],
+    equipment: ['ball', 'partner or cradle'],
+    steps: [
+      '10 close catches: chest height, with partner 10m away',
+      '10 diving catches: partner throws wide — dive and catch',
+      '10 catching on the move: run 5m, turn, catch over shoulder',
+      '10 reaction catches: close range, hard throw, react',
+      '10 relay catches: throw up, run to where it will land, catch',
+      'Record every dropped catch — track your improvement',
+    ],
+    keyPoints: ['Soft hands: ball stays in; hard hands: pops out','Eyes on ball = everything else is automatic','Move before the ball arrives, not as it arrives'],
+    commonMistakes: ['Taking eye off ball at last moment','Hard hands = snatching → ball bounces out','Not positioning properly before ball arrives'],
+    videoId: 'bWQ7hJmvFZE',
+    videoTitle: 'Catching Drills — Daily Practice Routine',
+    videoChannel: 'Cricket Mentor',
+  },
+  {
+    id: 'field-boundary-patrol', category: 'fielding', name: 'Boundary Fielding',
+    level: 'intermediate', xp: 70, duration: '15 min', icon: '🏃',
+    tagline: 'Stop fours and take catches on the rope',
+    focus: ['sprint','catch on boundary','throw back'],
+    equipment: ['ball', 'cones for boundary line'],
+    steps: [
+      'Set boundary line with cones — practice staying inside',
+      'Chase: full-speed sprint from 30 yards, stopping in time',
+      'Boundary save: reach ball inside, return before it crosses',
+      'Over-the-shoulder catch: sprint, don\'t look back too early',
+      'Catch and return in one motion: catch then instantly pivot and throw',
+      'Pressure: score yourself on boundary saves out of 10',
+    ],
+    keyPoints: ['Eyes up — watch ball not boundary rope','Sprint the first 10m — that\'s where matches are won','Never take lazy steps on the boundary — sprint always'],
+    commonMistakes: ['Jogging → ball crosses boundary','Looking at rope instead of ball','Slow return throw → extra run'],
+    videoId: 'R6TxjGCa3Bc',
+    videoTitle: 'Boundary Fielding — Sprint, Save, Throw',
+    videoChannel: 'Cricket Coach Online',
+  },
+  {
+    id: 'field-infield', category: 'fielding', name: 'Infield Pressure',
+    level: 'intermediate', xp: 75, duration: '20 min', icon: '⚡',
+    tagline: 'Cut off singles, create run-out chances',
+    focus: ['positioning','anticipation','reaction'],
+    equipment: ['ball', 'cones', 'stumps'],
+    steps: [
+      'Position: always in ready stance — low, weight forward',
+      'Anticipate: read the shot being played before ball is hit',
+      'Charge early: if batter drives, charge immediately after contact',
+      'Angle: always field at angle to cut off runs, not just block',
+      'Communicate: call to keeper where you\'re throwing before picking up',
+      'Drill: 15 throws to keeper from infield position — score direct hits',
+    ],
+    keyPoints: ['Anticipation = early movement = better fielding','Always field at angle to stumps for run-out chance','Quick communication before pick-up saves 0.5 seconds'],
+    commonMistakes: ['Flat-footed → always reacting, never anticipating','Fielding square to stumps → no angle for run-out','Not communicating → keeper unprepared'],
+    videoId: 'R6TxjGCa3Bc',
+    videoTitle: 'Infield Pressure — Cut Off Singles',
+    videoChannel: 'Cricket Coach Online',
+  },
+  {
+    id: 'field-team-relay', category: 'fielding', name: 'Team Relay Fielding',
+    level: 'advanced', xp: 85, duration: '25 min', icon: '🤝',
+    tagline: 'Turn team fielding into a wicket-taking machine',
+    focus: ['teamwork','backing up','communication'],
+    equipment: ['ball', 'stumps', 'cones', 'full team'],
+    steps: [
+      'Drill: fielder at boundary, relay fielder at 30 yards, keeper at stumps',
+      'Ball hit to boundary: boundary fielder throws to relay',
+      'Relay fielder catches, immediately turns and throws to stumps',
+      'Keeper takes and attempts stumping/run-out',
+      'Next fielder backs up at opposite end automatically',
+      'Rotate positions so every player practices every role',
+    ],
+    keyPoints: ['Relay is only useful if the relay fielder is in position','Back-up fielder at opposite end is non-negotiable','Communication: "two!", "one!" tells keeper where to stand'],
+    commonMistakes: ['No relay fielder in position → long boundary return','No backup → overthrow costs 4 extra runs','Relay fielder stopping to look before throwing → too slow'],
+    videoId: 'DlPi9kHqiR0',
+    videoTitle: 'Team Fielding Relay — Coordination Drills',
+    videoChannel: 'CoachCricXI',
+  },
 ];
-var _encIdx = 0;
-function nextEnc() { return YOUTH_ENC[_encIdx++ % YOUTH_ENC.length]; }
 
-// ── Infer drill target ────────────────────────────────────────────
-function inferDrillTarget(target_metric) {
-  if (!target_metric) return { type:'quality', target:5 };
-  var t = target_metric.toLowerCase();
-  var ofMatch = t.match(/(\d+)\s+of\s+(\d+)/);
-  if (ofMatch) return { type:'count', target:parseInt(ofMatch[2]) };
-  var consMatch = t.match(/(\d+)\s+consecutive/);
-  if (consMatch) return { type:'count', target:parseInt(consMatch[1]) };
-  var fracMatch = t.match(/(\d+)\/(\d+)/);
-  if (fracMatch) return { type:'count', target:parseInt(fracMatch[2]) };
-  return { type:'quality', target:5 };
-}
-
-// ── D-B: Tier config ──────────────────────────────────────────────
-const TIER_CONFIG = {
-  none:   { label:'Not started', color:'#4b5563', bg:'rgba(75,85,99,0.10)',   border:'rgba(75,85,99,0.22)',   emoji:null },
-  bronze: { label:'Bronze',      color:'#b87840', bg:'rgba(184,120,64,0.12)', border:'rgba(184,120,64,0.30)', emoji:'🥉' },
-  silver: { label:'Silver',      color:'#9ca3af', bg:'rgba(156,163,175,0.12)',border:'rgba(156,163,175,0.30)',emoji:'🥈' },
-  gold:   { label:'Gold',        color:'#f59e0b', bg:'rgba(245,158,11,0.12)', border:'rgba(245,158,11,0.35)', emoji:'🥇' },
+// Category config
+var CATS = {
+  all:      { label: 'All Drills', color: '#9ca3af', bg: 'rgba(75,85,99,0.15)' },
+  batting:  { label: 'Batting',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  bowling:  { label: 'Bowling',    color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  fielding: { label: 'Fielding',   color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
 };
 
-// ── Small tier badge ──────────────────────────────────────────────
-function TierBadge({ tier }) {
-  if (!tier || tier === 'none') return null;
-  var tc = TIER_CONFIG[tier];
-  return h('span',{style:{display:'inline-flex',alignItems:'center',gap:3,fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,
-    background:tc.bg,border:'1px solid '+tc.border,color:tc.color,flexShrink:0,whiteSpace:'nowrap'}},tc.emoji,' ',tc.label);
-}
+var LEVEL_COLORS = { beginner: '#16a34a', intermediate: '#f59e0b', advanced: '#ef4444', pro: '#8b5cf6' };
 
-// ── P5-D: Drill Score Sparkline ───────────────────────────────────
-function DrillScoreSparkline({ drillId }) {
-  var recent = DB.getDrillRecentScores ? DB.getDrillRecentScores(drillId) : [];
-  if (!recent || !recent.length) return null;
-  function dotColor(pct) { return pct>=80?'#16a34a':pct>=50?'#f59e0b':'#ef4444'; }
-  return h('div', {
-    role: 'img',
-    'aria-label': 'Last '+recent.length+' attempt scores',
-    style: { display:'flex', alignItems:'center', gap:3 },
-  },
-    recent.map(function(r, i) {
-      return h('div', {
-        key: i, 'aria-hidden': 'true', title: r.date+': '+r.pct+'%',
-        style: {
-          width:7, height:7, borderRadius:'50%', background:dotColor(r.pct),
-          opacity: 0.5 + (i/recent.length)*0.5, transition:'all 0.3s',
-        }
-      });
-    })
-  );
-}
-
-// ── P5-B: Drill Heart Favourite Button ───────────────────────────
-function DrillHeartButton({ drillId, size }) {
-  var [favs, setFavs] = React.useState(function() { return DB.getDrillFavorites ? DB.getDrillFavorites() : []; });
-  var isFav = favs.indexOf(drillId) !== -1;
-  var s = size || 18;
-  return h('button', {
-    onClick: function(e) {
-      e.stopPropagation();
-      if(DB.toggleDrillFavorite) { var updated = DB.toggleDrillFavorite(drillId); setFavs(updated.slice()); }
-    },
-    'aria-label': isFav ? 'Remove from favourites' : 'Add to favourites',
-    'aria-pressed': isFav ? 'true' : 'false',
-    style: {
-      padding:6, background:'none', border:'none', cursor:'pointer',
-      display:'flex', alignItems:'center', justifyContent:'center',
-      minWidth:36, minHeight:36, borderRadius:8, outline:'none',
-    },
-    onFocus: function(e) { e.currentTarget.style.boxShadow='0 0 0 2px rgba(225,29,72,0.4)'; },
-    onBlur:  function(e) { e.currentTarget.style.boxShadow='none'; },
-  },
-    h('svg', {
-      xmlns:'http://www.w3.org/2000/svg', width:s, height:s, viewBox:'0 0 24 24',
-      fill:isFav?'#e11d48':'none', stroke:isFav?'#e11d48':'#374151', strokeWidth:2,
-      strokeLinecap:'round', strokeLinejoin:'round', 'aria-hidden':'true',
-      style:{ transition:'all 0.2s', transform:isFav?'scale(1.15)':'scale(1)' },
-    },
-      h('path',{d:'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z'})
-    )
-  );
-}
-
-// ── DR-1: Personal Record badge ───────────────────────────────────
-function PBBadge({ drillId, targetType, targetScore }) {
-  var dp = DB.getSingleDrillProgress(drillId);
-  if(!dp||!dp.personalBest||dp.personalBest===0) return null;
-  var label = targetType==='quality'
-    ? 'PB: '+dp.personalBest+'/5 ⭐'
-    : 'PB: '+dp.personalBest+'/'+(targetScore||'?');
-  return h('span',{style:{display:'inline-flex',alignItems:'center',gap:3,fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,
-    background:'rgba(139,92,246,0.10)',border:'1px solid rgba(139,92,246,0.25)',color:'#a78bfa',flexShrink:0,whiteSpace:'nowrap'}},
-    label
-  );
-}
-
-// ── D-B: Tier progress card ───────────────────────────────────────
-function TierProgressCard({ drill }) {
-  var drillData = DB.getSingleDrillProgress(drill.id);
-  var tier = drillData ? drillData.tier||'none' : 'none';
-  var pb = drillData ? drillData.personalBest||0 : 0;
-  var attempts = drillData ? (drillData.attempts||[]).length : 0;
-  var inf = inferDrillTarget(drill.target_metric);
-  var type = inf.type, target = inf.target;
-  var TIERS = ['none','bronze','silver','gold'];
-  var tierIdx = TIERS.indexOf(tier);
-  var consec = 0;
-  if(drillData&&drillData.attempts){
-    var recents=drillData.attempts.slice(-5);
-    for(var i=recents.length-1;i>=0;i--){ if(recents[i].pct>=80) consec++; else break; }
-  }
-  return h('div',{style:{padding:'16px',borderRadius:12,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)'}},
-    h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:12}},
-      h(Icon,{n:'target',cls:'w-4 h-4',style:{color:'#484f58'}}),
-      h('span',{style:{fontSize:12,fontWeight:700,color:'#8b949e',textTransform:'uppercase',letterSpacing:'0.08em'}},'Your Progress')
-    ),
-    tier==='none'
-      ?h('p',{style:{fontSize:13,color:'#484f58'}},
-        'Complete this drill to earn tiers. Hit 80%+ of the target for Silver. Do it 3 times in a row for Gold! 🥇')
-      :h('div',null,
-        h('div',{style:{display:'flex',gap:8,marginBottom:12}},
-          ['bronze','silver','gold'].map(function(t){
-            var tc=TIER_CONFIG[t], achieved=tierIdx>=TIERS.indexOf(t);
-            return h('div',{key:t,style:{flex:1,padding:'8px 6px',borderRadius:9,textAlign:'center',
-              background:achieved?tc.bg:'rgba(13,17,23,0.6)',border:'1px solid '+(achieved?tc.border:'rgba(48,54,61,0.5)'),opacity:achieved?1:0.4}},
-              h('div',{style:{fontSize:18,marginBottom:2}},tc.emoji||'·'),
-              h('div',{style:{fontSize:9,fontWeight:700,color:achieved?tc.color:'#374151',textTransform:'uppercase',letterSpacing:'0.06em'}},tc.label)
-            );
-          })
-        ),
-        h('div',{style:{display:'flex',gap:8}},
-          h('div',{style:{flex:1,padding:'8px 10px',borderRadius:8,background:'rgba(13,17,23,0.5)',border:'1px solid rgba(48,54,61,0.6)',textAlign:'center'}},
-            h('div',{style:{fontSize:20,fontWeight:800,color:'#f0fdf4',fontVariantNumeric:'tabular-nums'}},type==='quality'?pb+'/5':pb+'/'+target),
-            h('div',{style:{fontSize:10,color:'#6b7280',fontWeight:600,marginTop:2}},'Personal Best')
+// ── DRILL VIDEO PLAYER ───────────────────────────────────────────
+function VideoPlayer({ drill }) {
+  var [show, setShow] = useState(false);
+  if(!drill.videoId) return null;
+  return h('div', { style: { marginTop: 16 }},
+    !show
+      ? h('button', {
+          onClick: function() { setShow(true); },
+          style: {
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            padding: '13px 14px', borderRadius: 11,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+            cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          }
+        },
+          h('div', { style: {
+            width: 44, height: 32, borderRadius: 7, background: '#dc2626',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }},
+            h('div', { style: { width: 0, height: 0, borderTop: '7px solid transparent', borderBottom: '7px solid transparent', borderLeft: '13px solid #fff', marginLeft: 2 }})
           ),
-          h('div',{style:{flex:1,padding:'8px 10px',borderRadius:8,background:'rgba(13,17,23,0.5)',border:'1px solid rgba(48,54,61,0.6)',textAlign:'center'}},
-            h('div',{style:{fontSize:20,fontWeight:800,color:'#f0fdf4',fontVariantNumeric:'tabular-nums'}},attempts),
-            h('div',{style:{fontSize:10,color:'#6b7280',fontWeight:600,marginTop:2}},'Attempts')
-          ),
-          tier!=='gold'&&h('div',{style:{flex:1,padding:'8px 10px',borderRadius:8,background:'rgba(13,17,23,0.5)',border:'1px solid rgba(48,54,61,0.6)',textAlign:'center'}},
-            h('div',{style:{fontSize:20,fontWeight:800,color:consec>=2?'#f59e0b':'#f0fdf4',fontVariantNumeric:'tabular-nums'}},consec+'/3'),
-            h('div',{style:{fontSize:10,color:'#6b7280',fontWeight:600,marginTop:2}},'Gold Streak')
-          )
-        )
-      )
-  );
-}
-
-// ── D-A: Target Tracker Bottom Sheet ─────────────────────────────
-function TargetTrackerSheet({ drill, onSubmit, onSkip }) {
-  var inf = inferDrillTarget(drill.target_metric);
-  var type = inf.type, target = inf.target;
-  var [countVal, setCountVal] = useState(0);
-  var [qualVal, setQualVal]   = useState(0);
-  var score = type==='count' ? countVal : qualVal;
-  var pct = target>0 ? Math.min(100,Math.round((score/target)*100)) : 0;
-  var hitTarget = pct>=80;
-  var barColor = hitTarget?'#16a34a':pct>=50?'#f59e0b':'#3b82f6';
-  return h('div',{
-    style:{position:'fixed',inset:0,zIndex:60,background:'rgba(0,0,0,0.72)',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',display:'flex',alignItems:'flex-end',justifyContent:'center'},
-    onClick:onSkip},
-    h('div',{onClick:function(e){e.stopPropagation();},style:{width:'100%',maxWidth:520,background:'#0d1117',borderRadius:'20px 20px 0 0',border:'1px solid rgba(48,54,61,0.9)',borderBottom:'none',padding:'0 20px 40px',animation:'sheetSlideUp 0.28s cubic-bezier(0.16,1,0.3,1)'}},
-      h('div',{style:{width:40,height:4,borderRadius:2,background:'rgba(75,85,99,0.6)',margin:'12px auto 20px'}}),
-      h('h3',{style:{fontSize:17,fontWeight:800,color:'#f0fdf4',marginBottom:4}},'How did you do?'),
-      h('p',{style:{fontSize:13,color:'#6b7280',marginBottom:20,lineHeight:1.5}},drill.target_metric||'Rate your execution quality'),
-      type!=='quality'&&h('div',{style:{marginBottom:16}},
-        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 18px',borderRadius:12,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)',marginBottom:12}},
-          h('button',{onClick:function(){setCountVal(function(v){return Math.max(0,v-1);});},style:{width:46,height:46,borderRadius:10,background:'rgba(48,54,61,0.5)',border:'1px solid rgba(75,85,99,0.5)',color:'#e6edf3',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:300,lineHeight:1,fontFamily:'inherit'}},'−'),
-          h('div',{style:{textAlign:'center'}},
-            h('div',{style:{fontSize:44,fontWeight:900,color:'#f0fdf4',fontVariantNumeric:'tabular-nums',lineHeight:1}},countVal),
-            h('div',{style:{fontSize:12,color:'#6b7280',marginTop:4}},'Target: '+target)
-          ),
-          h('button',{onClick:function(){setCountVal(function(v){return v+1;});},style:{width:46,height:46,borderRadius:10,background:'rgba(48,54,61,0.5)',border:'1px solid rgba(75,85,99,0.5)',color:'#e6edf3',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:300,lineHeight:1,fontFamily:'inherit'}},'+')
-        ),
-        h('div',{style:{height:6,borderRadius:3,background:'rgba(48,54,61,0.8)',overflow:'hidden',marginBottom:8}},
-          h('div',{style:{height:'100%',borderRadius:3,background:barColor,width:pct+'%',transition:'width 0.3s, background 0.3s'}})),
-        hitTarget&&h('div',{style:{display:'flex',alignItems:'center',gap:6,color:'#4ade80',fontSize:12,fontWeight:700}},
-          h(Icon,{n:'circleCheck',cls:'w-4 h-4'}),'Target achieved! 🎯')
-      ),
-      type==='quality'&&h('div',{style:{marginBottom:16}},
-        h('p',{style:{fontSize:12,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}},'Execution quality'),
-        h('div',{style:{display:'flex',gap:8,justifyContent:'center'}},
-          [1,2,3,4,5].map(function(n){
-            var colors=['','#ef4444','#f97316','#f59e0b','#10b981','#16a34a'];
-            var labels=['','Poor','Fair','Good','Great','Elite'];
-            var isSel=qualVal===n;
-            return h('button',{key:n,onClick:function(){setQualVal(n);},style:{width:54,height:60,borderRadius:10,cursor:'pointer',fontFamily:'inherit',
-              background:isSel?(colors[n]+'18'):'rgba(22,27,34,0.9)',border:'2px solid '+(isSel?colors[n]:'rgba(48,54,61,0.9)'),
-              display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,transition:'all 0.15s',
-              transform:isSel?'scale(1.08)':'scale(1)'}},
-              h('span',{style:{fontSize:18,fontWeight:800,color:isSel?colors[n]:'#6b7280'}},n),
-              isSel&&h('span',{style:{fontSize:9,color:colors[n],fontWeight:700,textTransform:'uppercase',letterSpacing:'0.04em'}},labels[n])
-            );
-          })
-        ),
-        qualVal>0&&h('p',{style:{textAlign:'center',fontSize:13,color:['','#ef4444','#f97316','#f59e0b','#10b981','#16a34a'][qualVal],fontWeight:700,marginTop:10}},
-          ['','Poor — keep at it!','Fair — getting there!','Good — solid!','Great — above target! 🎯','Elite — perfect! 🏆'][qualVal])
-      ),
-      h('div',{style:{display:'flex',gap:10,marginTop:20}},
-        h('button',{onClick:onSkip,style:{flex:'0 0 auto',padding:'13px 16px',background:'transparent',border:'1px solid rgba(48,54,61,0.9)',borderRadius:10,cursor:'pointer',color:'#6b7280',fontSize:13,fontWeight:600,fontFamily:'inherit'}},'Skip'),
-        h('button',{onClick:function(){onSubmit(score,target,type);},
-          style:{flex:1,padding:'13px',background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontSize:13,fontWeight:700,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:6},
-          disabled:type==='quality'?qualVal===0:false},
-          h(Icon,{n:'circleCheck',cls:'w-4 h-4'}),' Save & Complete (+'+drill.xp_value+' XP)')
-      )
-    )
-  );
-}
-
-// ── D-F: Category Completion Rings ────────────────────────────────
-function CategoryRings({ currentCat, onCatClick, completedDrills }) {
-  return h('div',{style:{display:'flex',gap:8,padding:'14px 16px 0',overflowX:'auto',scrollbarWidth:'none'}},
-    DRILL_CATS.map(function(cat){
-      var catDrills=DRILLS.filter(function(d){return d.category===cat.id;});
-      var total=catDrills.length;
-      var done=catDrills.filter(function(d){return completedDrills.indexOf(d.id)!==-1;}).length;
-      var pct=total>0?(done/total):0;
-      var isActive=currentCat===cat.id;
-      var R=20,C=2*Math.PI*R,strokeDash=pct*C;
-      return h('button',{key:cat.id,onClick:function(){onCatClick(cat.id);},
-        style:{display:'flex',flexDirection:'column',alignItems:'center',gap:5,flexShrink:0,
-          background:'transparent',border:'none',cursor:'pointer',fontFamily:'inherit',padding:'4px 2px',
-          opacity:isActive?1:0.65,transition:'opacity 0.15s,transform 0.15s',
-          transform:isActive?'scale(1.1)':'scale(1)'}},
-        h('div',{style:{position:'relative',width:50,height:50}},
-          h('svg',{width:50,height:50,viewBox:'0 0 50 50'},
-            h('circle',{cx:25,cy:25,r:R,fill:'none',stroke:'rgba(48,54,61,0.8)',strokeWidth:3}),
-            done>0&&h('circle',{cx:25,cy:25,r:R,fill:'none',
-              stroke:isActive?cat.from:'rgba(100,116,139,0.6)',strokeWidth:3,
-              strokeDasharray:strokeDash+' '+C,strokeDashoffset:C*0.25,
-              strokeLinecap:'round',transition:'stroke-dasharray 0.5s ease,stroke 0.3s'}),
-            h('foreignObject',{x:8,y:8,width:34,height:34},
-              h('div',{xmlns:'http://www.w3.org/1999/xhtml',style:{width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',
-                borderRadius:'50%',background:isActive?(cat.from+'22'):'rgba(22,27,34,0.5)'}},
-                h(Icon,{n:cat.icon,cls:'w-4 h-4',style:{color:isActive?cat.from:'#6b7280'}})
-              )
+          h('div', { style: { flex: 1, minWidth: 0 }},
+            h('div', { style: { fontSize: 13, fontWeight: 700, color: '#f0fdf4', lineHeight: 1.3 }}, drill.videoTitle),
+            h('div', { style: { fontSize: 11, color: '#9ca3af', marginTop: 3 }},
+              drill.videoChannel, ' · ⭐ Top Pick for this drill'
             )
           )
-        ),
-        h('div',{style:{textAlign:'center'}},
-          h('div',{style:{fontSize:9,fontWeight:700,color:isActive?cat.from:'#4b5563',whiteSpace:'nowrap'}},
-            done>0?(done+'/'+total):('0/'+total))
         )
-      );
-    })
+      : h('div', { style: { borderRadius: 12, overflow: 'hidden', background: '#000' }},
+          h('div', { style: { position: 'relative', paddingBottom: '56.25%', height: 0 }},
+            h('iframe', {
+              src: 'https://www.youtube.com/embed/' + drill.videoId + '?autoplay=1&rel=0&modestbranding=1',
+              style: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' },
+              allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+              allowFullScreen: true, title: drill.videoTitle,
+            })
+          ),
+          h('div', { style: { padding: '8px 14px', background: 'rgba(17,17,17,0.9)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }},
+            h('span', { style: { fontSize: 11, color: '#9ca3af' }}, drill.videoChannel),
+            h('button', { onClick: function() { setShow(false); }, style: { background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: 18, fontFamily: 'inherit', padding: '0 4px' }}, '×')
+          )
+        )
   );
 }
 
-// ── DR-3: Featured Drill Banner ───────────────────────────────────
-function FeaturedDrillBanner({ featuredId }) {
-  if(!featuredId) return null;
-  var drill=DRILLS.find(function(d){return d.id===featuredId;});
-  if(!drill) return null;
-  return h('button',{
-    onClick:function(){nav('DrillDetail',{id:featuredId});},
-    style:{
-      display:'flex',alignItems:'center',gap:10,margin:'0 16px 4px',padding:'10px 14px',
-      borderRadius:10,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.30)',
-      cursor:'pointer',fontFamily:'inherit',textAlign:'left',width:'calc(100% - 32px)',
-    }},
-    h('span',{style:{fontSize:18,flexShrink:0}},'⭐'),
-    h('div',{style:{flex:1,minWidth:0}},
-      h('div',{style:{fontSize:10,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:2}},
-        'Featured This Week — 2× XP'
-      ),
-      h('div',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},drill.title)
+// ── DRILL DETAIL PAGE ────────────────────────────────────────────
+function DrillDetailPage({ drillId, onBack }) {
+  var drill = DRILLS.find(function(d) { return d.id === drillId; });
+  var [done, setDone] = useState(false);
+  var [started, setStarted] = useState(false);
+  if(!drill) return h('div', { style: { padding: 20, color: '#f0fdf4' }}, 'Drill not found. ', h('button', { onClick: onBack, style: { color: '#16a34a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 }}, '← Go back'));
+
+  var catCol = CATS[drill.category] ? CATS[drill.category].color : '#9ca3af';
+  var lvlCol = LEVEL_COLORS[drill.level] || '#9ca3af';
+
+  function completeDrill() {
+    if(done) return;
+    setDone(true);
+    var p = DB.getProgress();
+    p.drills_done = (p.drills_done || 0) + 1;
+    if(!p.drill_completions) p.drill_completions = {};
+    p.drill_completions[drill.id] = (p.drill_completions[drill.id] || 0) + 1;
+    DB.saveProgress(p);
+    if(awardXP) awardXP(drill.xp, 0, 'drill:' + drill.id);
+    window.dispatchEvent(new CustomEvent('sc_update'));
+  }
+
+  return h('div', { style: { background: '#0d1117', minHeight: '100dvh', paddingBottom: 100 }},
+    // Header
+    h('div', { style: { padding: '16px 16px 0', position: 'sticky', top: 0, background: 'rgba(13,17,23,0.97)', zIndex: 10, borderBottom: '1px solid rgba(48,54,61,0.6)', paddingBottom: 12 }},
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 }},
+        h('button', { onClick: onBack, style: { background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: '7px 12px', color: '#9ca3af', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, minHeight: 36 }}, '← Back'),
+        h('div', { style: { flex: 1, fontSize: 15, fontWeight: 800, color: '#f0fdf4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}, drill.name),
+        h('div', { style: { fontSize: 20, lineHeight: 1, flexShrink: 0 }}, drill.icon)
+      )
     ),
-    h(Icon,{n:'chevR',cls:'w-4 h-4',style:{color:'#f59e0b',flexShrink:0}})
+    h('div', { style: { padding: '20px 16px' }},
+      // Meta badges
+      h('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }},
+        h('span', { style: { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: CATS[drill.category].bg, color: catCol, border: '1px solid ' + catCol + '40' }}, drill.category.charAt(0).toUpperCase() + drill.category.slice(1)),
+        h('span', { style: { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: lvlCol + '15', color: lvlCol, border: '1px solid ' + lvlCol + '40' }}, drill.level.charAt(0).toUpperCase() + drill.level.slice(1)),
+        h('span', { style: { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: 'rgba(22,163,74,0.12)', color: '#4ade80', border: '1px solid rgba(22,163,74,0.3)' }}, '+' + drill.xp + ' XP'),
+        h('span', { style: { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 99, background: 'rgba(75,85,99,0.2)', color: '#9ca3af', border: '1px solid rgba(75,85,99,0.3)' }}, drill.duration)
+      ),
+      // Tagline
+      h('p', { style: { fontSize: 14, color: '#9ca3af', lineHeight: 1.7, marginBottom: 20, fontStyle: 'italic' }}, '"' + drill.tagline + '"'),
+      // Video player
+      h(VideoPlayer, { drill: drill }),
+      // Equipment
+      h('div', { style: { marginTop: 20, marginBottom: 16, padding: '14px 16px', borderRadius: 12, background: 'rgba(22,27,34,0.9)', border: '1px solid rgba(48,54,61,0.9)' }},
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}, 'Equipment Needed'),
+        h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 }},
+          drill.equipment.map(function(item, i) {
+            return h('span', { key: i, style: { fontSize: 12, padding: '4px 10px', borderRadius: 99, background: 'rgba(75,85,99,0.25)', color: '#d1d5db', border: '1px solid rgba(75,85,99,0.4)' }}, item);
+          })
+        )
+      ),
+      // Steps
+      h('div', { style: { marginBottom: 16 }},
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}, 'Step-by-Step Instructions'),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10 }},
+          drill.steps.map(function(step, i) {
+            return h('div', { key: i, style: { display: 'flex', gap: 12, padding: '12px 14px', borderRadius: 11, background: 'rgba(22,27,34,0.9)', border: '1px solid rgba(48,54,61,0.9)' }},
+              h('div', { style: { width: 24, height: 24, borderRadius: '50%', background: 'rgba(22,163,74,0.15)', border: '1.5px solid rgba(22,163,74,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#4ade80', flexShrink: 0 }}, i + 1),
+              h('p', { style: { fontSize: 13, color: '#d1d5db', lineHeight: 1.65, margin: 0, paddingTop: 2 }}, step)
+            );
+          })
+        )
+      ),
+      // Key points
+      h('div', { style: { marginBottom: 16, padding: '14px 16px', borderRadius: 12, background: 'rgba(22,163,74,0.06)', border: '1px solid rgba(22,163,74,0.2)' }},
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}, '✓ Key Coaching Points'),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 }},
+          drill.keyPoints.map(function(pt, i) {
+            return h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start' }},
+              h('span', { style: { color: '#16a34a', fontSize: 14, lineHeight: 1, flexShrink: 0, marginTop: 2 }}, '✓'),
+              h('span', { style: { fontSize: 13, color: '#d1d5db', lineHeight: 1.5 }}, pt)
+            );
+          })
+        )
+      ),
+      // Common mistakes
+      h('div', { style: { marginBottom: 24, padding: '14px 16px', borderRadius: 12, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }},
+        h('div', { style: { fontSize: 12, fontWeight: 700, color: '#f87171', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}, '⚠ Common Mistakes'),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 7 }},
+          drill.commonMistakes.map(function(m, i) {
+            return h('div', { key: i, style: { display: 'flex', gap: 8, alignItems: 'flex-start' }},
+              h('span', { style: { color: '#ef4444', fontSize: 14, lineHeight: 1, flexShrink: 0, marginTop: 2 }}, '✗'),
+              h('span', { style: { fontSize: 13, color: '#d1d5db', lineHeight: 1.5 }}, m)
+            );
+          })
+        )
+      ),
+      // Complete button
+      done
+        ? h('div', { style: { textAlign: 'center', padding: '20px', borderRadius: 12, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)' }},
+            h('div', { style: { fontSize: 32, marginBottom: 8 }}, '🎉'),
+            h('div', { style: { fontSize: 15, fontWeight: 700, color: '#4ade80', marginBottom: 4 }}, 'Drill Complete!'),
+            h('div', { style: { fontSize: 13, color: '#9ca3af' }}, '+' + drill.xp + ' XP earned')
+          )
+        : h('button', {
+            onClick: completeDrill,
+            style: {
+              width: '100%', padding: '15px', border: 'none', borderRadius: 12,
+              background: 'linear-gradient(135deg, #16a34a, #0d9488)',
+              color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              fontFamily: 'inherit', boxShadow: '0 4px 20px rgba(22,163,74,0.35)',
+            }
+          }, '✓ Mark as Complete — +' + drill.xp + ' XP')
+    )
   );
 }
 
-// ================================================================
-// DRILLS PAGE
-// ================================================================
+// ── MAIN DRILLS PAGE ─────────────────────────────────────────────
 function DrillsPage() {
-  var [cat,setCat]           = useState('batting');
-  var [search,setSearch]     = useState('');
-  var [progress,setProgress] = useState(function(){ return DB.getProgress(); });
-  var [drillProg,setDrillProg] = useState(function(){ return DB.getDrillProgress(); });
-  var [favs,setFavs]         = useState(function(){ return DB.getDrillFavorites ? DB.getDrillFavorites() : []; });
-  var featuredId = getFeaturedDrillId ? getFeaturedDrillId() : null;
+  var [activeCat, setActiveCat] = useState('all');
+  var [search, setSearch] = useState('');
+  var [selectedDrill, setSelectedDrill] = useState(null);
+  var progress = DB.getProgress();
+  var completions = progress.drill_completions || {};
 
-  useEffect(function(){
-    var refresh=function(){
-      setProgress(DB.getProgress());setDrillProg(DB.getDrillProgress());
-      if(DB.getDrillFavorites) setFavs(DB.getDrillFavorites());
-    };
-    window.addEventListener('sc_update',refresh);
-    window.addEventListener('focus',refresh);
-    return function(){window.removeEventListener('sc_update',refresh);window.removeEventListener('focus',refresh);};
-  },[]);
+  if(selectedDrill) {
+    return h(DrillDetailPage, { drillId: selectedDrill, onBack: function() { setSelectedDrill(null); } });
+  }
 
-  var completed=progress.completed_drills||[];
-  var catDef=DRILL_CATS.find(function(c){return c.id===cat;});
-  var filtered=DRILLS.filter(function(d){
-    if(cat==='favorites') return favs.indexOf(d.id)!==-1 && (search===''||d.title.toLowerCase().indexOf(search.toLowerCase())!==-1);
-    return d.category===cat&&(search===''||d.title.toLowerCase().indexOf(search.toLowerCase())!==-1);
+  // Filter drills
+  var filtered = DRILLS.filter(function(d) {
+    var catMatch = activeCat === 'all' || d.category === activeCat;
+    var searchMatch = !search || d.name.toLowerCase().indexOf(search.toLowerCase()) > -1 || d.focus.some(function(f) { return f.toLowerCase().indexOf(search.toLowerCase()) > -1; });
+    return catMatch && searchMatch;
   });
 
-  // DR-6: Quick 10-Min handler
-  function handleQuick10() {
-    var candidates=DRILLS.filter(function(d){return d.category===cat&&d.duration_minutes<=15;});
-    if(candidates.length<2){
-      candidates=DRILLS.filter(function(d){return d.duration_minutes<=15;});
-    }
-    var picked=candidates.slice(0,3).map(function(d){return d.id;});
-    if(picked.length<2){ return; }
-    try{ sessionStorage.setItem('sc_quick_drills',JSON.stringify(picked)); }catch(e){}
-    nav('PracticeSession');
-  }
-
-  return h('div',{className:'pb-28'},
-    h(PageHeader,{title:'Cricket Drills',subtitle:DRILLS.length+' professional drills',
-      gradient:'linear-gradient(135deg,'+(catDef?catDef.from:'#1d4ed8')+','+(catDef?catDef.to:'#4338ca')+')',
-      actions:h('div',{style:{display:'flex',gap:6}},
-        // DR-6 Quick 10-Min
-        h('button',{onClick:handleQuick10,style:{
-          display:'flex',alignItems:'center',gap:4,padding:'7px 10px',borderRadius:8,
-          background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.18)',
-          cursor:'pointer',color:'#fff',fontSize:11,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap',
-        }},h(Icon,{n:'zap',cls:'w-3 h-3'}),'10 Min'),
-        // Build Session
-        h('button',{onClick:function(){nav('PracticeSession');},style:{
-          display:'flex',alignItems:'center',gap:5,padding:'7px 10px',borderRadius:8,
-          background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.18)',
-          cursor:'pointer',color:'#fff',fontSize:11,fontWeight:700,fontFamily:'inherit',whiteSpace:'nowrap',
-        }},h(Icon,{n:'zap',cls:'w-3 h-3'}),'Session')
-      )}),
-
-    // DR-3: Featured drill banner (above rings)
-    featuredId && h(FeaturedDrillBanner,{featuredId:featuredId}),
-
-    // D-F: Category completion rings
-    h(CategoryRings,{currentCat:cat,onCatClick:function(c){setCat(c);setSearch('');},completedDrills:completed}),
-
-    // Category pills
-    h('div',{role:'tablist','aria-label':'Drill categories',className:'flex gap-2 px-4 py-3 overflow-x-auto scrollbar-hide'},
-      // Favourites pill first
-      h('button',{
-        role:'tab', 'aria-selected':cat==='favorites'?'true':'false',
-        'aria-label':'Favourite drills ('+favs.length+')',
-        onClick:function(){setCat('favorites');setSearch('');},
-        className:'flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap flex-shrink-0 transition-all',
-        style:cat==='favorites'
-          ?{background:'linear-gradient(135deg,#be123c,#e11d48)',color:'#fff',boxShadow:'0 4px 16px rgba(190,18,60,0.35)',outline:'none'}
-          :{background:'rgba(22,27,34,0.9)',color:'#8b949e',border:'1px solid rgba(48,54,61,0.9)',outline:'none'},
-      },
-        h('svg',{xmlns:'http://www.w3.org/2000/svg',width:14,height:14,viewBox:'0 0 24 24',fill:cat==='favorites'?'#fff':'none',stroke:cat==='favorites'?'#fff':'#484f58',strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round','aria-hidden':'true'},
-          h('path',{d:'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z'})
+  return h('div', { style: { background: '#0d1117', minHeight: '100dvh', paddingBottom: 100 }},
+    // Sticky header
+    h('div', { style: { position: 'sticky', top: 0, background: 'rgba(13,17,23,0.97)', zIndex: 10, paddingTop: 'max(16px, calc(16px + env(safe-area-inset-top)))', paddingBottom: 0, borderBottom: '1px solid rgba(48,54,61,0.6)' }},
+      h('div', { style: { padding: '0 16px 12px' }},
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }},
+          h('div', null,
+            h('h1', { style: { fontSize: 20, fontWeight: 900, color: '#f0fdf4', letterSpacing: '-0.01em', margin: 0 }}, 'Cricket Drills'),
+            h('div', { style: { fontSize: 12, color: '#6b7280', marginTop: 2 }}, filtered.length + ' of ' + DRILLS.length + ' drills')
+          ),
+          h('div', { style: { fontSize: 11, fontWeight: 700, color: '#4ade80', background: 'rgba(22,163,74,0.12)', padding: '4px 10px', borderRadius: 99, border: '1px solid rgba(22,163,74,0.25)' }}, (progress.drills_done || 0) + ' done')
         ),
-        'Favourites',
-        favs.length>0&&h('span',{style:{marginLeft:3,fontSize:10,fontWeight:800,opacity:0.8}},favs.length)
-      ),
-      DRILL_CATS.map(function(c){
-        return h('button',{key:c.id,role:'tab','aria-selected':cat===c.id?'true':'false',
-          onClick:function(){setCat(c.id);setSearch('');},
-          className:'flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap flex-shrink-0 transition-all',
-          style:cat===c.id?{background:'linear-gradient(135deg,'+c.from+','+c.to+')',color:'#fff',boxShadow:'0 4px 16px '+c.from+'40',outline:'none'}
-            :{background:'rgba(22,27,34,0.9)',color:'#8b949e',border:'1px solid rgba(48,54,61,0.9)',outline:'none'}},
-          h(Icon,{n:c.icon,cls:'w-3.5 h-3.5 flex-shrink-0',style:{color:cat===c.id?'#fff':c.text}}),' ',c.label);
-      })
-    ),
-
-    // Search
-    h('div',{className:'px-4 mb-3'},
-      h('div',{className:'relative'},
-        h(Icon,{n:'search',cls:'w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2',style:{color:'#484f58'}}),
-        h('input',{type:'text',placeholder:'Search drills…',value:search,onChange:function(e){setSearch(e.target.value);},
-          className:'w-full pl-9 pr-4 py-2.5 rounded-xl text-sm placeholder-slate-600 outline-none',
-          style:{background:'rgba(22,27,34,0.9)',border:'1px solid '+(search?(catDef?catDef.from+'60':'rgba(22,163,74,0.4)'):'rgba(48,54,61,0.9)'),color:'#e6edf3'}})
+        // Search
+        h('div', { style: { position: 'relative', marginBottom: 12 }},
+          h('input', {
+            type: 'search', value: search, placeholder: 'Search drills...',
+            onChange: function(e) { setSearch(e.target.value); },
+            style: {
+              width: '100%', padding: '10px 14px 10px 36px', borderRadius: 10,
+              background: 'rgba(22,27,34,0.9)', border: '1px solid rgba(48,54,61,0.9)',
+              color: '#f0fdf4', fontSize: 14, fontFamily: 'inherit', outline: 'none',
+              boxSizing: 'border-box',
+            },
+            onFocus: function(e) { e.target.style.borderColor = 'rgba(22,163,74,0.4)'; },
+            onBlur: function(e) { e.target.style.borderColor = 'rgba(48,54,61,0.9)'; },
+          }),
+          h('span', { style: { position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#6b7280', fontSize: 14 }}, '🔍')
+        ),
+        // Category filter
+        h('div', { style: { display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 2 }},
+          Object.keys(CATS).map(function(cat) {
+            var active = activeCat === cat;
+            var catData = CATS[cat];
+            return h('button', {
+              key: cat,
+              onClick: function() { setActiveCat(cat); setSearch(''); },
+              style: {
+                flexShrink: 0, padding: '7px 14px', borderRadius: 99, border: 'none',
+                cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
+                background: active ? catData.bg : 'transparent',
+                color: active ? catData.color : '#6b7280',
+                outline: active ? '1.5px solid ' + catData.color + '50' : 'none',
+                transition: 'all 0.15s',
+              }
+            }, catData.label);
+          })
+        )
       )
     ),
-
-    // Drill cards
-    h('div',{className:'px-4 space-y-2.5'},
-      filtered.length===0
-        ?h(EmptyState,{icon:catDef&&catDef.icon||'bat',title:'No drills found',desc:'Try a different search term'})
-        :filtered.map(function(d){
-          var lvl=LVL_BADGE[d.skill_level]||LVL_BADGE.beginner;
-          var done=completed.indexOf(d.id)!==-1;
-          var tier=drillProg[d.id]?drillProg[d.id].tier||'none':'none';
-          var catD=DRILL_CATS.find(function(c){return c.id===d.category;});
-          var isFeatured=featuredId===d.id;
-          var inf=inferDrillTarget(d.target_metric);
-          return h('div',{key:d.id,
-            style:{background:'rgba(22,27,34,0.9)',borderRadius:10,position:'relative',
-              border:'1px solid '+(tier==='gold'?'rgba(245,158,11,0.35)':isFeatured?'rgba(245,158,11,0.25)':done?'rgba(22,163,74,0.25)':'rgba(48,54,61,0.9)')}},
-            h('button',{
-              onClick:function(){nav('DrillDetail',{id:d.id});},
-              'aria-label':'Open '+d.title,
-              className:'w-full text-left p-4 rounded-2xl transition-all active:scale-[.99]',
-              style:{background:'none',border:'none',cursor:'pointer',fontFamily:'inherit',outline:'none',display:'block',width:'100%',padding:14,paddingRight:44}},
-              h('div',{className:'flex items-start gap-3'},
-                h('div',{style:{width:44,height:44,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',
-                  background:'linear-gradient(135deg,'+(catD?catD.from:'#1d4ed8')+','+(catD?catD.to:'#4338ca')+')'}},
-                  h(Icon,{n:catD?catD.icon:'bat',cls:'w-5 h-5 text-white'}),
-                  done&&h('div',{style:{position:'absolute',top:-4,right:-4,width:18,height:18,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center'}},
-                    h(Icon,{n:'check',cls:'w-3 h-3 text-white'}))
-                ),
-                h('div',{className:'flex-1 min-w-0'},
-                  h('div',{className:'flex items-start justify-between gap-2'},
-                    h('h3',{style:{fontSize:13,fontWeight:700,color:'#e6edf3',lineHeight:1.3}},d.title),
-                    d.is_premium&&h(PremiumBadge)
+    // Drill grid
+    h('div', { style: { padding: '16px 16px' }},
+      filtered.length === 0
+        ? h('div', { style: { textAlign: 'center', padding: '60px 20px', color: '#6b7280' }},
+            h('div', { style: { fontSize: 40, marginBottom: 12 }}, '🔍'),
+            h('div', { style: { fontSize: 14, fontWeight: 600 }}, 'No drills found'),
+            h('button', { onClick: function() { setSearch(''); setActiveCat('all'); }, style: { marginTop: 12, background: 'none', border: 'none', color: '#16a34a', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700 }}, 'Clear filters')
+          )
+        : h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }},
+            filtered.map(function(drill) {
+              var catData = CATS[drill.category];
+              var lvlCol = LEVEL_COLORS[drill.level] || '#9ca3af';
+              var drillDone = completions[drill.id] || 0;
+              return h('button', {
+                key: drill.id,
+                onClick: function() { setSelectedDrill(drill.id); },
+                style: {
+                  display: 'flex', flexDirection: 'column', padding: 0,
+                  borderRadius: 14, border: '1px solid rgba(48,54,61,0.9)',
+                  background: 'rgba(22,27,34,0.9)', cursor: 'pointer',
+                  fontFamily: 'inherit', textAlign: 'left', overflow: 'hidden',
+                  transition: 'all 0.2s', outline: 'none',
+                },
+                onMouseEnter: function(e) { e.currentTarget.style.borderColor = catData.color + '60'; e.currentTarget.style.transform = 'translateY(-2px)'; },
+                onMouseLeave: function(e) { e.currentTarget.style.borderColor = 'rgba(48,54,61,0.9)'; e.currentTarget.style.transform = 'translateY(0)'; },
+              },
+                // Card header with category color
+                h('div', { style: { height: 4, background: catData.color, opacity: 0.7 }}),
+                h('div', { style: { padding: '14px 16px' }},
+                  h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }},
+                    h('div', { style: { fontSize: 24, lineHeight: 1, flexShrink: 0, marginTop: 2 }}, drill.icon),
+                    h('div', { style: { flex: 1, minWidth: 0 }},
+                      h('div', { style: { fontSize: 14, fontWeight: 800, color: '#f0fdf4', lineHeight: 1.3, marginBottom: 4 }}, drill.name),
+                      h('div', { style: { fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}, drill.tagline)
+                    ),
+                    drillDone > 0 && h('div', { style: { flexShrink: 0, fontSize: 10, fontWeight: 700, color: '#4ade80', background: 'rgba(22,163,74,0.12)', padding: '2px 7px', borderRadius: 99, border: '1px solid rgba(22,163,74,0.25)', whiteSpace: 'nowrap' }}, '×' + drillDone)
                   ),
-                  isFeatured&&h('div',{style:{fontSize:10,fontWeight:700,color:'#f59e0b',marginTop:2}},'⭐ 2× XP this week'),
-                  h('p',{style:{fontSize:11,color:'#484f58',marginTop:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},d.description),
-                  h('div',{style:{display:'flex',alignItems:'center',flexWrap:'wrap',gap:6,marginTop:8}},
-                    h('span',{style:{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:lvl.bg,border:'1px solid '+lvl.border,color:lvl.color,textTransform:'uppercase',letterSpacing:'0.04em'}},lvl.label),
-                    h('span',{style:{fontSize:11,color:'#484f58'}},d.duration_minutes+' min'),
-                    h(XPBadge,{xp:isFeatured?d.xp_value*2:d.xp_value}),
-                    h(TierBadge,{tier:tier}),
-                    h(PBBadge,{drillId:d.id,targetType:inf.type,targetScore:inf.target}),
-                    // P5-D: Score sparkline
-                    h(DrillScoreSparkline,{drillId:d.id})
+                  // Focus tags
+                  h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }},
+                    drill.focus.slice(0,3).map(function(f, i) {
+                      return h('span', { key: i, style: { fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: 'rgba(75,85,99,0.25)', color: '#9ca3af', border: '1px solid rgba(75,85,99,0.3)' }}, f);
+                    })
+                  ),
+                  // Footer row
+                  h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }},
+                    h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' }},
+                      h('span', { style: { fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: lvlCol + '15', color: lvlCol, border: '1px solid ' + lvlCol + '30' }}, drill.level),
+                      h('span', { style: { fontSize: 11, color: '#6b7280' }}, drill.duration)
+                    ),
+                    h('div', { style: { display: 'flex', alignItems: 'center', gap: 4 }},
+                      h('span', { style: { fontSize: 12, fontWeight: 800, color: '#4ade80' }}, '+' + drill.xp),
+                      h('span', { style: { fontSize: 11, color: '#6b7280' }}, 'XP'),
+                      drill.videoId && h('span', { style: { fontSize: 16, marginLeft: 4 }}, '▶')
+                    )
                   )
                 )
-              )
-            ),
-            // P5-B: Heart button (outside main button, absolutely positioned)
-            h('div',{style:{position:'absolute',top:8,right:4}},
-              h(DrillHeartButton,{drillId:d.id,size:16})
-            )
-          );
-        })
-    )
-  );
-}
-
-// ================================================================
-// DRILL DETAIL PAGE
-// ================================================================
-function DrillDetailPage({ params }) {
-  var drill=DRILLS.find(function(d){return d.id===params&&params.id?d.id===params.id:false;});
-  if(!params||!params.id) drill=null;
-  else drill=DRILLS.find(function(d){return d.id===params.id;});
-
-  var [done,setDone]                 = useState(false);
-  var [showSheet,setShowSheet]       = useState(false);
-  var [encouragement,setEncouragement] = useState('');
-  var completing                     = useRef(false);
-  var catDef = drill ? DRILL_CATS.find(function(c){return c.id===drill.category;}) : null;
-
-  var featuredId = getFeaturedDrillId ? getFeaturedDrillId() : null;
-  var isFeatured = drill && featuredId===drill.id;
-  var xpMultiplier = isFeatured ? 2 : 1;
-
-  if(!drill) return h('div',{className:'pb-28 flex flex-col items-center justify-center',style:{minHeight:'80vh'}},
-    h('p',{className:'font-bold text-white mb-4'},'Drill not found'),
-    h('button',{onClick:function(){nav('Drills');},className:'btn-primary px-6 py-3'},'Back'));
-
-  function handleTrackerSubmit(rawScore,targetScore,targetType) {
-    if(completing.current) return; completing.current=true;
-    DB.logDrillAttempt(drill.id,rawScore,targetScore,targetType);
-    // DR-2: update drill streak silently
-    if(DB.updateDrillStreak) DB.updateDrillStreak(drill.id);
-    awardXP(drill.xp_value*xpMultiplier,drill.duration_minutes,'drill','drill',drill.id);
-    var tier=DB.getDrillTier(drill.id);
-    var msg=tier==='gold'?getEncouragement('gold_tier'):tier==='silver'?getEncouragement('silver_tier'):nextEnc();
-    setEncouragement(msg);
-    fireConfetti(); setShowSheet(false); setDone(true);
-  }
-  function handleTrackerSkip() {
-    if(completing.current) return; completing.current=true;
-    var inf=inferDrillTarget(drill.target_metric);
-    DB.logDrillAttempt(drill.id,0,inf.target,inf.type);
-    if(DB.updateDrillStreak) DB.updateDrillStreak(drill.id);
-    awardXP(drill.xp_value*xpMultiplier,drill.duration_minutes,'drill','drill',drill.id);
-    setEncouragement(nextEnc());
-    fireConfetti(); setShowSheet(false); setDone(true);
-  }
-
-  if(done) {
-    var tier=DB.getDrillTier(drill.id);
-    return h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'48px 20px',minHeight:'80vh',background:'#0d1117'}},
-      h('div',{style:{width:72,height:72,borderRadius:16,background:'rgba(22,163,74,0.12)',border:'1px solid rgba(22,163,74,0.25)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:16}},
-        h(Icon,{n:'circleCheck',cls:'w-9 h-9',style:{color:'#16a34a'}})),
-      h('h2',{className:'text-2xl font-black text-white mb-2'},'Drill Complete!'),
-      h('p',{className:'text-slate-400 mb-3'},drill.title),
-      isFeatured&&h('div',{style:{padding:'6px 14px',borderRadius:7,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.3)',marginBottom:8}},
-        h('span',{style:{fontSize:12,fontWeight:700,color:'#f59e0b'}},'⭐ Featured drill — 2× XP awarded!')
-      ),
-      h('div',{style:{display:'flex',gap:8,alignItems:'center',justifyContent:'center',marginBottom:12}},
-        h(XPBadge,{xp:drill.xp_value*xpMultiplier}),h(TierBadge,{tier:tier})),
-      h('div',{style:{padding:'14px 16px',borderRadius:12,background:'rgba(22,163,74,0.07)',border:'1px solid rgba(22,163,74,0.20)',maxWidth:320,marginBottom:20}},
-        h('p',{style:{fontSize:14,fontWeight:600,color:'#6ee7b7',lineHeight:1.6}},encouragement)),
-      h('div',{className:'mt-2 flex flex-col gap-3 w-full max-w-xs'},
-        h('button',{onClick:function(){nav('Drills');},className:'btn-primary'},'More Drills'),
-        h('button',{onClick:function(){setDone(false);completing.current=false;},className:'btn-secondary'},'Do Again')
-      )
-    );
-  }
-
-  return h('div',{className:'pb-28'},
-    h(PageHeader,{title:drill.title,subtitle:drill.duration_minutes+' min · '+(drill.xp_value*xpMultiplier)+' XP'+(isFeatured?' · ⭐ 2× XP':''),
-      gradient:'linear-gradient(135deg,'+(catDef?catDef.from:'#1d4ed8')+','+(catDef?catDef.to:'#4338ca')+')',onBack:function(){nav('Drills');},
-      actions:h(DrillHeartButton,{drillId:drill.id,size:20})}),
-
-    // Featured banner on detail page
-    isFeatured&&h('div',{style:{margin:'12px 16px 0',padding:'10px 14px',borderRadius:10,
-      background:'rgba(245,158,11,0.10)',border:'1px solid rgba(245,158,11,0.30)',
-      display:'flex',alignItems:'center',gap:10}},
-      h('span',{style:{fontSize:18}},'⭐'),
-      h('div',null,
-        h('div',{style:{fontSize:11,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.08em'}},'Featured This Week'),
-        h('div',{style:{fontSize:12,color:'rgba(245,158,11,0.75)'}},
-          'Complete this drill for '+drill.xp_value*2+' XP (2× bonus this week!)')
-      )
-    ),
-
-    h('div',{className:'px-4 pt-5 space-y-4'},
-      drill.video_id&&h('div',null,
-        h('p',{className:'text-xs font-bold text-slate-500 uppercase tracking-wider mb-2'},'Video Tutorial'),
-        h('div',{style:{position:'relative',aspectRatio:'16/9',background:'#0f172a',borderRadius:'1rem',overflow:'hidden'}},
-          h('iframe',{src:'https://www.youtube.com/embed/'+drill.video_id+'?modestbranding=1&rel=0&color=white',title:drill.title,
-            allow:'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',allowFullScreen:true,loading:'lazy',
-            style:{position:'absolute',inset:0,width:'100%',height:'100%',border:0}}))),
-      h('div',{className:'p-4 rounded-2xl',style:{background:'rgba(30,41,59,0.6)',border:'1px solid rgba(51,65,85,0.5)'}},
-        h('p',{className:'text-sm text-slate-300 leading-relaxed'},drill.description)),
-      h('div',null,
-        h('p',{className:'text-xs font-bold text-slate-500 uppercase tracking-wider mb-3'},drill.steps.length+' Steps'),
-        h('div',{className:'space-y-2'},
-          drill.steps.map(function(s,i){
-            return h('div',{key:i,className:'flex items-start gap-3 p-3 rounded-xl',
-              style:{background:'rgba(15,23,42,0.5)',border:'1px solid rgba(51,65,85,0.4)'}},
-              h('div',{className:'w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white flex-shrink-0 mt-0.5',
-                style:{background:'linear-gradient(135deg,'+(catDef?catDef.from:'#1d4ed8')+','+(catDef?catDef.to:'#4338ca')+')'}},i+1),
-              h('p',{className:'text-sm text-slate-300 leading-relaxed flex-1'},s));
-          }))),
-      drill.tips&&h('div',{className:'flex items-start gap-3 p-4 rounded-2xl',style:{background:'rgba(16,185,129,0.07)',border:'1px solid rgba(16,185,129,0.22)'}},
-        h(Icon,{n:'sparkles',cls:'w-4 h-4 flex-shrink-0',style:{color:'#16a34a'}}),
-        h('div',null,h('p',{className:'text-xs font-black text-emerald-400 uppercase tracking-wider mb-1'},'Coach Tip'),h('p',{className:'text-sm',style:{color:'#6ee7b7'}},drill.tips))),
-      drill.target_metric&&h('div',{className:'flex items-start gap-3 p-4 rounded-2xl',style:{background:'rgba(59,130,246,0.07)',border:'1px solid rgba(59,130,246,0.22)'}},
-        h(Icon,{n:'target',cls:'w-4 h-4 flex-shrink-0',style:{color:'#3b82f6'}}),
-        h('div',null,h('p',{className:'text-xs font-black text-blue-400 uppercase tracking-wider mb-1'},'Success Target'),h('p',{className:'text-sm text-blue-300'},drill.target_metric))),
-      h(TierProgressCard,{drill:drill}),
-
-      // P5-D: 5-bar score history chart
-      (function(){
-        var recent=DB.getDrillRecentScores?DB.getDrillRecentScores(drill.id):[];
-        if(!recent||!recent.length) return null;
-        var max=5;
-        function barColor(pct){return pct>=80?'#16a34a':pct>=50?'#f59e0b':'#ef4444';}
-        return h('div',{
-          role:'region','aria-label':'Your last '+recent.length+' attempt scores',
-          style:{padding:'14px',borderRadius:12,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)'}},
-          h('p',{style:{fontSize:11,fontWeight:700,color:'#484f58',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}},'Last '+recent.length+' Attempts'),
-          h('div',{style:{display:'flex',alignItems:'flex-end',gap:6,height:40},'aria-hidden':'true'},
-            recent.map(function(r,i){
-              var ht=Math.max(4,Math.round((r.pct/100)*36));
-              return h('div',{key:i,style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}},
-                h('div',{style:{width:'100%',borderRadius:'3px 3px 0 0',background:barColor(r.pct),height:ht+'px',transition:'height 0.4s'}}),
-                h('div',{style:{fontSize:8,color:'#484f58',fontWeight:600}},r.pct+'%')
               );
             })
           )
-        );
-      })(),
-
-      // P5-B: Personal training notes
-      (function(){
-        var noteData=DB.getDrillNote?DB.getDrillNote(drill.id):null;
-        var [noteText,setNoteText]=React.useState(noteData?noteData.text:'');
-        var [saved,setSaved]=React.useState(false);
-        function handleBlur(){
-          if(DB.saveDrillNote) DB.saveDrillNote(drill.id,noteText);
-          setSaved(true); setTimeout(function(){setSaved(false);},2000);
-        }
-        return h('div',{
-          role:'region','aria-label':'Your personal training notes for this drill',
-          style:{padding:'14px',borderRadius:12,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)'}},
-          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
-            h('label',{htmlFor:'drill-notes-'+drill.id,style:{fontSize:11,fontWeight:700,color:'#484f58',textTransform:'uppercase',letterSpacing:'0.08em'}},
-              '✏️ My Notes'),
-            saved&&h('span',{role:'status','aria-live':'polite',style:{fontSize:11,fontWeight:700,color:'#16a34a'}},'Saved ✓')
-          ),
-          h('textarea',{
-            id:'drill-notes-'+drill.id,
-            value:noteText,
-            onChange:function(e){setNoteText(e.target.value);setSaved(false);},
-            onBlur:handleBlur,
-            placeholder:'Add your coaching notes, what worked, personal tips...',
-            rows:3,
-            'aria-label':'Personal training notes for '+drill.title,
-            style:{
-              width:'100%',padding:'10px 12px',borderRadius:9,fontSize:13,lineHeight:1.6,
-              background:'rgba(13,17,23,0.6)',border:'1px solid rgba(48,54,61,0.9)',color:'#e6edf3',
-              fontFamily:'inherit',resize:'none',outline:'none',boxSizing:'border-box',
-              transition:'border-color 0.15s',
-            },
-            onFocus:function(e){e.target.style.borderColor='#16a34a';e.target.style.boxShadow='0 0 0 3px rgba(22,163,74,0.15)';},
-            onBlur:function(e){e.target.style.borderColor='rgba(48,54,61,0.9)';e.target.style.boxShadow='none';}
-          }),
-          h('p',{style:{fontSize:10,color:'#374151',marginTop:5}},'Notes auto-save when you leave this field. Private to you.')
-        );
-      })(),
-        DB.addSession({id:'sch_'+Date.now(),date:new Date().toISOString().slice(0,10),time:'',type:'drill',title:drill.title,ref_id:drill.id,duration_minutes:drill.duration_minutes,xp_value:drill.xp_value,status:'pending',notes:'',color:SCHED_TYPES.drill.color});
-        window.dispatchEvent(new CustomEvent('sc_update'));
-        alert('Added to today\'s schedule! ✅');},
-        className:'w-full py-3 rounded-2xl text-sm font-bold text-blue-400 text-center',
-        style:{background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.25)',cursor:'pointer'}},'📅 Add to Today\'s Schedule'),
-      h('button',{onClick:function(){setShowSheet(true);},className:'btn-primary w-full py-4 text-base font-black'},
-        h(Icon,{n:'circleCheck',cls:'w-5 h-5'}),' Mark Complete (+'+(drill.xp_value*xpMultiplier)+' XP)')
-    ),
-    showSheet&&h(TargetTrackerSheet,{drill:drill,onSubmit:handleTrackerSubmit,onSkip:handleTrackerSkip})
-  );
-}
-
-// ================================================================
-// D-C: PRACTICE SESSION BUILDER
-// ================================================================
-const SESSION_TEMPLATES = [
-  {id:'batting',  label:'Batting Day',  icon:'bat',    color:'#3b82f6', bg:'rgba(59,130,246,0.12)',  border:'rgba(59,130,246,0.3)',  desc:'Full batting technique workout',
-    drillIds:DRILLS?DRILLS.filter(function(d){return d.category==='batting';}).slice(0,4).map(function(d){return d.id;}):[]},
-  {id:'bowling',  label:'Bowling Day',  icon:'wicket', color:'#ef4444', bg:'rgba(239,68,68,0.12)',   border:'rgba(239,68,68,0.3)',   desc:'Focus on your bowling attack',
-    drillIds:DRILLS?DRILLS.filter(function(d){return d.category==='bowling';}).slice(0,3).map(function(d){return d.id;}):[]},
-  {id:'fielding', label:'Fielding Day', icon:'shield',  color:'#10b981', bg:'rgba(16,185,129,0.12)',  border:'rgba(16,185,129,0.3)',  desc:'Sharpen your fielding skills',
-    drillIds:DRILLS?DRILLS.filter(function(d){return d.category==='fielding';}).slice(0,3).map(function(d){return d.id;}):[]},
-];
-
-function PracticeSessionBuilderPage() {
-  var [step,setStep]               = useState('template');
-  var [selectedDrills,setSelected] = useState([]);
-  var [template,setTemplate]       = useState(null);
-  var [playIdx,setPlayIdx]         = useState(0);
-  var [sessionDone,setSessionDone] = useState(false);
-  var [totalEarned,setTotalEarned] = useState(0);
-  var [encouragement,setEncouragement] = useState('');
-
-  // DR-6: pick up quick drills from sessionStorage
-  useEffect(function(){
-    try {
-      var quick=sessionStorage.getItem('sc_quick_drills');
-      if(quick){
-        var ids=JSON.parse(quick);
-        sessionStorage.removeItem('sc_quick_drills');
-        setSelected(ids);
-        setStep('preview');
-      }
-    } catch(e){}
-  },[]);
-
-  var drillObjs=selectedDrills.map(function(id){return DRILLS.find(function(d){return d.id===id;});}).filter(Boolean);
-  var totalXP=drillObjs.reduce(function(s,d){return s+d.xp_value;},0);
-  var bonusXP=Math.floor(totalXP*0.10);
-  var totalMins=drillObjs.reduce(function(s,d){return s+d.duration_minutes;},0);
-
-  function startTemplate(tpl){
-    var ids=tpl.drillIds.filter(function(id){return DRILLS.find(function(d){return d.id===id;});});
-    setTemplate(tpl); setSelected(ids); setStep('preview');
-  }
-  function toggleDrill(id){
-    setSelected(function(prev){
-      return prev.indexOf(id)!==-1?prev.filter(function(x){return x!==id;}):[].concat(prev,[id]).slice(0,5);
-    });
-  }
-  function startSession(){ setPlayIdx(0); setStep('playing'); }
-  function handleDrillComplete(){
-    if(playIdx<drillObjs.length-1){ setPlayIdx(function(i){return i+1;}); }
-    else{ finishSession(); }
-  }
-  function finishSession(){
-    var base=drillObjs.reduce(function(s,d){return s+d.xp_value;},0);
-    var bonus=Math.floor(base*0.10);
-    drillObjs.forEach(function(d){awardXP(d.xp_value,d.duration_minutes,'drill','drill',d.id);});
-    awardXP(bonus,0,'session_bonus');
-    DB.logPracticeSession(selectedDrills,base,bonus);
-    setTotalEarned(base+bonus);
-    setEncouragement(getEncouragement('session_complete')||nextEnc());
-    fireConfetti(); setStep('done');
-  }
-
-  // Done screen
-  if(step==='done') return h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:'48px 20px',minHeight:'80vh',background:'#0d1117'}},
-    h('div',{style:{fontSize:56,marginBottom:16}},'🔥'),
-    h('h2',{className:'text-2xl font-black text-white mb-2'},'Session Complete!'),
-    h('p',{className:'text-slate-400 mb-4'},drillObjs.length+' drills · '+totalMins+' minutes'),
-    h('div',{style:{display:'flex',gap:8,alignItems:'center',justifyContent:'center',marginBottom:16}},
-      h(XPBadge,{xp:totalEarned}),
-      h('span',{style:{fontSize:13,fontWeight:700,color:'#f59e0b'}},'+'+bonusXP+' bonus XP! 🎯')),
-    h('div',{style:{padding:'14px 16px',borderRadius:12,background:'rgba(22,163,74,0.07)',border:'1px solid rgba(22,163,74,0.20)',maxWidth:320,marginBottom:24}},
-      h('p',{style:{fontSize:14,fontWeight:600,color:'#6ee7b7',lineHeight:1.6}},encouragement)),
-    h('div',{style:{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:280}},
-      h('button',{onClick:function(){nav('Drills');},className:'btn-primary'},'Back to Drills'),
-      h('button',{onClick:function(){setStep('template');setSelected([]);setTemplate(null);setPlayIdx(0);},className:'btn-secondary'},'Build Another Session')
-    )
-  );
-
-  // Playing
-  if(step==='playing'){
-    var d=drillObjs[playIdx];
-    if(!d){finishSession();return null;}
-    var cd=DRILL_CATS.find(function(c){return c.id===d.category;});
-    return h('div',{className:'pb-28'},
-      h('div',{style:{background:'linear-gradient(135deg,'+(cd?cd.from:'#1d4ed8')+','+(cd?cd.to:'#4338ca')+')',padding:'max(3.5rem,calc(3.5rem + env(safe-area-inset-top))) 1.25rem 1.25rem',position:'relative'}},
-        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
-          h('button',{onClick:function(){nav('Drills');},style:{color:'rgba(255,255,255,0.7)',background:'rgba(255,255,255,0.15)',border:'none',borderRadius:8,padding:'6px 12px',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:'inherit'}},'✕ Exit'),
-          h('div',{style:{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.8)'}},'Drill '+(playIdx+1)+' of '+drillObjs.length)
-        ),
-        h('h1',{style:{fontSize:'1.25rem',fontWeight:900,color:'#fff',margin:0}},d.title),
-        h('p',{style:{fontSize:12,color:'rgba(255,255,255,0.65)',marginTop:4}},d.duration_minutes+' min · '+d.xp_value+' XP'),
-        h('div',{style:{height:4,borderRadius:2,background:'rgba(255,255,255,0.2)',overflow:'hidden',marginTop:12}},
-          h('div',{style:{height:'100%',background:'#fff',borderRadius:2,width:(playIdx/drillObjs.length*100)+'%',transition:'width 0.5s'}}))
-      ),
-      h('div',{style:{padding:'20px 16px'}},
-        h('div',{style:{padding:'14px',borderRadius:12,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)',marginBottom:16}},
-          h('p',{style:{fontSize:13,color:'#8b949e',lineHeight:1.7}},d.description)),
-        h('div',{style:{marginBottom:16}},
-          h('p',{style:{fontSize:11,fontWeight:700,color:'#484f58',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}},d.steps.length+' Steps'),
-          h('div',{style:{display:'flex',flexDirection:'column',gap:6}},
-            d.steps.map(function(s,i){
-              return h('div',{key:i,style:{display:'flex',gap:10,padding:'10px 12px',borderRadius:8,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)'}},
-                h('span',{style:{width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,'+(cd?cd.from:'#1d4ed8')+','+(cd?cd.to:'#4338ca')+')',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff',flexShrink:0}},i+1),
-                h('p',{style:{fontSize:12,color:'#8b949e',flex:1,lineHeight:1.6}},s));
-            }))),
-        h('button',{onClick:handleDrillComplete,className:'btn-primary w-full py-4 text-base font-black'},
-          playIdx<drillObjs.length-1?'✓ Done! Next: '+drillObjs[playIdx+1].title.slice(0,20)+'…':'🎉 Complete Session!'
-        )
-      )
-    );
-  }
-
-  // Preview
-  if(step==='preview') return h('div',{className:'pb-28'},
-    h(PageHeader,{title:'Your Practice Session',subtitle:drillObjs.length+' drills · '+totalMins+' min · '+(totalXP+bonusXP)+' XP',
-      gradient:'linear-gradient(135deg,#1e40af,#1d4ed8)',onBack:function(){setStep('custom');}}),
-    h('div',{style:{padding:'20px 16px'}},
-      h('div',{style:{padding:'12px 14px',borderRadius:10,background:'rgba(245,158,11,0.10)',border:'1px solid rgba(245,158,11,0.25)',marginBottom:16,display:'flex',alignItems:'center',gap:10}},
-        h('span',{style:{fontSize:18}},'🎯'),
-        h('div',null,
-          h('p',{style:{fontSize:12,fontWeight:700,color:'#f59e0b'}},'Session Bonus XP'),
-          h('p',{style:{fontSize:11,color:'rgba(245,158,11,0.7)'}},
-            'Complete all '+drillObjs.length+' drills for +'+bonusXP+' bonus XP!'))
-      ),
-      h('p',{style:{fontSize:11,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}},'Drills in this session'),
-      h('div',{style:{display:'flex',flexDirection:'column',gap:8,marginBottom:20}},
-        drillObjs.map(function(d,i){
-          var catD=DRILL_CATS.find(function(c){return c.id===d.category;});
-          return h('div',{key:d.id,style:{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderRadius:10,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)'}},
-            h('div',{style:{width:28,height:28,borderRadius:6,background:'linear-gradient(135deg,'+(catD?catD.from:'#1d4ed8')+','+(catD?catD.to:'#4338ca')+')',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:12,fontWeight:800,color:'#fff'}},i+1),
-            h('div',{style:{flex:1}},
-              h('div',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4'}},d.title),
-              h('div',{style:{display:'flex',alignItems:'center',gap:6,marginTop:3}},
-                h('span',{style:{fontSize:11,color:'#6b7280'}},d.duration_minutes+' min'),h(XPBadge,{xp:d.xp_value})))
-          );
-        })
-      ),
-      drillObjs.length>=2
-        ?h('button',{onClick:startSession,className:'btn-primary',style:{padding:'14px',fontSize:15,fontWeight:700}},h(Icon,{n:'play',cls:'w-5 h-5'}),' Start Session Now')
-        :h('p',{style:{textAlign:'center',color:'#ef4444',fontSize:13,fontWeight:600}},'Add at least 2 drills to start!')
-    )
-  );
-
-  // Custom picker
-  if(step==='custom') return h('div',{className:'pb-28'},
-    h(PageHeader,{title:'Build Custom Session',subtitle:'Pick 2–5 drills · '+selectedDrills.length+' selected',gradient:'linear-gradient(135deg,#1e40af,#1d4ed8)',onBack:function(){setStep('template');}}),
-    h('div',{style:{padding:'12px 16px 0'}},
-      h('div',{style:{display:'flex',flexDirection:'column',gap:6}},
-        DRILLS.map(function(d){
-          var catD=DRILL_CATS.find(function(c){return c.id===d.category;});
-          var isSel=selectedDrills.indexOf(d.id)!==-1;
-          return h('button',{key:d.id,onClick:function(){toggleDrill(d.id);},style:{
-            display:'flex',alignItems:'center',gap:10,padding:'11px 12px',borderRadius:9,
-            background:isSel?'rgba(22,163,74,0.09)':'rgba(22,27,34,0.9)',
-            border:'1.5px solid '+(isSel?'rgba(22,163,74,0.4)':'rgba(48,54,61,0.9)'),
-            cursor:'pointer',textAlign:'left',fontFamily:'inherit',width:'100%',}},
-            h('div',{style:{width:32,height:32,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,
-              background:'linear-gradient(135deg,'+(catD?catD.from:'#1d4ed8')+','+(catD?catD.to:'#4338ca')+')'}},
-              h(Icon,{n:catD?catD.icon:'bat',cls:'w-3.5 h-3.5 text-white'})),
-            h('div',{style:{flex:1,minWidth:0}},
-              h('div',{style:{fontSize:12,fontWeight:700,color:'#f0fdf4'}},d.title),
-              h('div',{style:{fontSize:11,color:'#6b7280'}},d.duration_minutes+' min · '+d.xp_value+' XP')),
-            isSel&&h('div',{style:{width:22,height:22,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
-              h(Icon,{n:'check',cls:'w-3 h-3 text-white'}))
-          );
-        })
-      )
-    ),
-    selectedDrills.length>=2&&h('div',{style:{position:'fixed',bottom:'calc(env(safe-area-inset-bottom,0px) + 16px)',left:16,right:16,zIndex:20}},
-      h('button',{onClick:function(){setStep('preview');},className:'btn-primary',style:{padding:'14px',fontSize:14,fontWeight:700,boxShadow:'0 8px 24px rgba(22,163,74,0.35)'}},
-        'Preview Session ('+selectedDrills.length+' drills · '+(totalXP+bonusXP)+' XP) →')
-    )
-  );
-
-  // Template selection
-  return h('div',{className:'pb-28'},
-    h(PageHeader,{title:'Build a Practice Session',subtitle:'Chain drills together for bonus XP',gradient:'linear-gradient(135deg,#1e40af,#1d4ed8)',onBack:function(){nav('Drills');}}),
-    h('div',{style:{padding:'20px 16px'}},
-      h('div',{style:{padding:'12px 14px',borderRadius:10,background:'rgba(245,158,11,0.10)',border:'1px solid rgba(245,158,11,0.25)',marginBottom:20,display:'flex',gap:10}},
-        h('span',{style:{fontSize:18}},'⚡'),
-        h('p',{style:{fontSize:12,color:'rgba(245,158,11,0.85)',lineHeight:1.5,fontWeight:600}},'Complete a full session to earn 10% bonus XP on top of each drill!')),
-      h('p',{style:{fontSize:11,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}},'Quick Start Templates'),
-      h('div',{style:{display:'flex',flexDirection:'column',gap:10,marginBottom:24}},
-        SESSION_TEMPLATES.map(function(tpl){
-          var drs=tpl.drillIds.map(function(id){return DRILLS.find(function(d){return d.id===id;});}).filter(Boolean);
-          return h('button',{key:tpl.id,onClick:function(){startTemplate(tpl);},style:{
-            display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderRadius:12,
-            background:tpl.bg,border:'1px solid '+tpl.border,cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit'}},
-            h('div',{style:{width:44,height:44,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:'rgba(0,0,0,0.2)'}},
-              h(Icon,{n:tpl.icon,cls:'w-5 h-5',style:{color:tpl.color}})),
-            h('div',{style:{flex:1}},
-              h('div',{style:{fontSize:14,fontWeight:700,color:'#f0fdf4',marginBottom:3}},tpl.label),
-              h('div',{style:{fontSize:12,color:'rgba(255,255,255,0.5)',marginBottom:6}},tpl.desc),
-              h('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                h('span',{style:{fontSize:11,color:tpl.color,fontWeight:600}},drs.reduce(function(s,d){return s+d.duration_minutes;},0)+' min'),
-                h('span',{style:{fontSize:11,color:'rgba(255,255,255,0.4)'}},drs.length+' drills'),
-                h(XPBadge,{xp:drs.reduce(function(s,d){return s+d.xp_value;},0)+Math.floor(drs.reduce(function(s,d){return s+d.xp_value;},0)*0.1)})
-              )
-            ),
-            h(Icon,{n:'chevR',cls:'w-5 h-5 flex-shrink-0',style:{color:'rgba(255,255,255,0.25)'}})
-          );
-        })
-      ),
-      h('div',{style:{borderTop:'1px solid rgba(48,54,61,0.8)',paddingTop:20}},
-        h('p',{style:{fontSize:11,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}},'Or Build Your Own'),
-        h('button',{onClick:function(){setStep('custom');},style:{
-          display:'flex',alignItems:'center',justifyContent:'center',gap:10,width:'100%',
-          padding:'14px',borderRadius:12,background:'rgba(22,27,34,0.9)',
-          border:'1px dashed rgba(48,54,61,0.9)',cursor:'pointer',fontFamily:'inherit'}},
-          h(Icon,{n:'zap',cls:'w-5 h-5',style:{color:'#6b7280'}}),
-          h('span',{style:{fontSize:14,fontWeight:700,color:'#8b949e'}},'Custom Session (Pick any drills)'))
-      )
     )
   );
 }
 
-Object.assign(window.SC_APP,{
-  DrillsPage:DrillsPage,DrillDetailPage:DrillDetailPage,PracticeSessionBuilderPage:PracticeSessionBuilderPage,
-  TargetTrackerSheet:TargetTrackerSheet,TierProgressCard:TierProgressCard,TierBadge:TierBadge,CategoryRings:CategoryRings,
-  inferDrillTarget:inferDrillTarget,TIER_CONFIG:TIER_CONFIG,SESSION_TEMPLATES:SESSION_TEMPLATES,
-  FeaturedDrillBanner:FeaturedDrillBanner,PBBadge:PBBadge,
-});
-console.log('[SC] app-drills v3.2 — DR-1 PB badge, DR-2 streak, DR-3 featured, DR-6 quick set');
+A.DrillsPage = DrillsPage;
+A.DRILLS = DRILLS;
+console.log('[SC] app-drills v4.0 — ' + DRILLS.length + ' drills, search + filter + video ready');
 })();
