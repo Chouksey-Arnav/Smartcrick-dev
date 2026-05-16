@@ -1,0 +1,220 @@
+// sw.js — SmartCrick Service Worker v1.0
+// Strategy: cache-first for CDN + app files, network-first for API
+// ================================================================
+const CACHE_V       = 'sc-v1';
+const CDN_CACHE     = 'sc-cdn-v1';
+const CACHE_VERSION = '1.0.0';
+
+// All same-origin app files to cache on install
+const APP_SHELL = [
+  '/',
+  '/index.html',
+  '/styles.css',
+  '/vercel.json',
+  '/sc_opensource.js',
+  '/app-core.js',
+  '/app-data.js',
+  '/app-ui.js',
+  '/app-ui-patch.js',
+  '/app-onboard.js',
+  '/app-assessment.js',
+  '/app-home.js',
+  '/app-drills.js',
+  '/app-mental.js',
+  '/app-fitness.js',
+  '/app-timer.js',
+  '/app-schedule.js',
+  '/app-skillpaths.js',
+  '/app-progress.js',
+  '/app-challenges.js',
+  '/app-profile.js',
+  '/app-stubs.js',
+  '/app-aicoach.js',
+  '/app-daily-net.js',
+  '/app-viral.js',
+  '/app-matchlogger.js',
+  '/app-performance.js',
+  '/app-quizzes.js',
+  '/app-root.js',
+  '/manifest.json',
+  '/icon.svg',
+];
+
+// External CDN libraries to cache (versioned = immutable)
+const CDN_ASSETS = [
+  'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
+  'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
+  'https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/dayjs@1.11.11/dayjs.min.js',
+  'https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/mousetrap@1.6.5/mousetrap.min.js',
+  'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js',
+  'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js',
+];
+
+// Hosts that are backend APIs — use network-first, fallback JSON
+const API_HOSTS = [
+  'smartcrick-backend-kgya.vercel.app',
+  'auth-smartcrickai.vercel.app',
+];
+
+// ── INSTALL: cache everything ────────────────────────────────────
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+  event.waitUntil(
+    Promise.allSettled([
+      // Cache app shell files
+      caches.open(CACHE_V).then(function(cache) {
+        return Promise.allSettled(
+          APP_SHELL.map(function(url) {
+            return cache.add(url).catch(function(e) {
+              console.warn('[SW] Could not cache:', url, e.message);
+            });
+          })
+        );
+      }),
+      // Cache CDN assets
+      caches.open(CDN_CACHE).then(function(cache) {
+        return Promise.allSettled(
+          CDN_ASSETS.map(function(url) {
+            return cache.add(url).catch(function(e) {
+              console.warn('[SW] Could not cache CDN:', url, e.message);
+            });
+          })
+        );
+      }),
+    ]).then(function() {
+      console.log('[SW] Install complete — SmartCrick v' + CACHE_VERSION + ' cached');
+    })
+  );
+});
+
+// ── ACTIVATE: clean old caches ───────────────────────────────────
+self.addEventListener('activate', function(event) {
+  var valid = [CACHE_V, CDN_CACHE];
+  event.waitUntil(
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return !valid.includes(k); })
+            .map(function(k) { return caches.delete(k); })
+      );
+    }).then(function() {
+      console.log('[SW] Activated — old caches cleared');
+      return self.clients.claim();
+    })
+  );
+});
+
+// ── FETCH: smart routing ─────────────────────────────────────────
+self.addEventListener('fetch', function(event) {
+  var req = event.request;
+  var url = new URL(req.url);
+
+  // Skip non-GET and chrome-extension requests
+  if(req.method !== 'GET') return;
+  if(url.protocol === 'chrome-extension:') return;
+
+  // Skip YouTube embeds (no offline support possible)
+  if(url.hostname.includes('youtube.com') || url.hostname.includes('ytimg.com')) return;
+
+  // ── BACKEND APIS: network-first, offline JSON fallback ──────
+  if(API_HOSTS.some(function(h) { return url.hostname === h; })) {
+    event.respondWith(
+      fetch(req.clone(), { signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined })
+        .catch(function() {
+          return new Response(
+            JSON.stringify({ error: 'offline', message: 'SmartCrick is offline. Your progress is saved locally.' }),
+            { status: 503, headers: { 'Content-Type': 'application/json', 'X-SC-Offline': '1' } }
+          );
+        })
+    );
+    return;
+  }
+
+  // ── GOOGLE FONTS: cache-first ────────────────────────────────
+  if(url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(
+      caches.open(CDN_CACHE).then(function(cache) {
+        return cache.match(req).then(function(cached) {
+          if(cached) return cached;
+          return fetch(req).then(function(res) {
+            if(res.ok) cache.put(req, res.clone());
+            return res;
+          }).catch(function() { return new Response('', { status: 503 }); });
+        });
+      })
+    );
+    return;
+  }
+
+  // ── CDN ASSETS (unpkg, jsdelivr, cdnjs): cache-first ────────
+  var isCDN = url.hostname.includes('unpkg.com') ||
+              url.hostname.includes('jsdelivr.net') ||
+              url.hostname.includes('cdnjs.cloudflare.com') ||
+              url.hostname === 'cdn.tailwindcss.com';
+  if(isCDN) {
+    event.respondWith(
+      caches.open(CDN_CACHE).then(function(cache) {
+        return cache.match(req).then(function(cached) {
+          if(cached) return cached;
+          return fetch(req).then(function(res) {
+            if(res.ok) cache.put(req, res.clone());
+            return res;
+          }).catch(function() { return caches.match(req); });
+        });
+      })
+    );
+    return;
+  }
+
+  // ── SAME-ORIGIN APP FILES: stale-while-revalidate ───────────
+  if(url.hostname === self.location.hostname) {
+    event.respondWith(
+      caches.open(CACHE_V).then(function(cache) {
+        return cache.match(req).then(function(cached) {
+          var fetchPromise = fetch(req).then(function(res) {
+            if(res.ok) cache.put(req, res.clone());
+            return res;
+          }).catch(function() { return null; });
+
+          return cached || fetchPromise.then(function(res) {
+            return res || new Response('SmartCrick offline — cached content unavailable', { status: 503 });
+          });
+        });
+      })
+    );
+    return;
+  }
+});
+
+// ── PUSH NOTIFICATIONS (optional) ───────────────────────────────
+self.addEventListener('push', function(event) {
+  var data = event.data ? event.data.json() : {};
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'SmartCrick', {
+      body: data.body || "Time to train! Today's session is ready. 🏏",
+      icon: '/icon.svg',
+      badge: '/icon.svg',
+      tag: 'sc-training',
+      requireInteraction: false,
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
+      for(var i = 0; i < list.length; i++) {
+        if(list[i].url.includes(self.location.origin) && 'focus' in list[i]) return list[i].focus();
+      }
+      return clients.openWindow(event.notification.data.url || '/');
+    })
+  );
+});
+
+console.log('[SW] SmartCrick Service Worker v' + CACHE_VERSION + ' loaded');
