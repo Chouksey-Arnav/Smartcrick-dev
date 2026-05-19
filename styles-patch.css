@@ -1,0 +1,261 @@
+/* ================================================================
+   styles-patch.css — SmartCrick responsive + dark/light mode
+   ================================================================
+   USAGE: Add <link rel="stylesheet" href="styles-patch.css">
+   AFTER your existing <link rel="stylesheet" href="styles.css">
+   in index.html <head>.
+
+   This file:
+   1. Defines CSS variables for dark + light themes
+   2. Makes ALL pages fit the phone viewport (no overflow)
+   3. Applies safe-area insets universally
+   4. Fixes bottom nav clearance on all scrollable containers
+   5. Responsive improvements across every tab
+   ================================================================ */
+
+/* ─── CSS Custom Properties (dark mode default) ─────────────────── */
+:root {
+  --bg-base:    #0d1117;
+  --bg-card:    #161b22;
+  --bg-surface: #1c2128;
+  --bg-hover:   #22272e;
+  --border:     rgba(48,54,61,0.9);
+  --text-1:     #f0fdf4;
+  --text-2:     #8b949e;
+  --text-3:     #484f58;
+  --accent:     #16a34a;
+  --accent-dim: rgba(22,163,74,0.15);
+}
+
+/* Light mode overrides — toggled by JS via applyTheme() */
+body.sc-light {
+  --bg-base:    #f8fafc;
+  --bg-card:    #ffffff;
+  --bg-surface: #f1f5f9;
+  --bg-hover:   #e2e8f0;
+  --border:     rgba(148,163,184,0.4);
+  --text-1:     #0f172a;
+  --text-2:     #475569;
+  --text-3:     #94a3b8;
+}
+
+/* ─── Global phone-fit reset ────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  /* Prevent double-tap zoom on buttons/links */
+  touch-action: manipulation;
+}
+
+body {
+  min-height: 100%;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  /* Prevent horizontal scroll globally */
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* ─── Safe area — applied universally ───────────────────────────── */
+/* Every page wrapper gets top safe area */
+.sc-page,
+[class*="Page"],
+[data-page] {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ─── Bottom nav clearance on all scrollable areas ──────────────── */
+/* Anything that scrolls needs bottom padding to clear the nav */
+.sc-scroll,
+.sc-content,
+main,
+[role="main"] {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* ─── Page header safe area ─────────────────────────────────────── */
+.sc-page-header,
+.sc-topbar,
+[class*="PageHeader"] {
+  padding-top: max(3.5rem, calc(3.5rem + env(safe-area-inset-top, 0px)));
+}
+
+/* ─── Bottom nav itself ─────────────────────────────────────────── */
+.sc-bottomnav,
+nav[aria-label="Main navigation"] {
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* ─── Input fields — phone-friendly ────────────────────────────── */
+input, textarea, select {
+  font-size: 16px !important; /* Prevents iOS zoom on focus */
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ─── Touch targets — minimum 44px ─────────────────────────────── */
+button,
+[role="button"],
+a {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Pill filter buttons can be smaller but still tappable */
+.sc-pill,
+[class*="pill"],
+[class*="filter-btn"] {
+  min-height: 32px;
+  min-width: unset;
+}
+
+/* ─── Prevent text from being too small ─────────────────────────── */
+* {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* No content under 11px */
+span, div, p, label {
+  font-size: max(11px, inherit);
+}
+
+/* ─── Card / container — prevent overflow ───────────────────────── */
+.sc-card,
+[class*="Card"],
+[class*="card"] {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* ─── Filter pills row — horizontal scroll without jump ─────────── */
+.sc-filter-row,
+[class*="filter-row"],
+[class*="pill-row"] {
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  padding-bottom: 4px;
+  /* Hide scrollbar but keep functional */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sc-filter-row::-webkit-scrollbar,
+[class*="pill-row"]::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Workout / drill list — flex column ────────────────────────── */
+.sc-list,
+[class*="list-view"],
+[class*="workout-list"],
+[class*="drill-list"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ─── Dark mode: body & backgrounds ─────────────────────────────── */
+body.sc-dark {
+  background: var(--bg-base) !important;
+  color: var(--text-1) !important;
+}
+
+body.sc-light {
+  background: var(--bg-base) !important;
+  color: var(--text-1) !important;
+}
+
+/* Use CSS variable on cards where possible */
+body.sc-light .sc-card,
+body.sc-light [class*="Card"] {
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  color: var(--text-1) !important;
+}
+
+body.sc-light input,
+body.sc-light textarea,
+body.sc-light select {
+  background: var(--bg-surface) !important;
+  border-color: var(--border) !important;
+  color: var(--text-1) !important;
+}
+
+/* ─── Spin wheel modal — ensure full-screen on iOS ──────────────── */
+.sc-wheel-modal,
+[data-modal="wheel"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 9000 !important;
+}
+
+/* ─── Sidebar drawer — full height ─────────────────────────────── */
+.sc-sidebar-drawer {
+  height: 100dvh !important;
+  overflow-y: auto !important;
+}
+
+/* ─── Grid layouts — responsive at <400px ───────────────────────── */
+@media (max-width: 399px) {
+  /* Stat grids drop to 2-col */
+  [style*="grid-template-columns: repeat(3"],
+  [style*="gridTemplateColumns: 'repeat(3"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ─── Typography — no orphan tiny text ─────────────────────────── */
+@media (max-width: 375px) {
+  /* Allow very small phones to scale down slightly */
+  body {
+    font-size: 14px;
+  }
+}
+
+/* ─── Webkit scrollbar polish on sidebar ────────────────────────── */
+*::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(48, 54, 61, 0.9);
+  border-radius: 99px;
+}
+
+/* ─── Animation: reduce motion preference ───────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Focus visible for accessibility ───────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(22, 163, 74, 0.6);
+  outline-offset: 2px;
+}
+
+/* ─── Prevent tap highlight on mobile ───────────────────────────── */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
