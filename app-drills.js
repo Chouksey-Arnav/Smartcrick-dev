@@ -911,6 +911,15 @@ function DrillsPage() {
     return catMatch && searchMatch;
   });
 
+  // SmartCrick Picks — personalised for the user
+  var user = DB.getUser ? DB.getUser() : (DB.get ? DB.get('user') : null);
+  var completedIds = Object.keys(completions);
+  var pickDrills = (A.PersonalisationEngine && user)
+    ? A.PersonalisationEngine.getPickDrills(DRILLS, user, completedIds)
+    : [];
+  var pickIds = {};
+  pickDrills.forEach(function(d) { pickIds[d.id] = true; });
+
   return h('div', { style: { background: '#0d1117', minHeight: '100dvh', paddingBottom: 100 }},
     // Sticky header
     h('div', { style: { position: 'sticky', top: 0, background: 'rgba(13,17,23,0.97)', zIndex: 10, paddingTop: 'max(16px, calc(16px + env(safe-area-inset-top)))', paddingBottom: 0, borderBottom: '1px solid rgba(48,54,61,0.6)' }},
@@ -959,6 +968,66 @@ function DrillsPage() {
         )
       )
     ),
+    // ── SmartCrick Picks ─────────────────────────────────────────────
+    pickDrills.length > 0 && !search && activeCat === 'all' && h('div', { style: { padding: '12px 16px 0' }},
+      h('style', null,
+        '@keyframes sc-pick-border{0%,100%{opacity:0.6}50%{opacity:1}}' +
+        '.sc-pick-card{animation:sc-pick-border 3s ease-in-out infinite}'
+      ),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }},
+        h('span', { style: { fontSize: 11, fontWeight: 800, color: '#4ade80', letterSpacing: '0.08em', textTransform: 'uppercase' }}, '✦ SmartCrick Pick'),
+        h('div', { style: { flex: 1, height: 1, background: 'linear-gradient(to right, rgba(74,222,128,0.3), transparent)' }}),
+        h('span', { style: { fontSize: 10, color: '#6b7280', fontWeight: 600 }}, 'personalised for you')
+      ),
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10 }},
+        pickDrills.map(function(drill) {
+          var catData = CATS[drill.category] || { color: '#16a34a', bg: 'rgba(22,163,74,0.12)' };
+          var lvlCol = LEVEL_COLORS[drill.level] || '#9ca3af';
+          var drillDone = completions[drill.id] || 0;
+          return h('button', {
+            key: 'pick-' + drill.id,
+            className: 'sc-pick-card',
+            onClick: function() { setSelectedDrill(drill.id); },
+            style: {
+              display: 'flex', flexDirection: 'column', padding: 0,
+              borderRadius: 14, border: '1px solid rgba(74,222,128,0.35)',
+              background: 'rgba(22,27,34,0.95)', cursor: 'pointer',
+              fontFamily: 'inherit', textAlign: 'left', overflow: 'hidden',
+              boxShadow: '0 0 0 1px rgba(74,222,128,0.10), 0 4px 16px rgba(22,163,74,0.12)',
+              transition: 'all 0.2s',
+            },
+            onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(74,222,128,0.4), 0 8px 24px rgba(22,163,74,0.2)'; },
+            onMouseLeave: function(e) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 0 1px rgba(74,222,128,0.10), 0 4px 16px rgba(22,163,74,0.12)'; },
+          },
+            h('div', { style: { height: 3, background: 'linear-gradient(to right, #16a34a, #0d9488)', opacity: 0.9 }}),
+            h('div', { style: { padding: '12px 14px' }},
+              h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }},
+                h('div', { style: { fontSize: 22, lineHeight: 1, flexShrink: 0, marginTop: 2 }}, drill.icon),
+                h('div', { style: { flex: 1, minWidth: 0 }},
+                  h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }},
+                    h('span', { style: { fontSize: 8, fontWeight: 800, color: '#16a34a', background: 'rgba(22,163,74,0.12)', padding: '1px 5px', borderRadius: 3, border: '1px solid rgba(22,163,74,0.25)', letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}, '✦ Pick')
+                  ),
+                  h('div', { style: { fontSize: 13, fontWeight: 800, color: '#f0fdf4', lineHeight: 1.3, marginBottom: 2 }}, drill.name),
+                  h('div', { style: { fontSize: 11, color: '#9ca3af' }}, drill.tagline)
+                ),
+                drillDone > 0 && h('div', { style: { flexShrink: 0, fontSize: 10, fontWeight: 700, color: '#4ade80', background: 'rgba(22,163,74,0.12)', padding: '2px 7px', borderRadius: 99, border: '1px solid rgba(22,163,74,0.25)' }}, '×' + drillDone)
+              ),
+              h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' }},
+                h('div', { style: { display: 'flex', gap: 6, alignItems: 'center' }},
+                  h('span', { style: { fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: lvlCol + '15', color: lvlCol, border: '1px solid ' + lvlCol + '30' }}, drill.level),
+                  h('span', { style: { fontSize: 11, color: '#6b7280' }}, drill.duration)
+                ),
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: 4 }},
+                  h('span', { style: { fontSize: 12, fontWeight: 800, color: '#4ade80' }}, '+' + drill.xp),
+                  h('span', { style: { fontSize: 11, color: '#6b7280' }}, 'XP')
+                )
+              )
+            )
+          );
+        })
+      )
+    ),
+
     // Drill grid
     h('div', { style: { padding: '16px 16px' }},
       filtered.length === 0
@@ -994,7 +1063,10 @@ function DrillsPage() {
                       h('div', { style: { fontSize: 14, fontWeight: 800, color: '#f0fdf4', lineHeight: 1.3, marginBottom: 4 }}, drill.name),
                       h('div', { style: { fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}, drill.tagline)
                     ),
-                    drillDone > 0 && h('div', { style: { flexShrink: 0, fontSize: 10, fontWeight: 700, color: '#4ade80', background: 'rgba(22,163,74,0.12)', padding: '2px 7px', borderRadius: 99, border: '1px solid rgba(22,163,74,0.25)', whiteSpace: 'nowrap' }}, '×' + drillDone)
+                    h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }},
+                      pickIds[drill.id] && h('div', { style: { fontSize: 8, fontWeight: 800, color: '#16a34a', background: 'rgba(22,163,74,0.12)', padding: '2px 5px', borderRadius: 3, border: '1px solid rgba(22,163,74,0.25)', letterSpacing: '0.04em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}, '✦ Pick'),
+                      drillDone > 0 && h('div', { style: { fontSize: 10, fontWeight: 700, color: '#4ade80', background: 'rgba(22,163,74,0.12)', padding: '2px 7px', borderRadius: 99, border: '1px solid rgba(22,163,74,0.25)', whiteSpace: 'nowrap' }}, '×' + drillDone)
+                    )
                   ),
                   // Focus tags
                   h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }},
