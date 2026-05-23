@@ -49,6 +49,7 @@ var PAGE_LABELS = {
   CricketDNA:'Cricket DNA', DailyNet:'Daily Net',
   NinetyDay:'90-Day Program', MatchTracker:'Match Tracker',
   MiniMatch:'MiniMatch IQ', DrillDetail:'Drill', WorkoutDetail:'Workout',
+  VideoAnalysis:'ProVision™',
 };
 
 function getPage(name) {
