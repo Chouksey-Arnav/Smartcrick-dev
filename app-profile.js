@@ -540,14 +540,19 @@ function ProfilePage(props) {
       // XP bar
       h('div', { style: { marginBottom: 4 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
-          h('span', { style: { fontSize: 12, color: '#4ade80', fontWeight: 600 } }, 'Level ' + levelInfo.level + ' — ' + levelInfo.name),
+          h('span', { style: { fontSize: 12, color: '#4ade80', fontWeight: 700 } }, 'Level ' + levelInfo.level + ' — ' + levelInfo.name),
           h('span', { style: { fontSize: 12, color: '#6b7280' } }, (progress.total_xp || 0).toLocaleString() + ' XP'),
         ),
-        h('div', { style: { height: 6, background: 'rgba(255,255,255,.08)', borderRadius: 3, overflow: 'hidden' },
+        h('div', { style: { height: 8, background: 'rgba(255,255,255,.06)', borderRadius: 4, overflow: 'hidden' },
           role: 'progressbar', 'aria-valuenow': levelInfo.pct || 0, 'aria-valuemin': 0, 'aria-valuemax': 100,
           'aria-label': 'Level ' + levelInfo.level + ' progress: ' + Math.round(levelInfo.pct || 0) + '%',
         },
-          h('div', { style: { height: '100%', width: (levelInfo.pct || 0) + '%', background: '#16a34a', borderRadius: 3, transition: 'width .5s ease' } }),
+          h('div', { style: {
+            height: '100%', width: (levelInfo.pct || 0) + '%', borderRadius: 4,
+            background: 'linear-gradient(90deg, #16a34a, #0d9488)',
+            boxShadow: '0 0 10px rgba(22,163,74,0.5)',
+            transition: 'width .8s ease-out',
+          } }),
         ),
         h('div', { style: { fontSize: 11, color: '#4b5563', marginTop: 4, textAlign: 'right' } },
           (levelInfo.xpToNext || 0).toLocaleString() + ' XP to ' + (levelInfo.next || 'max level'),
@@ -579,22 +584,29 @@ function ProfilePage(props) {
 
       // ===== OVERVIEW TAB =====
       activeTab === 'overview' && h(Fragment, null,
-        // Stats grid
+        // Stats grid with icons
         h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 } },
           [
-            { label: 'Drills done',   value: progress.drills_done || 0,   color: '#3b82f6' },
-            { label: 'Mental done',   value: progress.mental_done || 0,   color: '#8b5cf6' },
-            { label: 'Workouts',      value: progress.workouts_done || 0, color: '#10b981' },
-            { label: 'Best streak',   value: (progress.longest_streak || 0) + ' days', color: '#f59e0b' },
-            { label: 'Practice min',  value: (progress.practice_minutes || 0).toLocaleString(), color: '#6b7280' },
-            { label: 'Badges earned', value: earned.length, color: '#f59e0b' },
+            { icon: '🏏', label: 'Drills done',   value: progress.drills_done || 0,   color: '#3b82f6' },
+            { icon: '🧘', label: 'Mental done',   value: progress.mental_done || 0,   color: '#8b5cf6' },
+            { icon: '💪', label: 'Workouts',      value: progress.workouts_done || 0, color: '#10b981' },
+            { icon: '🔥', label: 'Best streak',   value: (progress.longest_streak || 0) + ' days', color: '#f59e0b' },
+            { icon: '⏱', label: 'Practice min',  value: (progress.practice_minutes || 0).toLocaleString(), color: '#6b7280' },
+            { icon: '🏅', label: 'Badges earned', value: earned.length, color: '#f59e0b' },
           ].map(function(s, i) {
             return h('div', {
               key: i,
-              style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10, padding: '12px 14px' },
+              style: {
+                background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
+                borderRadius: 12, padding: '14px',
+                transition: 'transform .15s, box-shadow .15s',
+              },
+              onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.35)'; },
+              onMouseLeave: function(e) { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; },
             },
-              h('div', { style: { fontSize: 11, color: '#6b7280', marginBottom: 4 } }, s.label),
-              h('div', { style: { fontSize: 20, fontWeight: 700, color: s.color } }, s.value),
+              h('div', { style: { fontSize: 18, marginBottom: 6 } }, s.icon),
+              h('div', { style: { fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 } }, s.value),
+              h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 4, fontWeight: 500 } }, s.label),
             );
           })
         ),
@@ -650,53 +662,72 @@ function ProfilePage(props) {
         axes.map(function(ax) {
           var score = Math.round(rating[ax.key] || 0);
           var grade = score >= 80 ? 'Elite' : score >= 60 ? 'Strong' : score >= 40 ? 'Developing' : 'Beginner';
-          return h('div', { key: ax.key, style: { marginBottom: 12 } },
-            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 } },
-              h('span', { style: { fontSize: 13, fontWeight: 500, color: '#e5e7eb' } }, ax.label),
+          return h('div', { key: ax.key, style: { marginBottom: 14 } },
+            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
+              h('span', { style: { fontSize: 13, fontWeight: 600, color: '#e5e7eb' } }, ax.label),
               h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
-                h('span', { style: { fontSize: 11, color: '#6b7280' } }, grade),
-                h('span', { style: { fontSize: 14, fontWeight: 700, color: ax.color } }, score),
+                h('span', { style: { fontSize: 10, color: '#6b7280', background: 'rgba(255,255,255,.06)', padding: '2px 7px', borderRadius: 4 } }, grade),
+                h('span', { style: { fontSize: 15, fontWeight: 800, color: ax.color } }, score),
               ),
             ),
-            h('div', { style: { height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3, overflow: 'hidden' },
+            h('div', { style: { height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, overflow: 'hidden' },
               role: 'progressbar', 'aria-valuenow': score, 'aria-valuemin': 0, 'aria-valuemax': 100,
               'aria-label': ax.label + ': ' + score + ' out of 100',
             },
-              h('div', { style: { height: '100%', width: score + '%', background: ax.color, borderRadius: 3 } }),
+              h('div', { style: {
+                height: '100%', width: score + '%', borderRadius: 4,
+                background: 'linear-gradient(90deg,' + ax.color + ',' + ax.color + 'cc)',
+                boxShadow: '0 0 8px ' + ax.color + '60',
+                transition: 'width .8s ease-out',
+              } }),
             ),
           );
         }),
 
         // Mental Fitness
-        h('div', { style: { marginTop: 16, padding: '14px', background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.2)', borderRadius: 10 } },
-          h('div', { style: { fontSize: 13, fontWeight: 600, color: '#c4b5fd', marginBottom: 8 } }, 'Mental Fitness Score'),
-          h('div', { style: { fontSize: 28, fontWeight: 700, color: '#8b5cf6', textAlign: 'center', marginBottom: 8 } }, Math.round(mfScore)),
-          h('div', { style: { height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3, overflow: 'hidden' } },
-            h('div', { style: { height: '100%', width: mfScore + '%', background: '#8b5cf6', borderRadius: 3 } }),
+        h('div', { style: { marginTop: 16, padding: '16px', background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.2)', borderRadius: 12 } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
+            h('div', { style: { fontSize: 13, fontWeight: 600, color: '#c4b5fd' } }, '🧠 Mental Fitness Score'),
+            h('div', { style: { fontSize: 24, fontWeight: 800, color: '#8b5cf6' } }, Math.round(mfScore)),
+          ),
+          h('div', { style: { height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, overflow: 'hidden' } },
+            h('div', { style: {
+              height: '100%', width: mfScore + '%', borderRadius: 4,
+              background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
+              boxShadow: '0 0 10px rgba(139,92,246,.5)',
+              transition: 'width .8s ease-out',
+            } }),
           ),
         ),
       ),
 
       // ===== BADGES TAB =====
       activeTab === 'badges' && h('div', null,
+        h('style', null,
+          '@keyframes sc-badge-flip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}' +
+          '.sc-badge-card{perspective:400px}.sc-badge-card:hover .sc-badge-inner{animation:sc-badge-flip .5s ease}'
+        ),
         earned.length === 0 ? (
-          h('div', { style: { textAlign: 'center', padding: '40px 20px', color: '#6b7280' } },
-            h('div', { style: { fontSize: 40, marginBottom: 8 } }, '🏅'),
-            h('div', { style: { fontSize: 14 } }, 'No badges yet. Start training to earn them!'),
+          h('div', { style: { textAlign: 'center', padding: '48px 20px' } },
+            h('div', { style: { fontSize: 48, marginBottom: 12 } }, '🏅'),
+            h('div', { style: { fontSize: 15, fontWeight: 600, color: '#e5e7eb', marginBottom: 6 } }, 'No badges yet'),
+            h('div', { style: { fontSize: 13, color: '#6b7280' } }, 'Complete drills and sessions to earn them!'),
           )
         ) : (
           h('div', null,
-            h('div', { style: { fontSize: 13, color: '#6b7280', marginBottom: 12 } }, earned.length + ' badges earned'),
-            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }, role: 'list' },
+            h('div', { style: { fontSize: 12, color: '#6b7280', marginBottom: 14, fontWeight: 500 } }, earned.length + ' badges earned'),
+            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }, role: 'list' },
               earned.map(function(b) {
                 var def = badgeDefs[b] || { icon: '⭐', label: b, desc: '' };
                 return h('div', {
-                  key: b, role: 'listitem',
-                  style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 10, padding: '10px 12px' },
+                  key: b, role: 'listitem', className: 'sc-badge-card',
+                  style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 12, padding: '14px 12px', cursor: 'default' },
                 },
-                  h('div', { style: { fontSize: 18, marginBottom: 4 }, 'aria-hidden': 'true' }, '🏅'),
-                  h('div', { style: { fontSize: 12, fontWeight: 600, color: '#fbbf24' } }, def.label),
-                  h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 2 } }, def.desc || ''),
+                  h('div', { className: 'sc-badge-inner' },
+                    h('div', { style: { fontSize: 24, marginBottom: 6 }, 'aria-hidden': 'true' }, '🏅'),
+                    h('div', { style: { fontSize: 12, fontWeight: 700, color: '#fbbf24', marginBottom: 3 } }, def.label),
+                    h('div', { style: { fontSize: 11, color: '#6b7280' } }, def.desc || ''),
+                  )
                 );
               })
             ),
