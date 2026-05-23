@@ -115,6 +115,7 @@ var CLEAN_NAV = [
   { label:'Cricket DNA',      icon:'sparkles', pg:'CricketDNA', section:'PERFORMANCE' },
   { label:'Assessment',       icon:'target',   pg:'Assessment', section:'PERFORMANCE' },
   { label:'My Profile',       icon:'user',     pg:'Profile',    section:'PERFORMANCE' },
+  { label:'ProVision™ Analysis',icon:'cpu',    pg:'VideoAnalysis',section:'PERFORMANCE', isNew:true },
   // Planning
   { label:'Training Schedule',icon:'calendar', pg:'Schedule',   section:'PLANNING', isNew:true },
   { label:'Daily Net Quiz',   icon:'crosshair',pg:'DailyNet',   section:'PLANNING' },
