@@ -800,7 +800,7 @@ function HomePage(){
           {label:'Mental',      emoji:'🧠', page:'Mental',     color:'#8b5cf6'},
           {label:'Fitness',     emoji:'💪', page:'Fitness',    color:'#10b981'},
           {label:'Schedule',    emoji:'📅', page:'Schedule',   color:'#f59e0b'},
-          {label:'Badges',      emoji:'🏅', page:'Badges',     color:'#14b8a6'},
+          {label:'ProVision™',  emoji:'🎥', page:'VideoAnalysis',color:'#7c3aed'},
           {label:'Progress',    emoji:'📊', page:'Progress',   color:'#6b7280'},
           {label:'Cricket DNA', emoji:'🧬', page:'CricketDNA', color:'#7c3aed'},
         ].map(function(item){
