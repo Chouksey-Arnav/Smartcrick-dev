@@ -270,6 +270,180 @@ function avgVisibility(lm) {
   return valid.reduce(function(s, p) { return s + p.visibility; }, 0) / valid.length;
 }
 
+// ── Action Segmentation — Motion Intelligence ─────────────────────
+// Key joint indices for motion energy calculation
+var ACTION_JOINTS = [
+  11, 12, // shoulders
+  13, 14, // elbows
+  15, 16, // wrists
+  23, 24, // hips
+  25, 26, // knees
+];
+
+function calcMotionEnergy(prevLm, currLm) {
+  if (!prevLm || !currLm) return 0;
+  var energy = 0;
+  ACTION_JOINTS.forEach(function(idx) {
+    var p = prevLm[idx], c = currLm[idx];
+    if (!p || !c) return;
+    var dx = c.x - p.x, dy = c.y - p.y;
+    energy += dx*dx + dy*dy;
+  });
+  return energy;
+}
+
+function detectActionWindows(landmarks, fps) {
+  if (!landmarks || landmarks.length < 8) return null;
+  fps = fps || 8;
+
+  // Build per-frame motion energies
+  var energies = [0];
+  for (var i = 1; i < landmarks.length; i++) {
+    energies.push(calcMotionEnergy(landmarks[i-1], landmarks[i]));
+  }
+
+  // Rolling mean (9-frame window ≈ 300ms at 30fps)
+  var WIN = 9;
+  var smoothed = energies.map(function(_, idx) {
+    var s = Math.max(0, idx - Math.floor(WIN/2));
+    var e = Math.min(energies.length, idx + Math.floor(WIN/2) + 1);
+    var slice = energies.slice(s, e);
+    return slice.reduce(function(a, v) { return a + v; }, 0) / slice.length;
+  });
+
+  // Adaptive threshold = mean + 1.5 * std_dev
+  var n = smoothed.length;
+  var mean = smoothed.reduce(function(a, v) { return a + v; }, 0) / n;
+  var variance = smoothed.reduce(function(a, v) { return a + Math.pow(v - mean, 2); }, 0) / n;
+  var threshold = mean + 1.5 * Math.sqrt(variance);
+
+  // Need at least 0.5s of sustained motion to count as action
+  var MIN_RUN = Math.max(4, Math.round(fps * 0.5));
+  var MERGE_GAP = Math.max(3, Math.round(fps * 0.4));
+
+  // Find high-energy runs
+  var inAction = false, runStart = 0;
+  var runs = [];
+  for (var i = 0; i < smoothed.length; i++) {
+    if (smoothed[i] >= threshold && !inAction) { inAction = true; runStart = i; }
+    else if (smoothed[i] < threshold && inAction) {
+      inAction = false;
+      if (i - runStart >= MIN_RUN) runs.push({ start: runStart, end: i - 1 });
+    }
+  }
+  if (inAction && smoothed.length - runStart >= MIN_RUN) {
+    runs.push({ start: runStart, end: smoothed.length - 1 });
+  }
+
+  if (!runs.length) return null; // No clear action detected — use full video
+
+  // Merge windows that are close together
+  var merged = [{ start: runs[0].start, end: runs[0].end }];
+  for (var i = 1; i < runs.length; i++) {
+    var last = merged[merged.length - 1];
+    if (runs[i].start - last.end <= MERGE_GAP) {
+      last.end = runs[i].end;
+    } else {
+      merged.push({ start: runs[i].start, end: runs[i].end });
+    }
+  }
+
+  return merged;
+}
+
+function findBiomechanicalWindow(landmarks, mode, handedness, fps) {
+  if (!landmarks || landmarks.length < 5) return null;
+  fps = fps || 8;
+  var bowlSide = (handedness === 'LHB') ? 'L' : 'R';
+
+  if (mode === 'bowling') {
+    // Release point: frame where bowling wrist is at maximum height (minimum Y)
+    var bestFrame = -1, bestY = Infinity;
+    for (var i = 0; i < landmarks.length; i++) {
+      var lm = landmarks[i];
+      if (!lm) continue;
+      var wrist = lm[MP[bowlSide + '_WRIST']];
+      var shoulder = lm[MP[bowlSide + '_SHOULDER']];
+      if (wrist && shoulder && wrist.visibility !== undefined && wrist.visibility >= 0.5) {
+        // Wrist above shoulder = arm raised = delivery action
+        if (wrist.y < shoulder.y && wrist.y < bestY) {
+          bestY = wrist.y;
+          bestFrame = i;
+        }
+      }
+    }
+    if (bestFrame >= 0) {
+      return [{ start: Math.max(0, bestFrame - Math.round(fps * 1.5)), end: Math.min(landmarks.length - 1, bestFrame + Math.round(fps * 0.75)) }];
+    }
+
+  } else if (mode === 'batting') {
+    // Contact point: frame where bat-hand wrist speed is highest near hip height
+    var bestFrame = -1, bestSpeed = 0;
+    for (var i = 1; i < landmarks.length; i++) {
+      var prev = landmarks[i-1], curr = landmarks[i];
+      if (!prev || !curr) continue;
+      var wrist = curr[MP[bowlSide + '_WRIST']];
+      var hip = curr[MP[bowlSide + '_HIP']];
+      var prevWrist = prev[MP[bowlSide + '_WRIST']];
+      if (!wrist || !hip || !prevWrist) continue;
+      var speed = Math.sqrt(Math.pow(wrist.x - prevWrist.x, 2) + Math.pow(wrist.y - prevWrist.y, 2));
+      // Only count frames where wrist is near hip height (actually swinging)
+      if (speed > bestSpeed && Math.abs(wrist.y - hip.y) < 0.35) {
+        bestSpeed = speed;
+        bestFrame = i;
+      }
+    }
+    if (bestFrame >= 0 && bestSpeed > 0.005) {
+      return [{ start: Math.max(0, bestFrame - Math.round(fps * 1.33)), end: Math.min(landmarks.length - 1, bestFrame + Math.round(fps * 0.83)) }];
+    }
+
+  } else if (mode === 'fielding') {
+    // Throw phase: elbow most retracted then moving forward
+    var bestFrame = -1, bestRetract = 0;
+    for (var i = 0; i < landmarks.length; i++) {
+      var lm = landmarks[i];
+      if (!lm) continue;
+      var shoulder = lm[MP.R_SHOULDER], elbow = lm[MP.R_ELBOW];
+      if (shoulder && elbow) {
+        var retract = elbow.x - shoulder.x; // negative = elbow behind
+        if (retract < bestRetract) { bestRetract = retract; bestFrame = i; }
+      }
+    }
+    if (bestFrame >= 0) {
+      return [{ start: Math.max(0, bestFrame - Math.round(fps * 0.5)), end: Math.min(landmarks.length - 1, bestFrame + Math.round(fps * 1.0)) }];
+    }
+  }
+
+  return null; // No event found — fall back to motion energy
+}
+
+function getActionFrameSet(landmarks, mode, handedness, fps) {
+  var windows = null;
+
+  // First try biomechanical event anchoring (most precise)
+  var bioWindow = findBiomechanicalWindow(landmarks, mode, handedness, fps);
+  if (bioWindow) {
+    windows = bioWindow;
+  } else {
+    // Fall back to motion energy detection
+    windows = detectActionWindows(landmarks, fps);
+  }
+
+  if (!windows) return null; // No action found — caller should use all frames
+
+  // Build set of action frame indices
+  var actionSet = new Set();
+  windows.forEach(function(w) {
+    for (var i = w.start; i <= w.end; i++) actionSet.add(i);
+  });
+
+  // Calculate detected duration for reporting
+  var totalActionFrames = actionSet.size;
+  var detectedSeconds = Math.round(totalActionFrames / fps * 10) / 10;
+
+  return { frames: actionSet, windows: windows, detectedSeconds: detectedSeconds };
+}
+
 // ── Phase detection ───────────────────────────────────────────────
 function detectBattingPhase(frameMetrics, frameIdx, totalFrames) {
   var pct = frameIdx / Math.max(1, totalFrames - 1);
@@ -661,27 +835,7 @@ async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
   pose.onResults(function(results) {
     var lm = results.poseLandmarks || null;
     allLandmarks.push(lm);
-    if (lm) {
-      var frameIdx = allLandmarks.length - 1;
-      var phase;
-      var mFrame;
-      if (mode === 'batting') {
-        mFrame = extractBattingMetrics(lm, handedness);
-        phase  = detectBattingPhase(mFrame, frameIdx, frameCount);
-        accumulateBatting(acc, mFrame, phase);
-      } else if (mode === 'bowling') {
-        mFrame = extractBowlingMetrics(lm, handedness);
-        phase  = detectBowlingPhase(mFrame, frameIdx, frameCount);
-        accumulateBowling(acc, mFrame, phase);
-      } else if (mode === 'fielding') {
-        mFrame = extractFieldingMetrics(lm);
-        accumulateFielding(acc, mFrame);
-      } else {
-        mFrame = extractKeepingMetrics(lm);
-        accumulateKeeping(acc, mFrame);
-      }
-      onFrameResult && onFrameResult({ lm: lm, frame: frameIdx, phase: phase });
-    }
+    // Pass 1: just collect landmarks — scoring happens after action detection
     if (pendingResolve) { pendingResolve(); pendingResolve = null; }
   });
 
@@ -705,8 +859,60 @@ async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
   }
 
   pose.close();
-  onProgress && onProgress(90, 'Computing CricketIQ™ Scores...');
-  await delay(300);
+  onProgress && onProgress(88, 'Detecting action windows...');
+  await delay(150);
+
+  // Pass 2: detect action windows and score only action frames
+  var actionResult = getActionFrameSet(allLandmarks, mode, handedness, fps);
+  var usingActionSegmentation = !!actionResult;
+  var detectedSeconds = actionResult ? actionResult.detectedSeconds : null;
+
+  onProgress && onProgress(91, 'Computing CricketIQ™ Scores...');
+  await delay(200);
+
+  // Accumulate metrics only for action frames
+  var filteredCount = 0;
+  for (var fi = 0; fi < allLandmarks.length; fi++) {
+    var lm = allLandmarks[fi];
+    if (!lm) continue;
+    // Skip non-action frames if action was detected
+    if (actionResult && !actionResult.frames.has(fi)) continue;
+    filteredCount++;
+    var phase;
+    var mFrame;
+    var actionFraction = fi / Math.max(1, allLandmarks.length - 1);
+    if (mode === 'batting') {
+      mFrame = extractBattingMetrics(lm, handedness);
+      // Re-derive phase relative to action window
+      if (actionResult && actionResult.windows.length > 0) {
+        var w = actionResult.windows[0];
+        var wLen = w.end - w.start;
+        var relPct = wLen > 0 ? (fi - w.start) / wLen : actionFraction;
+        phase = detectBattingPhase(mFrame, Math.round(relPct * frameCount), frameCount);
+      } else {
+        phase = detectBattingPhase(mFrame, fi, allLandmarks.length);
+      }
+      accumulateBatting(acc, mFrame, phase);
+    } else if (mode === 'bowling') {
+      mFrame = extractBowlingMetrics(lm, handedness);
+      if (actionResult && actionResult.windows.length > 0) {
+        var w = actionResult.windows[0];
+        var wLen = w.end - w.start;
+        var relPct = wLen > 0 ? (fi - w.start) / wLen : actionFraction;
+        phase = detectBowlingPhase(mFrame, Math.round(relPct * frameCount), frameCount);
+      } else {
+        phase = detectBowlingPhase(mFrame, fi, allLandmarks.length);
+      }
+      accumulateBowling(acc, mFrame, phase);
+    } else if (mode === 'fielding') {
+      mFrame = extractFieldingMetrics(lm);
+      accumulateFielding(acc, mFrame);
+    } else {
+      mFrame = extractKeepingMetrics(lm);
+      accumulateKeeping(acc, mFrame);
+    }
+    onFrameResult && onFrameResult({ lm: lm, frame: fi, phase: phase });
+  }
 
   var scored;
   if (mode === 'batting')       scored = scoreBatting(acc, handedness);
@@ -714,10 +920,20 @@ async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
   else if (mode === 'fielding') scored = scoreFielding(acc);
   else                          scored = scoreKeeping(acc);
 
+  // Attach action detection metadata
+  scored.actionDetected = usingActionSegmentation;
+  scored.detectedSeconds = detectedSeconds;
+  scored.framesScored = filteredCount;
+
   // Low confidence warning
   var avgConf = avg(acc.confidences) || 1;
   if (avgConf < 0.45) {
     scored.warnings = ['Low video visibility detected. For best accuracy: good lighting, contrasting clothing, side-on camera angle.'];
+  }
+  if (usingActionSegmentation && detectedSeconds !== null) {
+    scored.actionInfo = detectedSeconds + 's of action detected and scored';
+  } else if (!usingActionSegmentation && allLandmarks.length > 10) {
+    scored.actionInfo = 'Full video scored (no distinct action window detected — ensure camera captures complete action)';
   }
 
   onProgress && onProgress(98, 'Building report...');
