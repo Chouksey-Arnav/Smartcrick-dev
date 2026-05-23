@@ -133,6 +133,209 @@ var AudioEngine = (function() {
   return { start: start, stop: stop, setVol: setVol, isPlaying: function() { return playing; } };
 })();
 
+// ── TONE.JS SOUNDSCAPE ENGINE ────────────────────────────────────
+// Generates rich ambient soundscapes using the globally-loaded Tone.js
+var ToneEngine = (function() {
+  var parts = [];
+  var master = null;
+  var running = false;
+  var currentType = null;
+
+  // Soundscape definitions — one per mental session type
+  var SOUNDSCAPES = {
+    // BREATH / calm: Ocean Air — gentle sine pads, slow LFO
+    breath: function() {
+      if (typeof Tone === 'undefined') return;
+      Tone.start();
+      var rev = new Tone.Reverb({ decay: 8, wet: 0.65 }).toDestination();
+      var synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'sine' },
+        envelope: { attack: 3, decay: 1, sustain: 0.9, release: 6 },
+        volume: -22,
+      }).connect(rev);
+      synth.triggerAttack(['C3', 'G3', 'E4'], Tone.now());
+      var lfo = new Tone.LFO({ frequency: 0.05, min: -28, max: -18 }).start();
+      lfo.connect(synth.volume);
+      parts.push({ dispose: function() { try { lfo.stop(); lfo.dispose(); synth.releaseAll(); synth.dispose(); rev.dispose(); } catch(e){} } });
+    },
+    // GROUND / grounding: Earth Anchor — bass drone, slow filter sweep
+    ground: function() {
+      if (typeof Tone === 'undefined') return;
+      Tone.start();
+      var rev = new Tone.Reverb({ decay: 10, wet: 0.55 }).toDestination();
+      var synth = new Tone.Synth({
+        oscillator: { type: 'triangle' },
+        envelope: { attack: 4, decay: 0, sustain: 1, release: 8 },
+        volume: -20,
+      }).connect(rev);
+      synth.triggerAttack('D2', Tone.now());
+      var filter = new Tone.AutoFilter({ frequency: 0.03, baseFrequency: 120, octaves: 2, wet: 0.7 }).toDestination().start();
+      var synth2 = new Tone.Synth({
+        oscillator: { type: 'sine' },
+        envelope: { attack: 6, decay: 0, sustain: 1, release: 8 },
+        volume: -26,
+      }).connect(filter);
+      synth2.triggerAttack('A2', Tone.now() + 2);
+      parts.push({ dispose: function() { try { synth.triggerRelease(); synth.dispose(); synth2.triggerRelease(); synth2.dispose(); filter.dispose(); rev.dispose(); } catch(e){} } });
+    },
+    // VISUALIZE: Champion Cinema — rising orchestral strings simulation
+    visualize: function() {
+      if (typeof Tone === 'undefined') return;
+      Tone.start();
+      var rev = new Tone.Reverb({ decay: 7, wet: 0.7 }).toDestination();
+      var vol = new Tone.Volume(-18).connect(rev);
+      var synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'sawtooth', partialCount: 3 },
+        envelope: { attack: 3, decay: 1, sustain: 0.85, release: 7 },
+      }).connect(vol);
+      var chords = [['A3','C#4','E4'], ['C4','E4','G4'], ['D4','F#4','A4'], ['G3','B3','D4']];
+      var idx = 0;
+      synth.triggerAttack(chords[0], Tone.now());
+      var seq = new Tone.Sequence(function(time) {
+        synth.releaseAll(time);
+        idx = (idx + 1) % chords.length;
+        synth.triggerAttack(chords[idx], time + 0.5);
+      }, [null], '4m');
+      seq.start(0);
+      Tone.getTransport().bpm.value = 70;
+      Tone.getTransport().start();
+      parts.push({ dispose: function() { try { seq.stop(); seq.dispose(); synth.releaseAll(); synth.dispose(); vol.dispose(); rev.dispose(); Tone.getTransport().stop(); } catch(e){} } });
+    },
+    // ACTIVATE: Game Day — rhythmic energy, rising A major
+    activate: function() {
+      if (typeof Tone === 'undefined') return;
+      Tone.start();
+      var rev = new Tone.Reverb({ decay: 2.5, wet: 0.3 }).toDestination();
+      Tone.getTransport().bpm.value = 116;
+      var kick = new Tone.MembraneSynth({ volume: -10 }).connect(rev);
+      var kickSeq = new Tone.Sequence(function(time) { kick.triggerAttackRelease('C1', '8n', time); }, ['0','2'], '1m');
+      var padSynth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'square', partialCount: 2 },
+        envelope: { attack: 0.2, decay: 0.3, sustain: 0.6, release: 1.5 },
+        volume: -24,
+      }).connect(rev);
+      padSynth.triggerAttack(['A3','E4','C#5'], Tone.now() + 1);
+      kickSeq.start(0);
+      Tone.getTransport().start();
+      parts.push({ dispose: function() { try { kickSeq.stop(); kickSeq.dispose(); kick.dispose(); padSynth.releaseAll(); padSynth.dispose(); rev.dispose(); Tone.getTransport().stop(); } catch(e){} } });
+    },
+    // RECOVER: Deep Rest — sparse piano, delta ambience
+    recover: function() {
+      if (typeof Tone === 'undefined') return;
+      Tone.start();
+      var rev = new Tone.Reverb({ decay: 12, wet: 0.8 }).toDestination();
+      var synth = new Tone.Synth({
+        oscillator: { type: 'sine' },
+        envelope: { attack: 2, decay: 4, sustain: 0.2, release: 10 },
+        volume: -24,
+      }).connect(rev);
+      var notes = ['G3','E3','C3','D3','B2'];
+      var noteIdx = 0;
+      var playNote = function() {
+        synth.triggerAttackRelease(notes[noteIdx % notes.length], '4n');
+        noteIdx++;
+      };
+      playNote();
+      var interval = Tone.getTransport().scheduleRepeat(function() { playNote(); }, '6s');
+      Tone.getTransport().bpm.value = 40;
+      Tone.getTransport().start();
+      parts.push({ dispose: function() { try { Tone.getTransport().clear(interval); synth.dispose(); rev.dispose(); Tone.getTransport().stop(); } catch(e){} } });
+    },
+    // REFLECT: Still Water — sparse plucked strings, G-Em-C-D progression
+    reflect: function() {
+      if (typeof Tone === 'undefined') return;
+      Tone.start();
+      var rev = new Tone.Reverb({ decay: 6, wet: 0.6 }).toDestination();
+      var pluck = new Tone.PluckSynth({ attackNoise: 1, dampening: 4000, resonance: 0.97, volume: -18 }).connect(rev);
+      var melody = ['G4','B4','D5','E4','G4','B4','C5','E5','G4','D5'];
+      var mIdx = 0;
+      Tone.getTransport().bpm.value = 62;
+      var seq = new Tone.Sequence(function(time) {
+        pluck.triggerAttack(melody[mIdx % melody.length], time);
+        mIdx++;
+      }, [null], '2n');
+      seq.start(0);
+      Tone.getTransport().start();
+      parts.push({ dispose: function() { try { seq.stop(); seq.dispose(); pluck.dispose(); rev.dispose(); Tone.getTransport().stop(); } catch(e){} } });
+    },
+    // PRESSURE: Into the Fire — heartbeat, then calm transition
+    pressure: function() {
+      if (typeof Tone === 'undefined') return;
+      Tone.start();
+      Tone.getTransport().bpm.value = 80;
+      var kick = new Tone.MembraneSynth({ volume: -8, envelope: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.3 } }).toDestination();
+      var kickSeq = new Tone.Sequence(function(time) { kick.triggerAttackRelease('C1', '8n', time); }, ['0', '0.5'], '1m');
+      kickSeq.start(0);
+      // After 20s fade kick out and bring in calm pad
+      var calmRev = new Tone.Reverb({ decay: 8, wet: 0.7 }).toDestination();
+      var calmPad = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: 'sine' },
+        envelope: { attack: 5, decay: 0, sustain: 1, release: 8 },
+        volume: -30,
+      }).connect(calmRev);
+      var transitionId = Tone.getTransport().scheduleOnce(function(time) {
+        kickSeq.stop(time);
+        kick.volume.rampTo(-60, 3, time);
+        calmPad.triggerAttack(['C3', 'G3', 'E4'], time + 3);
+        calmPad.volume.rampTo(-18, 5, time + 3);
+      }, '20s');
+      Tone.getTransport().start();
+      parts.push({ dispose: function() { try { kickSeq.stop(); kickSeq.dispose(); kick.dispose(); calmPad.releaseAll(); calmPad.dispose(); calmRev.dispose(); Tone.getTransport().stop(); } catch(e){} } });
+    },
+  };
+
+  // Map session name/category to soundscape type
+  function getSoundscapeType(sessionName, sessionCategory) {
+    var name = (sessionName || '').toLowerCase();
+    var cat  = (sessionCategory || '').toLowerCase();
+    if (name.includes('sleep') || name.includes('recovery') || name.includes('rest') || cat === 'recovery') return 'recover';
+    if (name.includes('activation') || name.includes('game day') || name.includes('morning') || name.includes('fuel') || name.includes('fire') || cat === 'activation' || cat === 'pre-performance') return 'activate';
+    if (name.includes('pressure') || name.includes('choke') || name.includes('crucible') || cat === 'pressure' || cat === 'pro-mental') return 'pressure';
+    if (name.includes('visualiz') || name.includes('imagery') || name.includes('champion') || name.includes('peak') || cat === 'visualization') return 'visualize';
+    if (name.includes('reflect') || name.includes('journal') || name.includes('accountab') || cat === 'reflection') return 'reflect';
+    if (name.includes('ground') || name.includes('focus') || name.includes('concentrat') || cat === 'focus' || cat === 'grounding') return 'ground';
+    return 'breath'; // Default: calm breathing soundscape
+  }
+
+  function play(sessionName, sessionCategory, volume) {
+    stop();
+    var type = getSoundscapeType(sessionName, sessionCategory);
+    currentType = type;
+    try {
+      var fn = SOUNDSCAPES[type];
+      if (fn) fn();
+      // Set master volume
+      if (typeof Tone !== 'undefined') {
+        Tone.getDestination().volume.value = -20 + ((volume || 65) / 100) * 14;
+      }
+      running = true;
+    } catch(e) {
+      console.warn('[ToneEngine] Soundscape failed:', e);
+    }
+  }
+
+  function stop() {
+    try {
+      if (typeof Tone !== 'undefined') {
+        Tone.getTransport().stop();
+        Tone.getTransport().cancel();
+      }
+    } catch(e) {}
+    parts.forEach(function(p) { try { p.dispose(); } catch(e) {} });
+    parts = [];
+    running = false;
+    currentType = null;
+  }
+
+  function setVol(pct) {
+    if (typeof Tone !== 'undefined') {
+      try { Tone.getDestination().volume.value = -20 + (pct / 100) * 14; } catch(e) {}
+    }
+  }
+
+  return { play: play, stop: stop, setVol: setVol, isPlaying: function() { return running; }, getCurrentType: function() { return currentType; } };
+})();
+
 // ── PRESETS BY SESSION TYPE ──────────────────────────────────────
 var PRESETS = {
   calm:       { beatHz:8,  carrier:190, ambience:'pink',  ytId:'n4YghVcjbpw', label:'Calm & Clear',        desc:'Alpha 8Hz — stress relief, relaxed awareness' },
@@ -171,10 +374,22 @@ function SessionAudioPlayer({ sessionName, minutes }) {
   useEffect(function() { return function() { AudioEngine.stop(); }; }, []);
 
   function toggle() {
-    if(playing) { AudioEngine.stop(); setPlaying(false); }
-    else { AudioEngine.start(preset.beatHz, preset.carrier, preset.ambience, vol); setPlaying(true); }
+    if(playing) {
+      AudioEngine.stop();
+      ToneEngine.stop();
+      setPlaying(false);
+    } else {
+      AudioEngine.start(preset.beatHz, preset.carrier, preset.ambience, vol);
+      ToneEngine.play(sessionName, '', vol);
+      setPlaying(true);
+    }
   }
-  function handleVol(e) { var v = parseInt(e.target.value); setVol(v); AudioEngine.setVol(v); }
+  function handleVol(e) {
+    var v = parseInt(e.target.value);
+    setVol(v);
+    AudioEngine.setVol(v);
+    ToneEngine.setVol(v);
+  }
 
   var ambLabel = { pink:'Rain',brown:'Forest',white:'White noise',none:'Pure binaural' };
   var ambienceEmoji = { pink:'🌧',brown:'🌲',white:'☁️',none:'🎵' };
@@ -276,6 +491,7 @@ function SessionAudioPlayer({ sessionName, minutes }) {
 // Attach to global so MentalPage can use it
 A.SessionAudioPlayer = SessionAudioPlayer;
 A.AudioEngine = AudioEngine;
+A.ToneEngine = ToneEngine;
 A.MentalPresets = PRESETS;
 A.getMentalPreset = getPreset;
 
