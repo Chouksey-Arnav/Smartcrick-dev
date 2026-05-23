@@ -540,6 +540,14 @@ function VideoResultsPage({ session, videoUrl, onRetry, onClose }) {
         s.shotLabel && h('div', { style: { marginTop: 8, fontSize: 13, color: '#c4b5fd',
           padding: '4px 12px', borderRadius: 20, background: 'rgba(124,58,237,0.2)', display: 'inline-block' } },
           'Detected: ' + s.shotLabel),
+        s.actionInfo && h('div', { style: { marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 } },
+          h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6,
+            fontSize: 11, fontWeight: 700,
+            background: s.actionDetected ? 'rgba(22,163,74,0.12)' : 'rgba(245,158,11,0.12)',
+            color: s.actionDetected ? '#4ade80' : '#fbbf24',
+            border: '1px solid ' + (s.actionDetected ? 'rgba(22,163,74,0.25)' : 'rgba(245,158,11,0.25)') } },
+            s.actionDetected ? '🎯 ' : '⚠ ', s.actionInfo)
+        ),
         h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 8 } },
           'Powered by CricketIQ™ Scoring Algorithm  ·  ' + s.backend + ' backend  ·  ' + s.frames + ' frames')
       ),
