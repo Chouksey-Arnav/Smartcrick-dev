@@ -62,10 +62,7 @@ function QuizzesPage() {
 }
 
 // ── AI & Analytics stubs (new pages referenced in router) ─────────
-function VideoAnalysisPage() {
-  return h(StubPage,{title:'Video Analysis',icon:'cpu',
-    desc:'Upload or record your batting/bowling and get AI-powered technique feedback with frame-by-frame pose analysis.'});
-}
+// VideoAnalysisPage is now implemented in app-video-analysis.js (ProVision™ Engine)
 
 function PerformancePage() {
   return h(StubPage,{title:'Performance Analytics',icon:'chartLine',
@@ -86,7 +83,8 @@ Object.assign(window.SC_APP, {
   StubPage,
   AICoachPage, NinetyDayPage,
   AIWorkoutPage, MatchTrackerPage, MiniMatchPage, GetOutPage, QuizzesPage,
-  VideoAnalysisPage, PerformancePage, MatchLoggerPage, ReactionDrillPage,
+  PerformancePage, MatchLoggerPage, ReactionDrillPage,
+  // VideoAnalysisPage — defined in app-video-analysis.js (ProVision™ Engine)
 });
 console.log('[SC] app-stubs ready');
 })();
