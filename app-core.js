@@ -278,6 +278,19 @@ const DB = {
   // ── Monthly Challenge Progress (P5-E) ─────────────────────────
   getMonthlyProgress: function() { return this.get('monthly_progress')||{}; },
   saveMonthlyProgress: function(v) { this.set('monthly_progress',v); },
+
+  // ── ProVision™ Video Sessions (VA) ────────────────────────────
+  getVideoSessions: function() { return this.get('video_sessions')||[]; },
+  saveVideoSession: function(session) {
+    var s=Object.assign({},session); delete s.landmarks; // strip large data before storing
+    var list=this.getVideoSessions();
+    list.push(s);
+    if(list.length>50) list=list.slice(-50);
+    this.set('video_sessions',list);
+  },
+  getVideoSessionsByMode: function(mode) {
+    return this.getVideoSessions().filter(function(s){return s.mode===mode;});
+  },
 };
 A.DB = DB;
 
