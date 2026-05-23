@@ -119,6 +119,13 @@ function MentalPage(){
     :[];
   const filtered=MENTAL_SESSIONS.filter(s=>(cat==='all'||s.category===cat)&&(search===''||s.title.toLowerCase().includes(search.toLowerCase())));
 
+  // SmartCrick Picks — personalised for this user
+  const user=DB.getUser?DB.getUser():(DB.get?DB.get('user'):null);
+  const pickSessions=(A.PersonalisationEngine&&user)
+    ?A.PersonalisationEngine.getPickSessions(MENTAL_SESSIONS,user,done)
+    :[];
+  const pickIds=new Set(pickSessions.map(s=>s.id));
+
   return h('div',{style:{minHeight:'100dvh',background:'#0d1117'}},
     h(PageHeader,{title:'Mental Training',subtitle:`${MENTAL_SESSIONS.length} sessions · ${MENTAL_ROUTINES.length} routines`,gradient:'linear-gradient(135deg,#5b21b6,#4f46e5)'}),
 
@@ -251,6 +258,48 @@ function MentalPage(){
           )
         ),
 
+        // ── SmartCrick Picks for Mental ───────────────────────────────
+        pickSessions.length>0&&!search&&cat==='all'&&h('div',{style:{padding:'8px 16px 0'}},
+          h('style',null,
+            '@keyframes sc-mental-pick{0%,100%{border-color:rgba(139,92,246,0.3)}50%{border-color:rgba(139,92,246,0.6)}}'
+          ),
+          h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
+            h('span',{style:{fontSize:11,fontWeight:800,color:'#a78bfa',letterSpacing:'0.08em',textTransform:'uppercase'}},'✦ SmartCrick Pick'),
+            h('div',{style:{flex:1,height:1,background:'linear-gradient(to right,rgba(167,139,250,0.3),transparent)'}}),
+            h('span',{style:{fontSize:10,color:'#6b7280',fontWeight:600}},'personalised for you')
+          ),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+            pickSessions.map(s=>{
+              const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
+              const mins=Math.floor(s.duration_seconds/60);
+              const isDone=done.includes(s.id);
+              return h('button',{key:'pick-'+s.id,onClick:()=>nav('MentalPlayer',{id:s.id}),style:{
+                display:'flex',alignItems:'center',gap:12,padding:'13px 14px',borderRadius:11,
+                background:'rgba(22,27,34,0.95)',border:'1px solid rgba(139,92,246,0.35)',
+                cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
+                boxShadow:'0 0 0 1px rgba(139,92,246,0.08),0 4px 14px rgba(109,40,217,0.10)',
+                animation:'sc-mental-pick 3s ease-in-out infinite',
+              }},
+                h('div',{style:{width:40,height:40,borderRadius:8,flexShrink:0,position:'relative',background:`linear-gradient(135deg,${sc.from},${sc.to})`,display:'flex',alignItems:'center',justifyContent:'center'}},
+                  h(Icon,{n:sc.icon,cls:'w-4 h-4 text-white'}),
+                  isDone&&h('div',{style:{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center'}},
+                    h(Icon,{n:'check',cls:'w-2.5 h-2.5 text-white'}))
+                ),
+                h('div',{style:{flex:1,minWidth:0}},
+                  h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:3}},
+                    h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'1px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.06em',textTransform:'uppercase'}},'✦ Pick'),
+                    h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title)
+                  ),
+                  h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                    h('span',{style:{fontSize:11,color:'#6b7280'}},mins+' min'),
+                    h(XPBadge,{xp:s.xp_value}))
+                ),
+                h(Icon,{n:'play',cls:'w-4 h-4 flex-shrink-0',style:{color:'#8b5cf6'}})
+              );
+            })
+          )
+        ),
+
         // Session list
         h('div',{style:{padding:'4px 16px 0'}},
           filtered.length===0
@@ -271,7 +320,10 @@ function MentalPage(){
                 h('div',{style:{flex:1,minWidth:0}},
                   h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:4}},
                     h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title),
-                    s.is_premium&&h(PremiumBadge)
+                    h('div',{style:{display:'flex',alignItems:'center',gap:4,flexShrink:0}},
+                      pickIds.has(s.id)&&h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'1px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.04em',textTransform:'uppercase'}},'✦ Pick'),
+                      s.is_premium&&h(PremiumBadge)
+                    )
                   ),
                   h('div',{style:{display:'flex',alignItems:'center',gap:8}},
                     h('span',{style:{fontSize:11,color:'#484f58'}},`${mins} min`),
@@ -363,8 +415,9 @@ function MentalPlayerPage({params}){
             h('p',{style:{fontSize:13,color:'#8b949e',flex:1,lineHeight:1.6}},s.instruction),
             h('span',{style:{fontSize:11,color:'#484f58',flexShrink:0}},`${s.duration_seconds}s`)))
         )),
+      A.SessionAudioPlayer&&h(A.SessionAudioPlayer,{sessionName:sess.title,minutes:Math.floor(sess.duration_seconds/60)}),
       h('button',{onClick:()=>{setStarted(true);setStep(0);setTimeLeft(sess.steps[0].duration_seconds);},
-        style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:700}},
+        style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:700,marginTop:A.SessionAudioPlayer?0:0}},
         h(Icon,{n:'play',cls:'w-5 h-5'}),' Begin Session')
     )
   );
