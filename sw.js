@@ -1,9 +1,9 @@
 // sw.js — SmartCrick Service Worker v1.0
 // Strategy: cache-first for CDN + app files, network-first for API
 // ================================================================
-const CACHE_V       = 'sc-v1';
-const CDN_CACHE     = 'sc-cdn-v1';
-const CACHE_VERSION = '1.0.0';
+const CACHE_V       = 'sc-v2';
+const CDN_CACHE     = 'sc-cdn-v2';
+const CACHE_VERSION = '2.0.0';
 
 // All same-origin app files to cache on install
 const APP_SHELL = [
@@ -28,6 +28,10 @@ const APP_SHELL = [
   '/app-progress.js',
   '/app-challenges.js',
   '/app-profile.js',
+  '/app-video-data.js',
+  '/app-video-engine.js',
+  '/app-video-results.js',
+  '/app-video-analysis.js',
   '/app-stubs.js',
   '/app-aicoach.js',
   '/app-daily-net.js',
