@@ -914,6 +914,189 @@ function getCachedDNA() {
 }
 window.addEventListener('sc_update', function() { _dnaCache = null; });
 
+// ── Layer 2-5: Multi-dimensional DNA analysis ─────────────────────
+var DNA_AXES = ['batting','bowling','fielding','fitness','mental','consistency'];
+
+function cosineSim(a, b) {
+  var dot = 0, ma = 0, mb = 0;
+  DNA_AXES.forEach(function(k) {
+    dot += (a[k]||0) * (b[k]||0);
+    ma  += (a[k]||0) * (a[k]||0);
+    mb  += (b[k]||0) * (b[k]||0);
+  });
+  return (ma && mb) ? dot / (Math.sqrt(ma) * Math.sqrt(mb)) : 0;
+}
+
+function computeSkillDNA() {
+  var db = A.CRICKETERS_DB;
+  if (!db || !db.length) return null;
+  var rating = A.calcPlayerRating ? A.calcPlayerRating() : null;
+  if (!rating) return null;
+  var userAxes = {
+    batting:     (rating.batting     || (rating.axes && rating.axes.batting)     || 0),
+    bowling:     (rating.bowling     || (rating.axes && rating.axes.bowling)     || 0),
+    fielding:    (rating.fielding    || (rating.axes && rating.axes.fielding)    || 0),
+    fitness:     (rating.fitness     || (rating.axes && rating.axes.fitness)     || 0),
+    mental:      (rating.mental      || (rating.axes && rating.axes.mental)      || 0),
+    consistency: (rating.consistency || (rating.axes && rating.axes.consistency) || 0),
+  };
+  var any = DNA_AXES.some(function(k){ return userAxes[k] > 3; });
+  if (!any) return null;
+  var matches = db.map(function(pro) {
+    return { pro: pro, score: cosineSim(userAxes, pro.dna) };
+  });
+  matches.sort(function(a, b){ return b.score - a.score; });
+  return { topMatches: matches.slice(0, 5), userAxes: userAxes };
+}
+
+function computePerformanceDNA() {
+  var logs = DB.get('match_logs') || [];
+  if (logs.length < 3) return { insufficient: true, count: logs.length };
+  var batInnings = logs.filter(function(l){ return l.runs !== undefined && l.runs !== null; });
+  var batOuts    = batInnings.filter(function(l){ return !l.notOut; });
+  var totalRuns  = batInnings.reduce(function(s,l){ return s + (l.runs||0); }, 0);
+  var totalBalls = batInnings.reduce(function(s,l){ return s + (l.balls||0); }, 0);
+  var battingAvg = batOuts.length > 0 ? totalRuns / batOuts.length : (batInnings.length > 0 ? totalRuns : 0);
+  var battingSR  = totalBalls > 0 ? Math.round((totalRuns / totalBalls) * 100) : 0;
+  var bowlInnings      = logs.filter(function(l){ return l.wickets !== undefined; });
+  var totalWickets     = bowlInnings.reduce(function(s,l){ return s + (l.wickets||0); }, 0);
+  var totalRunsConceded = bowlInnings.reduce(function(s,l){ return s + (l.runsConceded||0); }, 0);
+  var totalOvers       = bowlInnings.reduce(function(s,l){ return s + (l.overs||0); }, 0);
+  var bowlingAvg = totalWickets > 0 ? Math.round((totalRunsConceded / totalWickets) * 10) / 10 : 999;
+  var economy    = totalOvers > 0 ? Math.round((totalRunsConceded / totalOvers) * 100) / 100 : 0;
+  var stats = {
+    battingAvg: Math.round(battingAvg * 10) / 10,
+    battingSR: battingSR,
+    bowlingAvg: bowlingAvg,
+    economy: economy,
+    innings: batInnings.length,
+    wickets: totalWickets,
+  };
+  var db2 = A.CRICKETERS_DB || [];
+  var matches = db2.filter(function(p){ return p.careerStats && p.careerStats.battingAvg; }).map(function(p) {
+    var cs = p.careerStats;
+    var score = 0, count = 0;
+    if (batInnings.length >= 3 && cs.battingAvg) {
+      var diff = Math.abs(battingAvg - cs.battingAvg) / Math.max(cs.battingAvg, 1);
+      score += Math.max(0, 1 - diff); count++;
+    }
+    if (totalWickets >= 5 && cs.economy && economy > 0) {
+      var ediff = Math.abs(economy - cs.economy) / Math.max(cs.economy, 1);
+      score += Math.max(0, 1 - ediff); count++;
+    }
+    return { pro: p, score: count > 0 ? score / count : 0 };
+  }).filter(function(m){ return m.score > 0; });
+  matches.sort(function(a,b){ return b.score - a.score; });
+  return { stats: stats, topMatches: matches.slice(0, 3), dataQuality: logs.length };
+}
+
+function computeTechniqueDNA() {
+  var sessions = DB.get('video_sessions') || [];
+  if (!sessions.length) return null;
+  var keys = ['head_stability','body_rotation','balance','elbow_angle','bat_swing_path','follow_through','weight_transfer'];
+  var metrics = {}, totalWeight = 0;
+  sessions.forEach(function(s, i) {
+    var w = Math.exp(i * 0.1);
+    totalWeight += w;
+    keys.forEach(function(k) {
+      var val = s[k] !== undefined ? s[k] : (s.metrics && s.metrics[k] !== undefined ? s.metrics[k] : undefined);
+      if (val !== undefined) metrics[k] = (metrics[k] || 0) + val * w;
+    });
+  });
+  keys.forEach(function(k) { if (metrics[k]) metrics[k] = Math.round(metrics[k] / totalWeight); });
+  var tags = [];
+  if ((metrics.head_stability || 0) > 70)  tags.push('eyes_level');
+  if ((metrics.elbow_angle || 0) > 60)     tags.push('high_elbow');
+  if ((metrics.weight_transfer || 0) > 65) tags.push('front_foot');
+  if ((metrics.weight_transfer || 0) < 40) tags.push('back_foot');
+  if ((metrics.bat_swing_path || 0) > 70)  tags.push('straight_drive');
+  if ((metrics.follow_through || 0) > 65)  tags.push('power_hitting');
+  if ((metrics.body_rotation || 0) > 70)   tags.push('side_on');
+  if ((metrics.balance || 0) > 70)         tags.push('classical');
+  sessions.forEach(function(s) {
+    if (Array.isArray(s.tags)) s.tags.forEach(function(t){ if(tags.indexOf(t)<0) tags.push(t); });
+    if (Array.isArray(s.techniqueTags)) s.techniqueTags.forEach(function(t){ if(tags.indexOf(t)<0) tags.push(t); });
+  });
+  var db3 = A.CRICKETERS_DB || [];
+  var matches = db3.map(function(p) {
+    var pTags = p.techniqueTags || [];
+    var overlap = tags.filter(function(t){ return pTags.indexOf(t) >= 0; }).length;
+    return { pro: p, overlap: overlap, score: pTags.length > 0 ? overlap / Math.max(pTags.length, tags.length) : 0 };
+  }).filter(function(m){ return m.overlap > 0; });
+  matches.sort(function(a,b){ return b.score - a.score; });
+  return { metrics: metrics, tags: tags, topMatches: matches.slice(0, 3) };
+}
+
+function computeGrowthDNA() {
+  var xpLog = (DB.getXPLog ? DB.getXPLog() : null) || DB.get('xp_log') || [];
+  if (!xpLog || xpLog.length < 5) return { category:'new', label:'Just Starting', emoji:'🌱', color:'#16a34a', activeDays14:0, recent:0, prior:0, consistency14:0, velocityRatio:0 };
+  var now = Date.now();
+  var dayMap = {};
+  xpLog.forEach(function(e) {
+    if (!e.date) return;
+    dayMap[e.date] = (dayMap[e.date] || 0) + (e.xp || 0);
+  });
+  var recent = 0, prior = 0;
+  for (var i = 0; i < 14; i++) {
+    var d = new Date(now - i * 86400000).toISOString().slice(0,10);
+    recent += dayMap[d] || 0;
+  }
+  for (var j = 14; j < 28; j++) {
+    var d2 = new Date(now - j * 86400000).toISOString().slice(0,10);
+    prior += dayMap[d2] || 0;
+  }
+  var velocityRatio = prior > 0 ? recent / prior : (recent > 0 ? 2 : 0);
+  var activeDays14 = 0;
+  for (var k = 0; k < 14; k++) {
+    var d3 = new Date(now - k * 86400000).toISOString().slice(0,10);
+    if (dayMap[d3] > 0) activeDays14++;
+  }
+  var consistency14 = Math.round((activeDays14 / 14) * 100);
+  var cat, label, emoji, color;
+  if (velocityRatio >= 1.5 && activeDays14 >= 10)      { cat='rocket';       label='Rocket';       emoji='🚀'; color='#f59e0b'; }
+  else if (velocityRatio >= 1.2 && activeDays14 >= 7)  { cat='climbing';     label='Climbing';     emoji='📈'; color='#10b981'; }
+  else if (velocityRatio >= 0.8 && activeDays14 >= 8)  { cat='steady';       label='Steady';       emoji='💪'; color='#3b82f6'; }
+  else if (velocityRatio >= 1.3 && activeDays14 < 6)   { cat='volatile';     label='Volatile';     emoji='⚡'; color='#f97316'; }
+  else if (velocityRatio < 0.5 && prior > 0)           { cat='plateau';      label='Plateau';      emoji='⚖️'; color='#6b7280'; }
+  else if (prior === 0 && recent > 0)                  { cat='late_bloomer'; label='Late Bloomer';  emoji='🌸'; color='#a855f7'; }
+  else                                                  { cat='steady';       label='Steady';       emoji='💪'; color='#3b82f6'; }
+  var progress = (DB.getProgress ? DB.getProgress() : null) || DB.get('progress') || {};
+  var totalXP = progress.total_xp || 0;
+  var avgDaily = recent > 0 ? recent / 14 : 0;
+  var xpToNextLevel = 1000 - (totalXP % 1000);
+  var daysToNext = avgDaily > 5 ? Math.ceil(xpToNextLevel / avgDaily) : null;
+  return { category:cat, label:label, emoji:emoji, color:color, velocityRatio:Math.round(velocityRatio*100)/100, consistency14:consistency14, recent:recent, prior:prior, daysToNextLevel:daysToNext, activeDays14:activeDays14 };
+}
+
+function computeFullDNAReport() {
+  var layer1 = getCachedDNA();
+  var layer2 = computeSkillDNA();
+  var layer3 = computePerformanceDNA();
+  var layer4 = computeTechniqueDNA();
+  var layer5 = computeGrowthDNA();
+  var topFive = layer2 && layer2.topMatches ? layer2.topMatches.map(function(m){ return { pro:m.pro, score:m.score, source:'skill' }; }) : [];
+  var synthesis = '';
+  if (layer1 && layer1.primary) {
+    synthesis += 'Your Cricket DNA is a ' + layer1.primary.name;
+    if (layer1.secondary) synthesis += ' with ' + layer1.secondary.name + ' tendencies';
+    synthesis += '. ';
+  }
+  if (topFive.length > 0) synthesis += 'Your skill profile most resembles ' + topFive[0].pro.name + '. ';
+  var growthTexts = { rocket:'Your training momentum is explosive right now — keep riding it.', climbing:'You\'re on a steady upward trajectory, improving week by week.', steady:'You\'re training with great consistency — the foundation of elite cricket.', volatile:'Your intensity is high but inconsistent — channel it into a regular rhythm.', plateau:'You\'re in a plateau — time to challenge yourself with harder drills.', late_bloomer:'You\'re just getting started — the best is yet to come.', new:'Complete more training sessions to reveal your full Cricket DNA.' };
+  if (layer5) synthesis += (growthTexts[layer5.category] || '') + ' ';
+  if (layer3 && !layer3.insufficient && layer3.stats) synthesis += 'Your match batting average is ' + layer3.stats.battingAvg + '.';
+  return { layer1:layer1, layer2:layer2, layer3:layer3, layer4:layer4, layer5:layer5, topFive:topFive, synthesis:synthesis.trim(), computed_at:Date.now() };
+}
+
+var _fullDNACache = null;
+function getFullDNAReport() {
+  var TWO_HOURS = 7200000;
+  if (_fullDNACache && (Date.now() - _fullDNACache.computed_at < TWO_HOURS)) return _fullDNACache;
+  _fullDNACache = computeFullDNAReport();
+  return _fullDNACache;
+}
+window.addEventListener('sc_update', function(){ _fullDNACache = null; });
+
 // ── Rarity display helpers ────────────────────────────────────────
 var RARITY_COLORS = { common:'#6b7280', uncommon:'#3b82f6', rare:'#a855f7', legendary:'#f59e0b' };
 var RARITY_LABELS = { common:'Common', uncommon:'Uncommon', rare:'Rare', legendary:'Legendary' };
@@ -1051,22 +1234,27 @@ function SmallProfileCard(props) {
   );
 }
 
-// ── Full Cricket DNA Page ─────────────────────────────────────────
+// ── Full Cricket DNA Page (v2 — 5 tabs) ──────────────────────────
 function CricketDNAPage() {
-  var [dna, setDna]         = useState(null);
-  var [loading, setLoading] = useState(true);
+  var [tab, setTab]               = useState('profiles');
+  var [dna, setDna]               = useState(null);
+  var [fullReport, setFullReport] = useState(null);
+  var [loading, setLoading]       = useState(true);
   var [showSignals, setShowSignals] = useState(false);
-  var [catFilter, setCatFilter]     = useState('all');
-  var [showAll, setShowAll]         = useState(false);
+  var [catFilter, setCatFilter]   = useState('all');
+  var [showAll, setShowAll]       = useState(false);
 
   useEffect(function(){
     try {
       setLoading(false);
       setDna(getCachedDNA());
+      try { setFullReport(getFullDNAReport()); } catch(e2) {}
     } catch(e) { setLoading(false); }
-    window.addEventListener('sc_update', function(){
-      try { setDna(getCachedDNA()); } catch(e) {}
-    });
+    var onUpdate = function(){
+      try { setDna(getCachedDNA()); setFullReport(getFullDNAReport()); } catch(e) {}
+    };
+    window.addEventListener('sc_update', onUpdate);
+    return function(){ window.removeEventListener('sc_update', onUpdate); };
   }, []);
 
   if (loading) {
@@ -1081,161 +1269,324 @@ function CricketDNAPage() {
 
   var s = dna ? dna.signals : {};
   var sigTotal = (s.totalDrills||0)+(s.mc||0)+(s.fc||0)+(s.nc||0);
-
-  // Category filter options
   var cats = ['all','batting','bowling','fielding','mental','fitness','format','training','legendary'];
   var filteredProfiles = (dna ? dna.allScores : PROFILES).filter(function(p){
     return catFilter === 'all' || p.cat === catFilter;
   });
 
-  return h('div',{style:{background:'#0d1117',minHeight:'100dvh',paddingBottom:80}},
+  var TABS = [
+    { id:'profiles', label:'DNA', icon:'🧬' },
+    { id:'promatch', label:'Pro Match', icon:'⭐' },
+    { id:'performance', label:'Stats', icon:'📊' },
+    { id:'technique', label:'Technique', icon:'🎯' },
+    { id:'growth', label:'Growth', icon:'📈' },
+  ];
 
-    // Header
-    h('div',{style:{
-      padding:'20px 16px 16px',
-      background:'linear-gradient(180deg,rgba(168,85,247,0.08) 0%,transparent 100%)'
-    }},
+  function renderProfilesTab() {
+    return h('div',null,
+      !dna || !dna.hasEnoughData
+        ? h('div',{style:{margin:'16px',padding:'20px',borderRadius:14,
+            background:'rgba(168,85,247,0.07)',border:'1px solid rgba(168,85,247,0.2)',textAlign:'center'}},
+            h('div',{style:{fontSize:36,marginBottom:12}},'🧬'),
+            h('div',{style:{fontSize:16,fontWeight:700,color:'#f0fdf4',marginBottom:8}},'Start training to unlock your DNA'),
+            h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6,marginBottom:16}},'Complete drills, mental sessions, or fitness workouts to reveal your unique Cricket DNA.'),
+            h('button',{onClick:function(){nav('Drills');},style:{padding:'12px 24px',background:'#a855f7',color:'#fff',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'→ Start Training')
+          )
+        : h('div',null,
+            h('div',{style:{margin:'0 16px 12px'}}, h(PrimaryProfileCard, {profile:dna.primary})),
+            h('div',{style:{display:'flex',gap:8,margin:'0 16px 12px'}},
+              h(SmallProfileCard, {profile:dna.secondary, label:'Secondary DNA'}),
+              h(SmallProfileCard, {profile:dna.tertiary,  label:'Tertiary DNA'})
+            ),
+            h('div',{style:{margin:'0 16px 12px'}},
+              h('div',{role:'button',tabIndex:0,onClick:function(){setShowSignals(!showSignals);},
+                style:{padding:'11px 14px',borderRadius:12,cursor:'pointer',background:'rgba(255,255,255,0.04)',
+                  border:'1px solid rgba(255,255,255,0.08)',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+                h('div',{style:{fontSize:13,fontWeight:600,color:'#e5e7eb'}},'📊 Training Signals'),
+                h('span',{style:{color:'#484f58',fontSize:14}},showSignals?'▲':'▼')
+              ),
+              showSignals && h('div',{style:{padding:'12px',borderRadius:12,marginTop:4,background:'rgba(13,17,23,0.98)',border:'1px solid rgba(48,54,61,0.8)'}},
+                h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}},
+                  [{label:'Batting Drills',val:s.bd||0},{label:'Bowling Drills',val:s.bwd||0},
+                   {label:'Mental Sessions',val:s.mc||0},{label:'Fitness Sessions',val:s.fc||0},
+                   {label:'High-XP Days',val:s.hx||0},{label:'Current Streak',val:s.cs||0},
+                   {label:'Consistency',val:Math.round((s.con||0)*100)+'%'},{label:'XP Velocity',val:(s.vel>0?'+':'')+Math.round((s.vel||0)*100)+'%'}
+                  ].map(function(sig){
+                    return h('div',{key:sig.label,style:{padding:'8px 10px',borderRadius:8,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.5)'}},
+                      h('div',{style:{fontSize:10,color:'#484f58',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}},sig.label),
+                      h('div',{style:{fontSize:15,fontWeight:800,color:'#e5e7eb'}},sig.val)
+                    );
+                  })
+                )
+              )
+            ),
+            h('div',{style:{margin:'0 16px 12px'}},
+              h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:10}},'All '+PROFILES.length+' Profiles'),
+              h('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}},
+                cats.map(function(c){
+                  var sel=catFilter===c;
+                  return h('button',{key:c,onClick:function(){setCatFilter(c);},
+                    style:{padding:'4px 10px',borderRadius:99,fontSize:11,cursor:'pointer',fontFamily:'inherit',fontWeight:sel?700:400,
+                      background:sel?'rgba(168,85,247,0.2)':'rgba(255,255,255,0.04)',
+                      border:'1px solid '+(sel?'rgba(168,85,247,0.4)':'rgba(255,255,255,0.08)'),
+                      color:sel?'#c084fc':'#6b7280'}},c==='all'?'All':CAT_LABELS[c]||c);
+                })
+              ),
+              h('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}},
+                (showAll?filteredProfiles:filteredProfiles.slice(0,24)).map(function(p){
+                  var locked=(p.score||0)<15;
+                  return h('div',{key:p.id,style:{padding:'8px 6px',borderRadius:10,textAlign:'center',
+                    background:locked?'rgba(13,17,23,0.6)':'rgba(22,27,34,0.9)',
+                    border:'1px solid '+(locked?'rgba(48,54,61,0.3)':p.clr+'25'),opacity:locked?0.5:1}},
+                    h('div',{style:{fontSize:18,marginBottom:4,filter:locked?'grayscale(1)':'none'}},p.icon),
+                    h('div',{style:{fontSize:9,fontWeight:700,color:locked?'#374151':p.clr,lineHeight:1.3,marginBottom:3}},p.name),
+                    h('div',{style:{fontSize:8,color:'#484f58'}},RARITY_LABELS[p.rarity]),
+                    h('div',{style:{marginTop:4,height:2,borderRadius:99,background:'rgba(48,54,61,0.6)',overflow:'hidden'}},
+                      h('div',{style:{height:'100%',width:(p.score||0)+'%',background:p.clr,borderRadius:99}})
+                    )
+                  );
+                })
+              ),
+              filteredProfiles.length>24 && h('button',{onClick:function(){setShowAll(!showAll);},
+                style:{width:'100%',marginTop:10,padding:'10px',border:'none',borderRadius:10,background:'rgba(255,255,255,0.04)',color:'#9ca3af',cursor:'pointer',fontSize:13,fontFamily:'inherit'}},
+                showAll?'Show less':'Show all '+filteredProfiles.length+' profiles')
+            )
+          )
+    );
+  }
+
+  function renderProMatchTab() {
+    var layer2 = fullReport && fullReport.layer2;
+    var styleLabel = null;
+    try {
+      if (A.BrainEngine && A.BrainEngine.getStyleLabel && A.BrainEngine.buildStyleSignals) {
+        var sig = A.BrainEngine.buildStyleSignals();
+        if (sig) styleLabel = A.BrainEngine.getStyleLabel(sig);
+      }
+    } catch(e) {}
+    if (!layer2) {
+      return h('div',{style:{padding:16}},
+        h('div',{style:{padding:20,borderRadius:14,background:'rgba(59,130,246,0.07)',border:'1px solid rgba(59,130,246,0.2)',textAlign:'center'}},
+          h('div',{style:{fontSize:36,marginBottom:12}},'⭐'),
+          h('div',{style:{fontSize:15,fontWeight:700,color:'#f0fdf4',marginBottom:8}},'Pro Match Unavailable'),
+          h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6}},'Complete drills and training to build your skill profile — we\'ll match you against 100+ world-class cricketers.'),
+          h('button',{onClick:function(){nav('Drills');},style:{marginTop:12,padding:'11px 22px',background:'#3b82f6',color:'#fff',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'→ Start Training')
+        )
+      );
+    }
+    return h('div',{style:{padding:'0 16px 16px'}},
+      styleLabel && h('div',{style:{marginBottom:12,padding:'10px 14px',borderRadius:10,background:'rgba(168,85,247,0.1)',border:'1px solid rgba(168,85,247,0.25)',display:'flex',alignItems:'center',gap:10}},
+        h('div',{style:{fontSize:20}},'🧠'),
+        h('div',null,
+          h('div',{style:{fontSize:10,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:2}},'AI Playing Style'),
+          h('div',{style:{fontSize:14,fontWeight:700,color:'#c084fc'}},styleLabel)
+        )
+      ),
+      h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:10}},'Top Matches from 100+ Pro Cricketers'),
+      layer2.topMatches.map(function(m,i){
+        var p=m.pro, pct=Math.round(m.score*100);
+        var color=p.era==='legend'?'#f59e0b':p.era==='modern'?'#3b82f6':'#10b981';
+        return h('div',{key:p.id,style:{marginBottom:10,padding:'14px',borderRadius:14,background:'rgba(22,27,34,0.95)',border:'1px solid rgba(48,54,61,0.6)'}},
+          h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},
+            h('div',{style:{fontSize:28}},p.emoji||'🏏'),
+            h('div',{style:{flex:1}},
+              h('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                h('div',{style:{fontSize:14,fontWeight:700,color:'#f0fdf4'}},p.name),
+                h('div',{style:{fontSize:12}},p.flag||'')
+              ),
+              h('div',{style:{fontSize:11,color:'#6b7280'}},p.role+' · '+p.country),
+              h('div',{style:{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}},
+                (p.traits||[]).map(function(t){return h('span',{key:t,style:{fontSize:9,padding:'2px 7px',borderRadius:99,background:color+'15',border:'1px solid '+color+'30',color:color,fontWeight:600}},t);})
+              )
+            ),
+            h('div',{style:{textAlign:'center',minWidth:48}},
+              h('div',{style:{fontSize:20,fontWeight:900,color:color}},pct+'%'),
+              h('div',{style:{fontSize:9,color:'#484f58',textTransform:'uppercase'}},i===0?'Best Match':'Match')
+            )
+          ),
+          h('div',{style:{height:4,borderRadius:99,background:'rgba(48,54,61,0.5)',overflow:'hidden'}},
+            h('div',{style:{height:'100%',width:pct+'%',background:color,borderRadius:99,transition:'width 1s ease'}})
+          ),
+          p.tip && h('div',{style:{marginTop:8,padding:'8px 10px',borderRadius:8,background:'rgba(255,255,255,0.03)',fontSize:11,color:'#8b949e',lineHeight:1.5}},
+            h('span',{style:{color:color,fontWeight:700}},'💡 Tip: '),p.tip
+          )
+        );
+      })
+    );
+  }
+
+  function renderPerformanceTab() {
+    var layer3 = fullReport && fullReport.layer3;
+    if (!layer3) {
+      return h('div',{style:{padding:16}},
+        h('div',{style:{padding:20,borderRadius:14,background:'rgba(16,185,129,0.07)',border:'1px solid rgba(16,185,129,0.2)',textAlign:'center'}},
+          h('div',{style:{fontSize:36,marginBottom:12}},'📊'),
+          h('div',{style:{fontSize:15,fontWeight:700,color:'#f0fdf4',marginBottom:8}},'Log Matches to Unlock'),
+          h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6}},'Record match performances to compare your stats against professional cricketers.'),
+          h('button',{onClick:function(){nav('MatchLogger');},style:{marginTop:12,padding:'11px 22px',background:'#10b981',color:'#fff',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'→ Log a Match')
+        )
+      );
+    }
+    if (layer3.insufficient) {
+      return h('div',{style:{padding:16}},
+        h('div',{style:{padding:20,borderRadius:14,background:'rgba(16,185,129,0.07)',border:'1px solid rgba(16,185,129,0.2)',textAlign:'center'}},
+          h('div',{style:{fontSize:36,marginBottom:12}},'📊'),
+          h('div',{style:{fontSize:15,fontWeight:700,color:'#f0fdf4',marginBottom:8}},'⚠ Need 3+ Matches'),
+          h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6}},'You\'ve logged '+layer3.count+' match'+(layer3.count===1?'':'es')+'. Log '+(3-layer3.count)+' more.'),
+          h('button',{onClick:function(){nav('MatchLogger');},style:{marginTop:12,padding:'11px 22px',background:'#10b981',color:'#fff',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'→ Log Match')
+        )
+      );
+    }
+    var st=layer3.stats;
+    return h('div',{style:{padding:'0 16px 16px'}},
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8,marginBottom:16}},
+        [{label:'Batting Avg',value:st.battingAvg,color:'#3b82f6'},{label:'Strike Rate',value:st.battingSR,color:'#f59e0b'},
+         {label:'Wickets',value:st.wickets,color:'#ef4444'},{label:'Economy',value:st.economy||'—',color:'#10b981'}
+        ].map(function(sc){
+          return h('div',{key:sc.label,style:{padding:'14px',borderRadius:12,textAlign:'center',background:'rgba(22,27,34,0.95)',border:'1px solid rgba(48,54,61,0.6)'}},
+            h('div',{style:{fontSize:22,fontWeight:900,color:sc.color}},sc.value),
+            h('div',{style:{fontSize:11,color:'#6b7280',marginTop:4}},sc.label)
+          );
+        })
+      ),
+      layer3.topMatches && layer3.topMatches.length>0 && h('div',null,
+        h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:10}},'Stats-Similar Pros'),
+        layer3.topMatches.map(function(m){
+          var p=m.pro;
+          return h('div',{key:p.id,style:{marginBottom:8,padding:'12px',borderRadius:12,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.5)',display:'flex',alignItems:'center',gap:10}},
+            h('div',{style:{fontSize:22}},p.emoji||'🏏'),
+            h('div',{style:{flex:1}},
+              h('div',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4'}},p.name),
+              h('div',{style:{fontSize:11,color:'#6b7280'}},'Avg: '+p.careerStats.battingAvg+' · SR: '+p.careerStats.battingStrikeRate)
+            ),
+            h('div',{style:{fontSize:12,fontWeight:700,color:'#10b981'}},Math.round(m.score*100)+'% similar')
+          );
+        })
+      )
+    );
+  }
+
+  function renderTechniqueTab() {
+    var layer4 = fullReport && fullReport.layer4;
+    if (!layer4) {
+      return h('div',{style:{padding:16}},
+        h('div',{style:{padding:20,borderRadius:14,background:'rgba(245,158,11,0.07)',border:'1px solid rgba(245,158,11,0.2)',textAlign:'center'}},
+          h('div',{style:{fontSize:36,marginBottom:12}},'🎯'),
+          h('div',{style:{fontSize:15,fontWeight:700,color:'#f0fdf4',marginBottom:8}},'Complete a Video Analysis'),
+          h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6}},'Upload a batting or bowling video to unlock biomechanical technique analysis.'),
+          h('button',{onClick:function(){nav('VideoAnalysis');},style:{marginTop:12,padding:'11px 22px',background:'#f59e0b',color:'#fff',border:'none',borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},'→ Analyse Video')
+        )
+      );
+    }
+    var mKeys = Object.keys(layer4.metrics||{}).filter(function(k){return (layer4.metrics[k]||0)>0;});
+    return h('div',{style:{padding:'0 16px 16px'}},
+      layer4.tags&&layer4.tags.length>0 && h('div',{style:{marginBottom:14}},
+        h('div',{style:{fontSize:12,color:'#6b7280',marginBottom:8,textTransform:'uppercase',letterSpacing:'0.06em'}},'Detected Technique Tags'),
+        h('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+          layer4.tags.map(function(t){return h('span',{key:t,style:{fontSize:11,padding:'4px 10px',borderRadius:99,background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.25)',color:'#fbbf24',fontWeight:600}},t.replace(/_/g,' '));})
+        )
+      ),
+      mKeys.length>0 && h('div',{style:{marginBottom:14}},
+        h('div',{style:{fontSize:12,color:'#6b7280',marginBottom:8,textTransform:'uppercase',letterSpacing:'0.06em'}},'Biomechanical Metrics'),
+        mKeys.map(function(k){
+          var val=Math.round(layer4.metrics[k]);
+          return h('div',{key:k,style:{marginBottom:8}},
+            h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3}},
+              h('span',{style:{fontSize:12,color:'#e5e7eb'}},k.replace(/_/g,' ')),
+              h('span',{style:{fontSize:12,fontWeight:700,color:'#f59e0b'}},val+'%')
+            ),
+            h('div',{style:{height:4,borderRadius:99,background:'rgba(48,54,61,0.5)',overflow:'hidden'}},
+              h('div',{style:{height:'100%',width:val+'%',background:'#f59e0b',borderRadius:99}})
+            )
+          );
+        })
+      ),
+      layer4.topMatches&&layer4.topMatches.length>0 && h('div',null,
+        h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:10}},'Technique-Similar Pros'),
+        layer4.topMatches.map(function(m){
+          var p=m.pro;
+          return h('div',{key:p.id,style:{marginBottom:8,padding:'12px',borderRadius:12,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.5)',display:'flex',alignItems:'center',gap:10}},
+            h('div',{style:{fontSize:22}},p.emoji||'🏏'),
+            h('div',{style:{flex:1}},
+              h('div',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4'}},p.name),
+              h('div',{style:{fontSize:11,color:'#6b7280'}},(p.techniqueTags||[]).slice(0,3).join(', ').replace(/_/g,' '))
+            ),
+            h('div',{style:{fontSize:12,fontWeight:700,color:'#f59e0b'}},m.overlap+' tags match')
+          );
+        })
+      )
+    );
+  }
+
+  function renderGrowthTab() {
+    var layer5 = (fullReport && fullReport.layer5) || computeGrowthDNA();
+    var color = layer5 ? layer5.color : '#3b82f6';
+    return h('div',{style:{padding:'0 16px 16px'}},
+      layer5 && h('div',{style:{marginBottom:16,padding:'20px',borderRadius:16,textAlign:'center',background:color+'0f',border:'1px solid '+color+'30'}},
+        h('div',{style:{fontSize:48,marginBottom:8}},layer5.emoji),
+        h('div',{style:{fontSize:22,fontWeight:900,color:color,marginBottom:4}},layer5.label+' Trajectory'),
+        h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6}},layer5.consistency14+'% active days (last 14)'),
+        layer5.daysToNextLevel && h('div',{style:{marginTop:12,padding:'8px 16px',borderRadius:99,background:color+'18',border:'1px solid '+color+'30',display:'inline-block',fontSize:12,fontWeight:700,color:color}},'~'+layer5.daysToNextLevel+' days to next level')
+      ),
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}},
+        [{label:'Active Days (14d)',value:layer5?''+layer5.activeDays14:'—',color:'#3b82f6'},
+         {label:'Recent XP',value:layer5?layer5.recent:'—',color:'#f59e0b'},
+         {label:'Prior XP',value:layer5?layer5.prior:'—',color:'#6b7280'}
+        ].map(function(c){
+          return h('div',{key:c.label,style:{padding:'12px 8px',borderRadius:12,textAlign:'center',background:'rgba(22,27,34,0.95)',border:'1px solid rgba(48,54,61,0.6)'}},
+            h('div',{style:{fontSize:20,fontWeight:900,color:c.color}},c.value),
+            h('div',{style:{fontSize:10,color:'#6b7280',marginTop:4}},c.label)
+          );
+        })
+      ),
+      fullReport&&fullReport.synthesis && h('div',{style:{padding:'14px',borderRadius:12,background:'rgba(168,85,247,0.07)',border:'1px solid rgba(168,85,247,0.2)'}},
+        h('div',{style:{fontSize:11,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}},'DNA Synthesis'),
+        h('div',{style:{fontSize:13,color:'#e5e7eb',lineHeight:1.7}},fullReport.synthesis)
+      )
+    );
+  }
+
+  return h('div',{style:{background:'#0d1117',minHeight:'100dvh',paddingBottom:80}},
+    h('div',{style:{padding:'20px 16px 16px',background:'linear-gradient(180deg,rgba(168,85,247,0.08) 0%,transparent 100%)'}},
       h('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:6}},
         h('div',{style:{fontSize:32}},'🧬'),
         h('div',null,
           h('h1',{style:{fontSize:22,fontWeight:800,color:'#f0fdf4',margin:0}},'Cricket DNA'),
-          h('div',{style:{fontSize:12,color:'#6b7280'}},
-            sigTotal>0
-              ? 'Analysed '+sigTotal+' training signals from your history'
-              : 'Train to discover your Cricket DNA')
+          h('div',{style:{fontSize:12,color:'#6b7280'}},sigTotal>0?'Analysed '+sigTotal+' training signals':'Train to discover your Cricket DNA')
         )
       )
     ),
-
-    // Not enough data
-    !dna || !dna.hasEnoughData ? h('div',{style:{margin:'16px',padding:'20px',
-      borderRadius:14,background:'rgba(168,85,247,0.07)',
-      border:'1px solid rgba(168,85,247,0.2)',textAlign:'center'}},
-      h('div',{style:{fontSize:36,marginBottom:12}},'🧬'),
-      h('div',{style:{fontSize:16,fontWeight:700,color:'#f0fdf4',marginBottom:8}},
-        'Start training to unlock your DNA'),
-      h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6,marginBottom:16}},
-        'Complete a few drills, mental sessions, or fitness workouts. SmartCrick analyses your training patterns to reveal your unique Cricket DNA profile.'),
-      h('button',{onClick:function(){nav('Drills');},
-        style:{padding:'12px 24px',background:'#a855f7',color:'#fff',border:'none',
-          borderRadius:10,fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}},
-        '→ Start Training')
-    ) : h('div',null,
-
-      // Primary profile
-      h('div',{style:{margin:'0 16px 12px'}},
-        h(PrimaryProfileCard, {profile:dna.primary})
-      ),
-
-      // Secondary + Tertiary
-      h('div',{style:{display:'flex',gap:8,margin:'0 16px 12px'}},
-        h(SmallProfileCard, {profile:dna.secondary, label:'Secondary DNA'}),
-        h(SmallProfileCard, {profile:dna.tertiary,  label:'Tertiary DNA'})
-      ),
-
-      // Signals panel
-      h('div',{style:{margin:'0 16px 12px'}},
-        h('div',{
-          role:'button',tabIndex:0,
-          onClick:function(){ setShowSignals(!showSignals); },
-          style:{
-            padding:'11px 14px',borderRadius:12,cursor:'pointer',
-            background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',
-            display:'flex',alignItems:'center',justifyContent:'space-between'
-          }
-        },
-          h('div',{style:{fontSize:13,fontWeight:600,color:'#e5e7eb'}},'📊 Your Training Signals'),
-          h('span',{style:{color:'#484f58',fontSize:14}},showSignals?'▲':'▼')
-        ),
-        showSignals && h('div',{style:{
-          padding:'12px',borderRadius:12,marginTop:4,
-          background:'rgba(13,17,23,0.98)',border:'1px solid rgba(48,54,61,0.8)'
-        }},
-          h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}},
-            [
-              {label:'Batting Drills', val:s.bd||0, max:35},
-              {label:'Bowling Drills', val:s.bwd||0, max:35},
-              {label:'Fielding Drills', val:s.fd||0, max:20},
-              {label:'Mental Sessions', val:s.mc||0, max:50},
-              {label:'Fitness Sessions', val:s.fc||0, max:30},
-              {label:'Daily Net', val:s.nc||0, max:30},
-              {label:'High-XP Days', val:s.hx||0, max:15},
-              {label:'Current Streak', val:s.cs||0, max:30},
-              {label:'Best Streak', val:s.bs||0, max:100},
-              {label:'Consistency (30d)', val:Math.round((s.con||0)*100)+'%', raw:true},
-              {label:'XP Velocity', val:(s.vel>0?'+':'')+Math.round((s.vel||0)*100)+'%', raw:true},
-              {label:'Diversity Score', val:((s.div||0).toFixed(1))+'/4', raw:true},
-            ].map(function(sig){
-              return h('div',{key:sig.label,style:{
-                padding:'8px 10px',borderRadius:8,
-                background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.5)'
-              }},
-                h('div',{style:{fontSize:10,color:'#484f58',textTransform:'uppercase',
-                  letterSpacing:'0.06em',marginBottom:3}},sig.label),
-                h('div',{style:{fontSize:15,fontWeight:800,color:'#e5e7eb'}},
-                  sig.raw ? sig.val : sig.val)
-              );
-            })
-          )
-        )
-      ),
-
-      // All profiles grid
-      h('div',{style:{margin:'0 16px 12px'}},
-        h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:10}},
-          'All 106 Profiles'),
-        h('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}},
-          cats.map(function(c){
-            var sel = catFilter === c;
-            return h('button',{key:c,onClick:function(){ setCatFilter(c); },
-              style:{
-                padding:'4px 10px',borderRadius:99,fontSize:11,cursor:'pointer',
-                fontFamily:'inherit',fontWeight:sel?700:400,
-                background:sel?'rgba(168,85,247,0.2)':'rgba(255,255,255,0.04)',
-                border:'1px solid '+(sel?'rgba(168,85,247,0.4)':'rgba(255,255,255,0.08)'),
-                color:sel?'#c084fc':'#6b7280'
-              }}, c === 'all' ? 'All' : CAT_LABELS[c]||c);
-          })
-        ),
-        h('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}},
-          (showAll ? filteredProfiles : filteredProfiles.slice(0, 24)).map(function(p){
-            var locked = (p.score||0) < 15;
-            return h('div',{key:p.id,style:{
-              padding:'8px 6px',borderRadius:10,textAlign:'center',
-              background:locked?'rgba(13,17,23,0.6)':'rgba(22,27,34,0.9)',
-              border:'1px solid '+(locked?'rgba(48,54,61,0.3)':p.clr+'25'),
-              opacity:locked?0.5:1
-            }},
-              h('div',{style:{fontSize:18,marginBottom:4,filter:locked?'grayscale(1)':'none'}},p.icon),
-              h('div',{style:{fontSize:9,fontWeight:700,color:locked?'#374151':p.clr,
-                lineHeight:1.3,marginBottom:3}},p.name),
-              h('div',{style:{fontSize:8,color:'#484f58'}},RARITY_LABELS[p.rarity]),
-              h('div',{style:{marginTop:4,height:2,borderRadius:99,
-                background:'rgba(48,54,61,0.6)',overflow:'hidden'}},
-                h('div',{style:{height:'100%',width:(p.score||0)+'%',background:p.clr,borderRadius:99}})
-              )
-            );
-          })
-        ),
-        filteredProfiles.length > 24 && h('button',{
-          onClick:function(){ setShowAll(!showAll); },
-          style:{
-            width:'100%',marginTop:10,padding:'10px',border:'none',borderRadius:10,
-            background:'rgba(255,255,255,0.04)',color:'#9ca3af',cursor:'pointer',
-            fontSize:13,fontFamily:'inherit'
-          }
-        }, showAll ? 'Show less' : 'Show all '+filteredProfiles.length+' profiles')
-      )
-    )
+    h('div',{style:{display:'flex',padding:'0 16px 0',gap:4,overflowX:'auto',borderBottom:'1px solid rgba(48,54,61,0.5)',marginBottom:16}},
+      TABS.map(function(t){
+        var active=tab===t.id;
+        return h('button',{key:t.id,onClick:function(){setTab(t.id);},
+          style:{display:'flex',alignItems:'center',gap:5,padding:'10px 12px',border:'none',
+            borderBottom:'2px solid '+(active?'#a855f7':'transparent'),
+            background:'transparent',color:active?'#c084fc':'#6b7280',
+            cursor:'pointer',fontFamily:'inherit',fontSize:12,fontWeight:active?700:400,
+            whiteSpace:'nowrap',flexShrink:0}},
+          h('span',null,t.icon),h('span',null,t.label)
+        );
+      })
+    ),
+    tab==='profiles'    && renderProfilesTab(),
+    tab==='promatch'    && renderProMatchTab(),
+    tab==='performance' && renderPerformanceTab(),
+    tab==='technique'   && renderTechniqueTab(),
+    tab==='growth'      && renderGrowthTab()
   );
 }
 
 // ── Exports ───────────────────────────────────────────────────────
-A.CricketDNAPage       = CricketDNAPage;
-A.DNAOverview          = DNAOverview;
-A.getCricketDNA        = getCachedDNA;
-A.computeCricketDNA    = computeDNA;
-A.CRICKET_DNA_PROFILES = PROFILES;
+A.CricketDNAPage        = CricketDNAPage;
+A.DNAOverview           = DNAOverview;
+A.getCricketDNA         = getCachedDNA;
+A.computeCricketDNA     = computeDNA;
+A.CRICKET_DNA_PROFILES  = PROFILES;
+A.computeFullDNAReport  = computeFullDNAReport;
+A.getFullDNAReport      = getFullDNAReport;
+A.computeSkillDNA       = computeSkillDNA;
+A.computeGrowthDNA      = computeGrowthDNA;
 
-console.log('[SC] app-cricket-dna.js v1.0 — ' + PROFILES.length + ' profiles, DNA engine ready');
+console.log('[SC] app-cricket-dna.js v2.0 — ' + PROFILES.length + ' profiles + 5-layer DNA engine ready');
 })();
