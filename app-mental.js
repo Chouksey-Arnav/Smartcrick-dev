@@ -121,8 +121,8 @@ function MentalPage(){
 
   // SmartCrick Picks — personalised for this user
   const user=DB.getUser?DB.getUser():(DB.get?DB.get('user'):null);
-  const pickSessions=(A.PersonalisationEngine&&user)
-    ?A.PersonalisationEngine.getPickSessions(MENTAL_SESSIONS,user,done)
+  const pickSessions=(window.SC_APP.PersonalisationEngine&&user)
+    ?window.SC_APP.PersonalisationEngine.getPickSessions(MENTAL_SESSIONS,user,done)
     :[];
   const pickIds=new Set(pickSessions.map(s=>s.id));
 
@@ -415,9 +415,9 @@ function MentalPlayerPage({params}){
             h('p',{style:{fontSize:13,color:'#8b949e',flex:1,lineHeight:1.6}},s.instruction),
             h('span',{style:{fontSize:11,color:'#484f58',flexShrink:0}},`${s.duration_seconds}s`)))
         )),
-      A.SessionAudioPlayer&&h(A.SessionAudioPlayer,{sessionName:sess.title,minutes:Math.floor(sess.duration_seconds/60)}),
+      window.SC_APP.SessionAudioPlayer&&h(window.SC_APP.SessionAudioPlayer,{sessionName:sess.title,minutes:Math.floor(sess.duration_seconds/60)}),
       h('button',{onClick:()=>{setStarted(true);setStep(0);setTimeLeft(sess.steps[0].duration_seconds);},
-        style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:700,marginTop:A.SessionAudioPlayer?0:0}},
+        style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:700,marginTop:window.SC_APP.SessionAudioPlayer?0:0}},
         h(Icon,{n:'play',cls:'w-5 h-5'}),' Begin Session')
     )
   );
