@@ -574,8 +574,8 @@ function ProfilePage(props) {
 
     // ===== TABS =====
     h('div', { style: { display: 'flex', borderBottom: '1px solid rgba(255,255,255,.07)', margin: '0 16px' }, role: 'tablist' },
-      ['overview', 'skills', 'badges', 'goals'].map(function(t) {
-        var labels = { overview: 'Overview', skills: 'Skills', badges: 'Badges', goals: 'Goals' };
+      ['overview', 'skills', 'badges', 'goals', 'dna'].map(function(t) {
+        var labels = { overview: 'Overview', skills: 'Skills', badges: 'Badges', goals: 'Goals', dna: '🧬 DNA' };
         return h('button', { key: t, role: 'tab', 'aria-selected': activeTab === t ? 'true' : 'false', onClick: function() { setActiveTab(t); }, style: tabStyle(t) }, labels[t]);
       })
     ),
@@ -797,6 +797,91 @@ function ProfilePage(props) {
             })
           )
         ),
+      ),
+
+      // ===== DNA TAB =====
+      activeTab === 'dna' && h('div', null,
+        (function() {
+          var dnaReport = null;
+          try { if (A.getFullDNAReport) dnaReport = A.getFullDNAReport(); } catch(e) {}
+          var layer1 = dnaReport && dnaReport.layer1;
+          var layer5 = dnaReport && dnaReport.layer5;
+          var topFive = dnaReport && dnaReport.topFive;
+          var styleLabel = null;
+          try {
+            if (A.BrainEngine && A.BrainEngine.getStyleLabel && A.BrainEngine.buildStyleSignals) {
+              var sig = A.BrainEngine.buildStyleSignals();
+              if (sig) styleLabel = A.BrainEngine.getStyleLabel(sig);
+            }
+          } catch(e) {}
+          return h('div', null,
+            layer1 && layer1.primary ? h('div', {
+              style: { padding: '14px', borderRadius: 14, marginBottom: 12,
+                background: layer1.primary.clr + '10', border: '1px solid ' + layer1.primary.clr + '30' }
+            },
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 } },
+                h('div', { style: { fontSize: 28 } }, layer1.primary.icon),
+                h('div', null,
+                  h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'Primary DNA Archetype'),
+                  h('div', { style: { fontSize: 16, fontWeight: 800, color: layer1.primary.clr } }, layer1.primary.name),
+                  h('div', { style: { fontSize: 11, color: '#6b7280' } }, layer1.primary.tag)
+                )
+              ),
+              h('div', { style: { display: 'flex', gap: 5, flexWrap: 'wrap' } },
+                (layer1.primary.traits || []).map(function(t) {
+                  return h('span', { key: t, style: { fontSize: 10, padding: '2px 8px', borderRadius: 99,
+                    background: layer1.primary.clr + '15', color: layer1.primary.clr, fontWeight: 600 } }, t);
+                })
+              )
+            ) : h('div', { style: { padding: 16, textAlign: 'center', color: '#6b7280', fontSize: 13 } },
+              'Complete training sessions to unlock your DNA archetype'
+            ),
+
+            styleLabel && h('div', { style: { padding: '10px 14px', borderRadius: 10, marginBottom: 12,
+              background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)',
+              display: 'flex', alignItems: 'center', gap: 10 } },
+              h('div', { style: { fontSize: 18 } }, '🧠'),
+              h('div', null,
+                h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'AI Playing Style'),
+                h('div', { style: { fontSize: 14, fontWeight: 700, color: '#c084fc' } }, styleLabel)
+              )
+            ),
+
+            layer5 && h('div', { style: { padding: '10px 14px', borderRadius: 10, marginBottom: 12,
+              background: layer5.color + '10', border: '1px solid ' + layer5.color + '25',
+              display: 'flex', alignItems: 'center', gap: 10 } },
+              h('div', { style: { fontSize: 18 } }, layer5.emoji),
+              h('div', null,
+                h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'Growth Trajectory'),
+                h('div', { style: { fontSize: 14, fontWeight: 700, color: layer5.color } }, layer5.label)
+              )
+            ),
+
+            topFive && topFive.length > 0 && h('div', { style: { marginBottom: 14 } },
+              h('div', { style: { fontSize: 12, fontWeight: 700, color: '#e5e7eb', marginBottom: 8 } }, 'Top Pro Matches'),
+              topFive.slice(0, 2).map(function(m) {
+                var p = m.pro, pct = Math.round(m.score * 100);
+                var color = p.era === 'legend' ? '#f59e0b' : '#3b82f6';
+                return h('div', { key: p.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                  borderRadius: 10, marginBottom: 6, background: 'rgba(22,27,34,0.9)', border: '1px solid rgba(48,54,61,0.6)' } },
+                  h('div', { style: { fontSize: 22 } }, p.emoji || '🏏'),
+                  h('div', { style: { flex: 1 } },
+                    h('div', { style: { fontSize: 13, fontWeight: 700, color: '#f0fdf4' } }, p.name),
+                    h('div', { style: { fontSize: 11, color: '#6b7280' } }, p.role + ' · ' + p.country)
+                  ),
+                  h('div', { style: { fontSize: 16, fontWeight: 900, color: color } }, pct + '%')
+                );
+              })
+            ),
+
+            h('button', { onClick: function() { if (nav) nav('CricketDNA'); },
+              style: { width: '100%', padding: '12px', border: 'none', borderRadius: 10, cursor: 'pointer',
+                background: 'linear-gradient(135deg,#4f046e20,#a855f730)', border: '1px solid rgba(168,85,247,0.3)',
+                color: '#c084fc', fontSize: 14, fontWeight: 700, fontFamily: 'inherit' } },
+              '🧬 Explore Full Cricket DNA →'
+            )
+          );
+        })()
       ),
     ),
 
