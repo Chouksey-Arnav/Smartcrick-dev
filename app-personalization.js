@@ -143,41 +143,55 @@ function getPickDrills(allDrills, user, completedIds) {
   var completed = {};
   (completedIds || []).forEach(function(id) { completed[id] = true; });
 
+  var BE = A.BrainEngine;
+  var useNeural = BE && BE.isModelTrained && BE.isModelTrained('DrillAdaptor');
+
   var scored = allDrills.map(function(drill) {
     var cat   = (drill.category || drill.cat || '').toLowerCase();
     var base  = drillCategoryScore(user, cat);
-
-    // Recency penalty for already-completed drills
     var recencyMult = completed[drill.id] ? 0.72 : 1.0;
-
-    // Level match bonus
     var drillLvl = (drill.level || '').toLowerCase();
     var userLvl  = (user.level || 'club').toLowerCase();
     var levelBonus = 0;
-    if (drillLvl === 'beginner' && (userLvl === 'school' || userLvl === 'club'))    levelBonus = 10;
+    if (drillLvl === 'beginner' && (userLvl === 'school' || userLvl === 'club'))       levelBonus = 10;
     if (drillLvl === 'intermediate' && (userLvl === 'club' || userLvl === 'district')) levelBonus = 12;
-    if (drillLvl === 'advanced' && (userLvl === 'district' || userLvl === 'state'))   levelBonus = 14;
-
-    return { drill: drill, score: (base + levelBonus) * recencyMult };
+    if (drillLvl === 'advanced' && (userLvl === 'district' || userLvl === 'state'))    levelBonus = 14;
+    var neuralBoost = 0;
+    if (useNeural) {
+      try {
+        var sig = BE.buildDrillSignals ? BE.buildDrillSignals(drill.id) : null;
+        if (sig) {
+          var out = BE.predict('DrillAdaptor', sig);
+          if (out && out.relevance_boost !== undefined) neuralBoost = out.relevance_boost * 20;
+        }
+      } catch(e) {}
+    }
+    return { drill: drill, score: (base + levelBonus + neuralBoost) * recencyMult };
   });
 
   scored.sort(function(a, b) { return b.score - a.score; });
 
-  // Pick top 3 from diverse categories
   var picks = [], usedCats = {};
   for (var i = 0; i < scored.length && picks.length < 3; i++) {
-    var cat = (scored[i].drill.category || '').toLowerCase();
-    if (!usedCats[cat]) {
-      picks.push(scored[i].drill);
-      usedCats[cat] = true;
-    }
+    var cat2 = (scored[i].drill.category || '').toLowerCase();
+    if (!usedCats[cat2]) { picks.push(scored[i].drill); usedCats[cat2] = true; }
   }
-  // Fill remaining slots if not enough diverse categories
-  for (var i = 0; i < scored.length && picks.length < 3; i++) {
-    if (picks.indexOf(scored[i].drill) === -1) picks.push(scored[i].drill);
+  for (var j = 0; j < scored.length && picks.length < 3; j++) {
+    if (picks.indexOf(scored[j].drill) === -1) picks.push(scored[j].drill);
   }
 
   return picks.slice(0, 3);
+}
+
+function getSmartLabel() {
+  var BE = A.BrainEngine;
+  if (!BE) return null;
+  var drillCount  = BE.sampleCount ? (BE.sampleCount('DrillAdaptor')   || 0) : 0;
+  var mentalCount = BE.sampleCount ? (BE.sampleCount('MentalReadiness') || 0) : 0;
+  var total = drillCount + mentalCount;
+  if (total >= 10) return 'AI-personalised from your history';
+  var needed = 10 - total;
+  return 'Gets smarter after ' + needed + ' more session' + (needed === 1 ? '' : 's');
 }
 
 // ── Mental session picks ──────────────────────────────────────────
@@ -186,26 +200,37 @@ function getPickSessions(allSessions, user, completedIds) {
   var completed = {};
   (completedIds || []).forEach(function(id) { completed[id] = true; });
 
+  var BE = A.BrainEngine;
+  var useNeural = BE && BE.isModelTrained && BE.isModelTrained('MentalReadiness');
+  var neuralOut = null;
+  if (useNeural) {
+    try {
+      var sig = BE.buildMentalSignals ? BE.buildMentalSignals() : null;
+      if (sig) neuralOut = BE.predict('MentalReadiness', sig);
+    } catch(e) {}
+  }
+
   var scored = allSessions.map(function(s) {
-    var type      = sessionTypeFromCategory(s.category);
-    var base      = mentalTypeScore(user, type);
+    var type        = sessionTypeFromCategory(s.category);
+    var base        = mentalTypeScore(user, type);
     var recencyMult = completed[s.id] ? 0.78 : 1.0;
-    return { session: s, score: base * recencyMult, type: type };
+    var neuralBoost = 0;
+    if (neuralOut && neuralOut[type] !== undefined) {
+      var blend = BE.getBlendFactor ? BE.getBlendFactor('MentalReadiness') : 0;
+      neuralBoost = (neuralOut[type] * 100 - base) * blend;
+    }
+    return { session: s, score: (base + neuralBoost) * recencyMult, type: type };
   });
 
   scored.sort(function(a, b) { return b.score - a.score; });
 
-  // Pick top 3 from diverse types
   var picks = [], usedTypes = {};
   for (var i = 0; i < scored.length && picks.length < 3; i++) {
     var t = scored[i].type;
-    if (!usedTypes[t]) {
-      picks.push(scored[i].session);
-      usedTypes[t] = true;
-    }
+    if (!usedTypes[t]) { picks.push(scored[i].session); usedTypes[t] = true; }
   }
-  for (var i = 0; i < scored.length && picks.length < 3; i++) {
-    if (picks.indexOf(scored[i].session) === -1) picks.push(scored[i].session);
+  for (var j = 0; j < scored.length && picks.length < 3; j++) {
+    if (picks.indexOf(scored[j].session) === -1) picks.push(scored[j].session);
   }
 
   return picks.slice(0, 3);
@@ -213,10 +238,11 @@ function getPickSessions(allSessions, user, completedIds) {
 
 // ── PersonalisationEngine singleton ──────────────────────────────
 var PersonalisationEngine = {
-  getPickDrills:    getPickDrills,
-  getPickSessions:  getPickSessions,
+  getPickDrills:       getPickDrills,
+  getPickSessions:     getPickSessions,
   drillCategoryScore:  drillCategoryScore,
   mentalTypeScore:     mentalTypeScore,
+  getSmartLabel:       getSmartLabel,
 
   // Async: re-train Brain.js when enough data exists (future enhancement)
   trainAsync: function() {
