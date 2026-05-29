@@ -41,7 +41,7 @@ var UIAudio = {
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
 
       osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.06);
+      osc.stop(ctx.currentTime + 0.06); // tiny buffer after fade
     } catch(e) {
       // Audio is an enhancement only — silently swallow errors
     }
