@@ -1,14 +1,19 @@
-// app-root.js v5.1 — FIXED: desktop overflow + daily reward integration
-// Changes from v5.0:
-// 1. overflow:'hidden' → overflowX:'hidden' on main column (fixes desktop scroll)
-// 2. DailyRewardModal integrated into AppShell
-// 3. width:'100%' on page wrapper to prevent content squishing
+// app-root.js v5.2 — page transitions via Framer Motion + zero-latency BottomNav sound
+// Changes from v5.1:
+// 1. Framer Motion AnimatePresence wraps page content for smooth page transitions
+// 2. Graceful fallback: if framer-motion CDN fails, renders without animation
 (function() {
 'use strict';
 var h = React.createElement;
 var useState = React.useState;
 var useEffect = React.useEffect;
 var A = window.SC_APP;
+
+// ── Framer Motion — graceful fallback if CDN unavailable ──────────
+var _FM  = window.framerMotion || window.FramerMotion || null;
+var _AP  = _FM ? _FM.AnimatePresence : null;  // AnimatePresence
+var _mDiv = (_FM && _FM.motion) ? _FM.motion.div : null; // motion.div
+if (!_FM) console.warn('[SC] Framer Motion not loaded — page transitions disabled');
 
 function safeComp(comp, props, children) {
   if (typeof comp !== 'function' && typeof comp !== 'object') return null;
@@ -219,7 +224,9 @@ function AppShell() {
               )
             : null,
 
-          // Page content
+          // Page content — wrapped in AnimatePresence for smooth page transitions
+          // The outer div holds padding; only the inner motion.div slides/fades.
+          // Static chrome (TopBar, BottomNav, Sidebar) is NOT inside this wrapper.
           h('div', {
             style:{
               flex:1,
@@ -229,9 +236,24 @@ function AppShell() {
               boxSizing:'border-box',
             }
           },
-            PageComp
-              ? h(PageComp, { params:params })
-              : h(NotFound, { page:page })
+            _AP && _mDiv
+              ? h(_AP, { mode:'wait' },
+                  h(_mDiv, {
+                    key: page,
+                    initial:    { opacity:0, x:18 },
+                    animate:    { opacity:1, x:0  },
+                    exit:       { opacity:0, x:-18 },
+                    transition: { type:'tween', ease:'easeInOut', duration:0.22 },
+                    style:      { width:'100%' },
+                  },
+                    PageComp
+                      ? h(PageComp, { params:params })
+                      : h(NotFound, { page:page })
+                  )
+                )
+              : (PageComp
+                  ? h(PageComp, { params:params })
+                  : h(NotFound, { page:page }))
           ),
 
           // Mobile BottomNav
@@ -273,7 +295,7 @@ if (!rootEl) {
 } else {
   try {
     createRoot(rootEl).render(h(AppShell, null));
-    console.log('[SC] app-root v5.1 — mounted ✓ (daily reward + desktop fix)');
+    console.log('[SC] app-root v5.2 — mounted ✓ (page transitions + audio tick)');
   } catch(e) {
     console.error('[SC] Mount failed:', e);
     rootEl.innerHTML = '<div style="color:#f0fdf4;padding:40px;text-align:center;background:#0d1117;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font-size:3rem;margin-bottom:1rem">🏏</div><h2>SmartCrick failed to start</h2><p style="color:#6b7280">Open DevTools → Console for details.</p><button onclick="location.reload()" style="margin-top:1rem;padding:12px 24px;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px">Retry</button></div>';
