@@ -1,7 +1,8 @@
-// app-ui-patch.js v1.0
+// app-ui-patch.js v1.1
 // STANDALONE file — add as <script src="app-ui-patch.js"></script>
 // after app-ui.js and before app-root.js in index.html
 // Fixes: adds missing TopBar + MoreMenu, corrects BottomNav
+// v1.1: BottomNav uses onPointerDown for zero-latency UIAudio.tick()
 (function() {
 'use strict';
 var h = React.createElement;
@@ -149,7 +150,15 @@ function BottomNav(props) {
         var active = activePage === item.pg;
         return h('button', {
           key: item.pg,
-          onClick: function() { A.nav(item.pg); },
+          // onPointerDown fires at the instant of contact — zero-latency tick + nav
+          onPointerDown: function() {
+            if (window.SC_APP && window.SC_APP.UIAudio) window.SC_APP.UIAudio.tick();
+            A.nav(item.pg);
+          },
+          // onClick handles keyboard (Enter key) activation — detail===0 means keyboard
+          onClick: function(e) {
+            if (e.detail === 0) A.nav(item.pg);
+          },
           'aria-label': item.label,
           'aria-current': active ? 'page' : undefined,
           style: {
@@ -197,5 +206,5 @@ function BottomNav(props) {
 // Overwrite the existing BottomNav with the fixed version
 A.BottomNav = BottomNav;
 
-console.log('[SC] app-ui-patch v1.0 — TopBar, MoreMenu, BottomNav(fixed) ready');
+console.log('[SC] app-ui-patch v1.1 — TopBar, MoreMenu, BottomNav(onPointerDown+audio) ready');
 })();
