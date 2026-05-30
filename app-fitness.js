@@ -10,19 +10,10 @@
 (function () {
 'use strict';
 const { createElement:h, useState, useEffect, useRef } = React;
-const { nav, DB, awardXP, fireConfetti } = window.SC_APP;
-const { WORKOUTS, findWorkouts, FIT_LEVELS, FIT_TARGETS, FIT_GOALS, FIT_DURS } = window.SC_APP;
-const { Icon, XPBadge, StatCard, EmptyState, PageHeader } = window.SC_APP;
-
-const _FM   = window.framerMotion || window.FramerMotion || null;
-const _AP   = _FM ? _FM.AnimatePresence : null;
-const _mDiv = (_FM && _FM.motion) ? _FM.motion.div : null;
-const TAB_ANIM = {
-  initial:    { opacity: 0, y: 8  },
-  animate:    { opacity: 1, y: 0  },
-  exit:       { opacity: 0, y: -8 },
-  transition: { duration: 0.18, ease: 'easeInOut' },
-};
+const A = window.SC_APP;
+const { nav, DB, awardXP, fireConfetti } = A;
+const { WORKOUTS, findWorkouts, FIT_LEVELS, FIT_TARGETS, FIT_GOALS, FIT_DURS } = A;
+const { Icon, XPBadge, StatCard, EmptyState, PageHeader } = A;
 
 const LVL_GRAD = {
   beginner:    '#15803d,#059669',
@@ -82,14 +73,42 @@ function FitnessPage() {
     setStep(0); setPicks({ level:'', target:'', goal:'', duration:'' }); setResults(null);
   }
 
+  const _FM = window.FramerMotion;
+  const _AP = _FM ? _FM.AnimatePresence : null;
+  const _mDiv = _FM ? _FM.motion.div : null;
+
   const TABS = [
     { id:'all',    label:'All Workouts' },
     { id:'wizard', label:'🔮 Wizard' },
     { id:'stats',  label:'📊 Stats' },
   ];
 
-  function getTabContent() {
-    if (tab === 'all') return h('div', { style:{ padding:'12px 16px 0' } },
+  return h('div', { style:{ paddingBottom:100, background:'#0d1117', minHeight:'100dvh' } },
+    h(PageHeader, {
+      title:'Fitness Builder',
+      subtitle:`${WORKOUTS.length} workouts · every level & goal`,
+      gradient:'linear-gradient(135deg,#c2410c,#dc2626)',
+    }),
+
+    // Tabs
+    h('div', { style:{ display:'flex', gap:0, margin:'0 16px 0', borderRadius:10, overflow:'hidden', border:'1px solid rgba(48,54,61,0.9)' } },
+      TABS.map(t => h('button', {
+        key:t.id, onPointerDown:() => { if(A.playTabClick) A.playTabClick(); setTab(t.id); resetWizard(); },
+        style:{
+          flex:1, padding:'10px 4px', fontSize:12, fontWeight:700,
+          cursor:'pointer', fontFamily:'inherit', border:'none',
+          background: tab===t.id ? 'linear-gradient(135deg,#c2410c,#dc2626)' : 'rgba(22,27,34,0.9)',
+          color: tab===t.id ? '#fff' : '#6b7280',
+          borderRight: t.id!=='stats' ? '1px solid rgba(48,54,61,0.9)' : 'none',
+          transition:'all 0.15s',
+        }
+      }, t.label))
+    ),
+
+    (function() {
+      var _tabEl = h(React.Fragment, null,
+    // ── ALL WORKOUTS TAB ─────────────────────────────────────────
+    tab === 'all' && h('div', { style:{ padding:'12px 16px 0' } },
       // Search
       h('div', { style:{ position:'relative', marginBottom:10 } },
         h('input', {
@@ -164,8 +183,10 @@ function FitnessPage() {
         : h('div', { style:{ display:'flex', flexDirection:'column', gap:8 } },
             filtered.map(w => h(WorkoutCard, { key:w.id, w:w }))
           )
-    );
-    if (tab === 'wizard') return h('div', { style:{ padding:'12px 16px 0' } },
+    ),
+
+    // ── WIZARD TAB ───────────────────────────────────────────────
+    tab === 'wizard' && h('div', { style:{ padding:'12px 16px 0' } },
       !results && h('div', null,
         h('div', { style:{ display:'flex', justifyContent:'center', gap:4, marginBottom:16 } },
           WIZARD.map((_,i) => h('div', { key:i, style:{
@@ -209,51 +230,21 @@ function FitnessPage() {
           results.map(w => h(WorkoutCard, { key:w.id, w:w }))
         )
       )
-    );
-    if (tab === 'stats') return h('div', { style:{ padding:'12px 16px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 } },
+    ),
+
+    // ── STATS TAB ────────────────────────────────────────────────
+    tab === 'stats' && h('div', { style:{ padding:'12px 16px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 } },
       h(StatCard, { label:'Workouts Done',  value:progress.workouts_done||0, color:'#f97316', icon:'dumbbell' }),
       h(StatCard, { label:'Total Library',  value:WORKOUTS.length, color:'#fff', icon:'layers' }),
       h(StatCard, { label:'Levels',         value:'4 levels', color:'#16a34a', icon:'trophy' }),
       h(StatCard, { label:'Muscle Groups',  value:'8 targets', color:'#3b82f6', icon:'crosshair' })
-    );
-    return null;
-  }
-
-  return h('div', { style:{ paddingBottom:100, background:'#0d1117', minHeight:'100dvh' } },
-    h(PageHeader, {
-      title:'Fitness Builder',
-      subtitle:`${WORKOUTS.length} workouts · every level & goal`,
-      gradient:'linear-gradient(135deg,#c2410c,#dc2626)',
-    }),
-
-    // Tabs
-    h('div', { style:{ display:'flex', gap:0, margin:'0 16px 0', borderRadius:10, overflow:'hidden', border:'1px solid rgba(48,54,61,0.9)' } },
-      TABS.map(t => h('button', {
-        key:t.id,
-        onPointerDown: () => {
-          if (window.SC_APP && window.SC_APP.UIAudio) window.SC_APP.UIAudio.tick();
-          setTab(t.id); resetWizard();
-        },
-        onClick: (e) => { if (e.detail === 0) { setTab(t.id); resetWizard(); } },
-        style:{
-          flex:1, padding:'10px 4px', fontSize:12, fontWeight:700,
-          cursor:'pointer', fontFamily:'inherit', border:'none',
-          background: tab===t.id ? 'linear-gradient(135deg,#c2410c,#dc2626)' : 'rgba(22,27,34,0.9)',
-          color: tab===t.id ? '#fff' : '#6b7280',
-          borderRight: t.id!=='stats' ? '1px solid rgba(48,54,61,0.9)' : 'none',
-          transition:'all 0.15s',
-        }
-      }, t.label))
-    ),
-
-    // Tab content with Framer Motion fade animation
-    _AP && _mDiv
-      ? h(_AP, { mode: 'wait' },
-          h(_mDiv, Object.assign({ key: tab }, TAB_ANIM, { style: { width: '100%' } }),
-            getTabContent()
-          )
-        )
-      : h('div', { key: tab, className: 'sc-tab-content' }, getTabContent()),
+    )
+      );
+      if (!_FM || !_AP || !_mDiv) return _tabEl;
+      return h(_AP, { mode:'wait' },
+        h(_mDiv, { key:tab, initial:{opacity:0,y:8}, animate:{opacity:1,y:0}, exit:{opacity:0,y:-8}, transition:{duration:0.18,ease:'easeInOut'} }, _tabEl)
+      );
+    })()
   );
 }
 
