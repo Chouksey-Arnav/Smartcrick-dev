@@ -1,4 +1,4 @@
-// app-performance.js v1.0 — Performance Analytics V2
+// app-performance.js v1.1 — Performance Analytics V2
 // Exports: A.PerformancePage
 // Chart.js radar + rolling batting avg + XP trend + confidence tracker
 (function() {
@@ -11,6 +11,19 @@ var A = window.SC_APP;
 var DB = A.DB;
 var Icon = A.Icon;
 var PageHeader = A.PageHeader;
+
+// Framer Motion — graceful fallback when CDN unavailable
+var _FM   = window.framerMotion || window.FramerMotion || null;
+var _AP   = _FM ? _FM.AnimatePresence : null;
+var _mDiv = (_FM && _FM.motion) ? _FM.motion.div : null;
+
+// Tab transition: subtle fade + slide-up (matches Mental Training spec)
+var TAB_ANIM = {
+  initial:    { opacity: 0, y: 8  },
+  animate:    { opacity: 1, y: 0  },
+  exit:       { opacity: 0, y: -8 },
+  transition: { duration: 0.18, ease: 'easeInOut' },
+};
 
 // ── Chart.js helpers ─────────────────────────────────────────────
 function destroyChart(ref) {
@@ -318,132 +331,143 @@ function PerformancePage() {
     h(PageHeader, { title: 'Performance Analytics', subtitle: 'Deep insights across all your training', gradient: 'linear-gradient(135deg,#6d28d9,#4f46e5)' }),
 
     h('div', { style: { padding: '12px 16px 0' } },
-      // Tab bar
+      // Tab bar — onPointerDown for zero-latency audio + state update
       h('div', { style: { display: 'flex', gap: 0, marginBottom: 16, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(48,54,61,0.9)' } },
         TABS.map(function(t) {
-          return h('button', { key: t.id, onClick: function() { setTab(t.id); }, style: { flex: 1, padding: '10px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: tab === t.id ? 'linear-gradient(135deg,#6d28d9,#4f46e5)' : 'rgba(22,27,34,0.9)', color: tab === t.id ? '#fff' : '#6b7280', borderRight: t.id !== 'mental' ? '1px solid rgba(48,54,61,0.9)' : 'none', transition: 'all 0.15s' } }, t.label);
+          return h('button', { key: t.id,
+            onPointerDown: function() {
+              if (window.SC_APP && window.SC_APP.UIAudio) window.SC_APP.UIAudio.tick();
+              setTab(t.id);
+            },
+            onClick: function(e) {
+              if (e.detail === 0) setTab(t.id); // keyboard (Enter) fallback
+            },
+            style: { flex: 1, padding: '10px 6px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: tab === t.id ? 'linear-gradient(135deg,#6d28d9,#4f46e5)' : 'rgba(22,27,34,0.9)', color: tab === t.id ? '#fff' : '#6b7280', borderRight: t.id !== 'mental' ? '1px solid rgba(48,54,61,0.9)' : 'none', transition: 'all 0.15s' }
+          }, t.label);
         })
       ),
 
-      // ── OVERVIEW ─────────────────────────────────────────────
-      tab === 'overview' && h('div', null,
-        // Overall rating card
-        h('div', { style: { background: 'linear-gradient(135deg,rgba(109,40,217,0.15),rgba(79,70,229,0.08))', border: '1px solid rgba(109,40,217,0.3)', borderRadius: 14, padding: '16px', marginBottom: 12 } },
-          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
-            h('div', null,
-              h('div', { style: { fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em' } }, 'Overall Rating'),
-              h('div', { style: { fontSize: 44, fontWeight: 900, color: '#f0fdf4', lineHeight: 1, marginTop: 2 } }, rating.overall || 0)
-            ),
-            h('div', { style: { textAlign: 'right' } },
-              h('div', { style: { fontSize: 11, color: '#6b7280', marginBottom: 4 } }, 'Week XP'),
-              h('div', { style: { fontSize: 22, fontWeight: 700, color: '#4ade80' } }, weekXP.toLocaleString()),
-              h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 4 } }, (progress.current_streak || 0) + ' day streak 🔥')
+      // Animated tab content — AnimatePresence mode='wait' for cross-fade
+      // key=tab triggers exit→enter cycle on every tab switch
+      _AP && _mDiv
+        ? h(_AP, { mode: 'wait' },
+            h(_mDiv, Object.assign({ key: tab }, TAB_ANIM, { style: { width: '100%' } }),
+              getTabContent()
             )
+          )
+        : h('div', { key: tab, className: 'sc-tab-content' }, getTabContent())
+    )
+  );
+
+  function getTabContent() {
+    // ── OVERVIEW ─────────────────────────────────────────────
+    if (tab === 'overview') return h('div', null,
+      h('div', { style: { background: 'linear-gradient(135deg,rgba(109,40,217,0.15),rgba(79,70,229,0.08))', border: '1px solid rgba(109,40,217,0.3)', borderRadius: 14, padding: '16px', marginBottom: 12 } },
+        h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 } },
+          h('div', null,
+            h('div', { style: { fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em' } }, 'Overall Rating'),
+            h('div', { style: { fontSize: 44, fontWeight: 900, color: '#f0fdf4', lineHeight: 1, marginTop: 2 } }, rating.overall || 0)
           ),
-          h('div', { style: { display: 'flex', justifyContent: 'center' } },
-            h(RadarSection, { rating: rating })
+          h('div', { style: { textAlign: 'right' } },
+            h('div', { style: { fontSize: 11, color: '#6b7280', marginBottom: 4 } }, 'Week XP'),
+            h('div', { style: { fontSize: 22, fontWeight: 700, color: '#4ade80' } }, weekXP.toLocaleString()),
+            h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 4 } }, (progress.current_streak || 0) + ' day streak 🔥')
           )
         ),
+        h('div', { style: { display: 'flex', justifyContent: 'center' } },
+          h(RadarSection, { rating: rating })
+        )
+      ),
+      h(Section, { title: '14-Day XP History' },
+        h(XPTrendChart, { xpLog: xpLog })
+      ),
+      h(Section, { title: 'Skill Breakdown' },
+        AXES.map(function(ax) {
+          return h(AxisBar, { key: ax.key, axis: ax.key, label: ax.label, score: rating[ax.key] || 0 });
+        })
+      )
+    );
 
-        // XP trend
-        h(Section, { title: '14-Day XP History' },
-          h(XPTrendChart, { xpLog: xpLog })
+    // ── BATTING ──────────────────────────────────────────────
+    if (tab === 'batting') return h('div', null,
+      innings.length === 0
+        ? h('div', { style: { textAlign: 'center', padding: '48px 20px' } },
+            h('div', { style: { fontSize: 40, marginBottom: 12 } }, '🏏'),
+            h('p', { style: { fontSize: 13, color: '#6b7280' } }, 'Log your first match to see batting analytics'),
+            h('button', { onClick: function() { A.nav('MatchLogger'); }, style: { marginTop: 16, padding: '10px 24px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, 'Go to Match Logger')
+          )
+        : h('div', null,
+            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 12 } },
+              h(MiniStat, { label: 'Innings', value: innings.length }),
+              h(MiniStat, { label: 'Average', value: avg, color: '#4ade80' }),
+              h(MiniStat, { label: 'H/S', value: hs || '-', color: '#f59e0b' }),
+              h(MiniStat, { label: 'Total Runs', value: totalRuns, color: '#60a5fa' })
+            ),
+            h(Section, { title: 'Batting Trend — Runs + Rolling Average' },
+              h(BattingTrendChart, { matches: matchLogs })
+            ),
+            h(Section, { title: 'Last 5 Innings' },
+              h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+                innings.slice(0, 5).map(function(m, i) {
+                  var runs = parseInt(m.batting.runs) || 0;
+                  var balls = parseInt(m.batting.balls) || 0;
+                  var sr = balls > 0 ? ((runs / balls) * 100).toFixed(0) : '-';
+                  var runColor = runs >= 50 ? '#f59e0b' : runs >= 30 ? '#4ade80' : '#8b949e';
+                  return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(13,17,23,0.5)', borderRadius: 8, border: '1px solid rgba(48,54,61,0.6)' } },
+                    h('div', { style: { fontSize: 20, fontWeight: 800, color: runColor, minWidth: 44, textAlign: 'right', fontVariantNumeric: 'tabular-nums' } }, runs + (m.batting.notOut ? '*' : '')),
+                    h('div', { style: { flex: 1 } },
+                      h('div', { style: { fontSize: 12, fontWeight: 600, color: '#f0fdf4' } }, 'vs ' + (m.opposition || '?')),
+                      h('div', { style: { fontSize: 11, color: '#6b7280' } }, m.date + ' · ' + m.format + ' · ' + (balls || '?') + 'b · S/R ' + sr)
+                    ),
+                    h('div', { style: { width: 8, height: 8, borderRadius: '50%', background: m.result === 'win' ? '#16a34a' : m.result === 'loss' ? '#ef4444' : '#f59e0b', flexShrink: 0 } })
+                  );
+                })
+              )
+            )
+          )
+    );
+
+    // ── MENTAL ───────────────────────────────────────────────
+    return h('div', null,
+      h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 } },
+        h(MiniStat, { label: 'Sessions Done', value: progress.mental_done || 0, color: '#a78bfa' }),
+        h(MiniStat, { label: 'Mental Fitness', value: mfScore, color: '#8b5cf6' }),
+        h(MiniStat, { label: '14-Day Avg', value: mentalAvg ? mentalAvg + '/5' : '-', color: '#c084fc' })
+      ),
+      h(Section, { title: 'Confidence Trend (14 Days)' },
+        h(ConfidenceChart, {})
+      ),
+      h(Section, { title: 'Mental Fitness Score' },
+        h('div', { style: { marginBottom: 8 } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
+            h('span', { style: { fontSize: 13, color: '#e5e7eb' } }, 'Overall mental fitness'),
+            h('span', { style: { fontSize: 20, fontWeight: 800, color: '#8b5cf6' } }, mfScore + '/100')
+          ),
+          h('div', { style: { height: 8, borderRadius: 99, background: 'rgba(30,41,59,0.8)', overflow: 'hidden' } },
+            h('div', { style: { height: '100%', width: mfScore + '%', background: 'linear-gradient(to right,#7c3aed,#a855f7)', borderRadius: 99, transition: 'width 0.7s' } })
+          )
         ),
-
-        // Axis breakdown
-        h(Section, { title: 'Skill Breakdown' },
-          AXES.map(function(ax) {
-            return h(AxisBar, { key: ax.key, axis: ax.key, label: ax.label, score: rating[ax.key] || 0 });
+        h('div', { style: { fontSize: 11, color: '#6b7280', lineHeight: 1.6, marginTop: 10 } }, 'Calculated from: session count (40%), avg mood rating (30%), training consistency (30%). Increases as you build your mental training habit.')
+      ),
+      h(Section, { title: 'Mental Session History' },
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
+          [
+            { label: 'Focus sessions', val: (DB.getXPLog() || []).filter(function(e) { return e.source === 'mental'; }).length, color: '#8b5cf6' },
+            { label: 'Avg rating (7 days)', val: DB.getAverageMentalRating ? (DB.getAverageMentalRating(7) || '-') + '/5' : '-', color: '#a78bfa' },
+            { label: 'Sessions this week', val: (DB.getXPLast7Days ? DB.getXPLast7Days() : []).filter(function(d) { return d.xp > 0; }).length, color: '#c084fc' },
+          ].map(function(row) {
+            return h('div', { key: row.label, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(48,54,61,0.4)' } },
+              h('span', { style: { fontSize: 13, color: '#8b949e' } }, row.label),
+              h('span', { style: { fontSize: 14, fontWeight: 700, color: row.color } }, row.val)
+            );
           })
         )
       ),
-
-      // ── BATTING ──────────────────────────────────────────────
-      tab === 'batting' && h('div', null,
-        innings.length === 0
-          ? h('div', { style: { textAlign: 'center', padding: '48px 20px' } },
-              h('div', { style: { fontSize: 40, marginBottom: 12 } }, '🏏'),
-              h('p', { style: { fontSize: 13, color: '#6b7280' } }, 'Log your first match to see batting analytics'),
-              h('button', { onClick: function() { A.nav('MatchLogger'); }, style: { marginTop: 16, padding: '10px 24px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, 'Go to Match Logger')
-            )
-          : h('div', null,
-              h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 12 } },
-                h(MiniStat, { label: 'Innings', value: innings.length }),
-                h(MiniStat, { label: 'Average', value: avg, color: '#4ade80' }),
-                h(MiniStat, { label: 'H/S', value: hs || '-', color: '#f59e0b' }),
-                h(MiniStat, { label: 'Total Runs', value: totalRuns, color: '#60a5fa' })
-              ),
-              h(Section, { title: 'Batting Trend — Runs + Rolling Average' },
-                h(BattingTrendChart, { matches: matchLogs })
-              ),
-              // Last 5 innings
-              h(Section, { title: 'Last 5 Innings' },
-                h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
-                  innings.slice(0, 5).map(function(m, i) {
-                    var runs = parseInt(m.batting.runs) || 0;
-                    var balls = parseInt(m.batting.balls) || 0;
-                    var sr = balls > 0 ? ((runs / balls) * 100).toFixed(0) : '-';
-                    var runColor = runs >= 50 ? '#f59e0b' : runs >= 30 ? '#4ade80' : '#8b949e';
-                    return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(13,17,23,0.5)', borderRadius: 8, border: '1px solid rgba(48,54,61,0.6)' } },
-                      h('div', { style: { fontSize: 20, fontWeight: 800, color: runColor, minWidth: 44, textAlign: 'right', fontVariantNumeric: 'tabular-nums' } }, runs + (m.batting.notOut ? '*' : '')),
-                      h('div', { style: { flex: 1 } },
-                        h('div', { style: { fontSize: 12, fontWeight: 600, color: '#f0fdf4' } }, 'vs ' + (m.opposition || '?')),
-                        h('div', { style: { fontSize: 11, color: '#6b7280' } }, m.date + ' · ' + m.format + ' · ' + (balls || '?') + 'b · S/R ' + sr)
-                      ),
-                      h('div', { style: { width: 8, height: 8, borderRadius: '50%', background: m.result === 'win' ? '#16a34a' : m.result === 'loss' ? '#ef4444' : '#f59e0b', flexShrink: 0 } })
-                    );
-                  })
-                )
-              )
-            )
-      ),
-
-      // ── MENTAL ───────────────────────────────────────────────
-      tab === 'mental' && h('div', null,
-        h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 12 } },
-          h(MiniStat, { label: 'Sessions Done', value: progress.mental_done || 0, color: '#a78bfa' }),
-          h(MiniStat, { label: 'Mental Fitness', value: mfScore, color: '#8b5cf6' }),
-          h(MiniStat, { label: '14-Day Avg', value: mentalAvg ? mentalAvg + '/5' : '-', color: '#c084fc' })
-        ),
-
-        h(Section, { title: 'Confidence Trend (14 Days)' },
-          h(ConfidenceChart, {})
-        ),
-
-        h(Section, { title: 'Mental Fitness Score' },
-          h('div', { style: { marginBottom: 8 } },
-            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
-              h('span', { style: { fontSize: 13, color: '#e5e7eb' } }, 'Overall mental fitness'),
-              h('span', { style: { fontSize: 20, fontWeight: 800, color: '#8b5cf6' } }, mfScore + '/100')
-            ),
-            h('div', { style: { height: 8, borderRadius: 99, background: 'rgba(30,41,59,0.8)', overflow: 'hidden' } },
-              h('div', { style: { height: '100%', width: mfScore + '%', background: 'linear-gradient(to right,#7c3aed,#a855f7)', borderRadius: 99, transition: 'width 0.7s' } })
-            )
-          ),
-          h('div', { style: { fontSize: 11, color: '#6b7280', lineHeight: 1.6, marginTop: 10 } }, 'Calculated from: session count (40%), avg mood rating (30%), training consistency (30%). Increases as you build your mental training habit.')
-        ),
-
-        h(Section, { title: 'Mental Session History' },
-          h('div', { style: { display: 'flex', flexDirection: 'column', gap: 6 } },
-            [
-              { label: 'Focus sessions', val: (DB.getXPLog() || []).filter(function(e) { return e.source === 'mental'; }).length, color: '#8b5cf6' },
-              { label: 'Avg rating (7 days)', val: DB.getAverageMentalRating ? (DB.getAverageMentalRating(7) || '-') + '/5' : '-', color: '#a78bfa' },
-              { label: 'Sessions this week', val: (DB.getXPLast7Days ? DB.getXPLast7Days() : []).filter(function(d) { return d.xp > 0; }).length, color: '#c084fc' },
-            ].map(function(row) {
-              return h('div', { key: row.label, style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(48,54,61,0.4)' } },
-                h('span', { style: { fontSize: 13, color: '#8b949e' } }, row.label),
-                h('span', { style: { fontSize: 14, fontWeight: 700, color: row.color } }, row.val)
-              );
-            })
-          )
-        ),
-
-        h('button', { onClick: function() { A.nav('Mental'); }, style: { width: '100%', padding: '13px', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 10, color: '#a78bfa', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, '🧠 Train Mental Now')
-      )
-    )
-  );
+      h('button', { onClick: function() { A.nav('Mental'); }, style: { width: '100%', padding: '13px', background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 10, color: '#a78bfa', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, '🧠 Train Mental Now')
+    );
+  }
 }
 
 A.PerformancePage = PerformancePage;
-console.log('[SC] app-performance.js v1.0 — PerformancePage + charts ready');
+console.log('[SC] app-performance.js v1.1 — PerformancePage + charts + tab animations ready');
 })();
