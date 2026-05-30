@@ -187,6 +187,10 @@ function VisualizeViz(props) {
     return function(){clearInterval(tmr.current);clearTimeout(tmr.current);};
   },[active,text]);
 
+  useEffect(function() {
+    if (active && sentences[idx] && A.SpeechEngine) A.SpeechEngine.speak(sentences[idx]);
+  }, [active, idx]);
+
   return h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:20}},
     h('svg',{width:96,height:96,viewBox:'0 0 96 96'},
       [0,1,2,3,4,5,6].map(function(i){
@@ -258,6 +262,11 @@ function ReflectViz(props) {
     else if(si<lines.length-1){ tmr.current=setTimeout(function(){setDisp(function(d){return d+'\n';});setSi(function(x){return x+1;});setCi(0);},1900); }
     return function(){clearTimeout(tmr.current);};
   },[active,si,ci,text]);
+
+  useEffect(function() {
+    if (active && lines[si] && A.SpeechEngine) A.SpeechEngine.speak(lines[si]);
+  }, [active, si]);
+
   var color='#d97706';
   return h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:20}},
     h('svg',{width:80,height:80,viewBox:'0 0 80 80'},
@@ -351,7 +360,15 @@ function MentalPlayerPage(props) {
   var [running,setRunning]=useState(false);
   var [done,setDone]=useState(false);
   var [started,setStarted]=useState(false);
+  var [voiceOn, setVoiceOn] = useState(A.SpeechEngine ? A.SpeechEngine.isEnabled() : true);
   var doneRef=useRef(false);
+
+  useEffect(function() {
+    if (running && curPhase && curPhase.text && type !== 'VISUALIZE' && type !== 'REFLECT') {
+       A.SpeechEngine && A.SpeechEngine.speak(curPhase.text);
+    }
+    if (!running) A.SpeechEngine && A.SpeechEngine.stop();
+  }, [pi, running]);
 
   function finish(){
     if(doneRef.current)return;
@@ -428,8 +445,26 @@ function MentalPlayerPage(props) {
       // Phase text (not for types that display their own text)
       (type!=='REFLECT'&&type!=='VISUALIZE'&&curPhase.text&&curPhase.id!=='breathe')&&h(PhaseText,{text:curPhase.text,color:color}),
     ),
-    // Pause/resume
-    h('div',{style:{width:'100%',padding:'0 28px',marginTop:20}},
+    // Voice + Pause/resume
+    h('div',{style:{width:'100%',padding:'0 28px',marginTop:20,display:'flex',flexDirection:'column',gap:12}},
+      h('button', {
+        onClick: function() {
+          var now = !voiceOn;
+          setVoiceOn(now);
+          if (A.SpeechEngine) {
+            A.SpeechEngine.setEnabled(now);
+            if (now) A.SpeechEngine.speak("Voice guidance enabled");
+            else A.SpeechEngine.stop();
+          }
+        },
+        style: {
+          width:'100%', padding:'10px', borderRadius:12, fontSize:12, fontWeight:700,
+          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
+          color: voiceOn ? color : '#484f58',
+          cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8
+        }
+      }, voiceOn ? '🔊 Voice Guidance On' : '🔇 Voice Guidance Off'),
+
       h('button',{
         onClick:function(){setRunning(function(r){return !r;});},
         style:{width:'100%',padding:14,background:running?'rgba(255,255,255,0.05)':color,border:running?'1px solid rgba(255,255,255,0.1)':'none',borderRadius:12,color:running?'#6b7280':'#fff',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s'}
