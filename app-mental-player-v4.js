@@ -336,8 +336,10 @@ function usePhases(phases, running, onDone) {
 
 // ── MAIN PLAYER ───────────────────────────────────────────────────
 function MentalPlayerPage(props) {
-  var params=props.params||{}, session=params.session;
-  if(!session) return h('div',{style:{padding:40,textAlign:'center',color:'#6b7280'}},'No session');
+  var params=props.params||{};
+  var session=A._mentalSession||(A.MENTAL_SESSIONS&&A.MENTAL_SESSIONS.find(function(x){return x.id===params.id;}));
+  A._mentalSession=null;
+  if(!session) return h('div',{style:{padding:40,textAlign:'center',color:'#6b7280'}},'No session found. Please go back and select a session.');
 
   var slug     = (A.getSessionSlug && A.getSessionSlug(session.name)) || session.id || '';
   var content  = A.getSessionContent ? A.getSessionContent(slug,session.name,session.duration_minutes) : null;
