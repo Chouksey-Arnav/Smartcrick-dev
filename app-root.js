@@ -227,13 +227,15 @@ function AppShell() {
           // Page content — wrapped in AnimatePresence for smooth page transitions
           // The outer div holds padding; only the inner motion.div slides/fades.
           // Static chrome (TopBar, BottomNav, Sidebar) is NOT inside this wrapper.
-          h('div', {
+            h('div', {
             style:{
               flex:1,
               paddingTop:topPad,
               paddingBottom:botPad,
               width:'100%',        // ← fill full available width
               boxSizing:'border-box',
+              overflowY:'auto',
+              WebkitOverflowScrolling:'touch',
             }
           },
             _AP && _mDiv
