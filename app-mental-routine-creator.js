@@ -165,6 +165,26 @@ function MentalRoutineCreatorPlayer(props) {
 
   var intRef = useRef(null);
 
+  // Start YouTube soundtrack + speak first step on mount
+  useEffect(function() {
+    var MYT = window.SC_APP.MentalYouTube;
+    var MTTS = window.SC_APP.MentalTTS;
+    if (MYT) MYT.playCreator(focusDef.id);
+    if (MTTS && routine.steps[0]) MTTS.speak(routine.steps[0].instruction);
+    return function() {
+      if (MYT) MYT.stop();
+      if (MTTS) MTTS.stop();
+    };
+  }, []);
+
+  // Speak instruction for each new step (skip step 0 — spoken on mount)
+  useEffect(function() {
+    if (step === 0) return;
+    var MTTS = window.SC_APP.MentalTTS;
+    var cur = routine.steps[step];
+    if (MTTS && cur) MTTS.speak(cur.instruction);
+  }, [step]);
+
   useEffect(function() {
     if (done) return;
     clearInterval(intRef.current);
@@ -198,6 +218,10 @@ function MentalRoutineCreatorPlayer(props) {
     if (awarded) return;
     setAwarded(true);
     setDone(true);
+    var MYT = window.SC_APP.MentalYouTube;
+    var MTTS = window.SC_APP.MentalTTS;
+    if (MTTS) MTTS.stop();
+    if (MYT) MYT.fadeOut(5000);
     if (awardXP) awardXP(xpValue, Math.floor(routine.steps.reduce(function(s,x){return s+x.duration_seconds;},0)/60), 'mental', 'mental', 'creator-' + focusDef.id);
     if (fireConfetti) fireConfetti();
   }
@@ -235,7 +259,11 @@ function MentalRoutineCreatorPlayer(props) {
   return h('div', { style: { position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(160deg,#0f0824 0%,#170b35 45%,#0f172a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'max(1.25rem,env(safe-area-inset-top)) 1.25rem max(1.5rem,env(safe-area-inset-bottom))' } },
     // Header
     h('div', { style: { width: '100%', maxWidth: 380, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' } },
-      h('button', { onClick: onExit, style: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#a78bfa', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' } }, '← Exit'),
+      h('button', { onClick: function() {
+        var MYT = window.SC_APP.MentalYouTube; var MTTS = window.SC_APP.MentalTTS;
+        if (MYT) MYT.stop(); if (MTTS) MTTS.stop();
+        onExit();
+      }, style: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#a78bfa', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' } }, '← Exit'),
       h('div', { style: { textAlign: 'center', flex: 1, padding: '0 12px' } },
         h('div', { style: { fontSize: 11, fontWeight: 700, color: focusDef.color, textTransform: 'uppercase', letterSpacing: '0.06em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, focusDef.emoji + ' ' + focusDef.label),
         h('div', { style: { fontSize: 10, color: '#6d28d9', marginTop: 1 } }, 'Step ' + (step + 1) + ' of ' + routine.steps.length)
@@ -267,7 +295,14 @@ function MentalRoutineCreatorPlayer(props) {
       ),
       h('div', { style: { display: 'flex', gap: 9 } },
         h('button', { onClick: skipStep, style: { flex: 1, padding: '11px', background: 'transparent', color: 'rgba(109,40,217,0.8)', borderRadius: 10, fontWeight: 600, border: '1px solid rgba(109,40,217,0.30)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' } }, isLastStep ? 'Skip & Complete' : 'Skip Step'),
-        h('button', { onClick: function() { setPaused(function(p) { return !p; }); if (!paused) clearInterval(intRef.current); }, style: { flex: '0 0 auto', padding: '11px 16px', background: 'transparent', color: 'rgba(109,40,217,0.8)', borderRadius: 10, fontWeight: 600, border: '1px solid rgba(109,40,217,0.30)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' } }, paused ? '▶' : '⏸')
+        h('button', { onClick: function() {
+          setPaused(function(p) {
+            var MYT = window.SC_APP.MentalYouTube; var MTTS = window.SC_APP.MentalTTS;
+            if (!p) { if (MYT) MYT.pause(); if (MTTS) MTTS.pause(); clearInterval(intRef.current); }
+            else    { if (MYT) MYT.resume(); if (MTTS) MTTS.resume(); }
+            return !p;
+          });
+        }, style: { flex: '0 0 auto', padding: '11px 16px', background: 'transparent', color: 'rgba(109,40,217,0.8)', borderRadius: 10, fontWeight: 600, border: '1px solid rgba(109,40,217,0.30)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' } }, paused ? '▶' : '⏸')
       )
     )
   );
