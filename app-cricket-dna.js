@@ -19,15 +19,6 @@ var useEffect = React.useEffect;
 var A  = window.SC_APP;
 var DB = A.DB;
 var nav = A.nav;
-var _FM   = window.framerMotion || window.FramerMotion || null;
-var _AP   = _FM ? _FM.AnimatePresence : null;
-var _mDiv = (_FM && _FM.motion) ? _FM.motion.div : null;
-var TAB_ANIM = {
-  initial:    { opacity: 0, y: 8  },
-  animate:    { opacity: 1, y: 0  },
-  exit:       { opacity: 0, y: -8 },
-  transition: { duration: 0.18, ease: 'easeInOut' },
-};
 
 // ── Helpers ──────────────────────────────────────────────────────
 var cap = function(n) { return Math.min(100, Math.max(0, Math.round(n))); };
@@ -1283,6 +1274,10 @@ function CricketDNAPage() {
     return catFilter === 'all' || p.cat === catFilter;
   });
 
+  var _FM = window.FramerMotion;
+  var _AP = _FM ? _FM.AnimatePresence : null;
+  var _mDiv = _FM ? _FM.motion.div : null;
+
   var TABS = [
     { id:'profiles', label:'DNA', icon:'🧬' },
     { id:'promatch', label:'Pro Match', icon:'⭐' },
@@ -1555,15 +1550,6 @@ function CricketDNAPage() {
     );
   }
 
-  function getTabContent() {
-    if (tab === 'profiles')    return renderProfilesTab();
-    if (tab === 'promatch')    return renderProMatchTab();
-    if (tab === 'performance') return renderPerformanceTab();
-    if (tab === 'technique')   return renderTechniqueTab();
-    if (tab === 'growth')      return renderGrowthTab();
-    return null;
-  }
-
   return h('div',{style:{background:'#0d1117',minHeight:'100dvh',paddingBottom:80}},
     h('div',{style:{padding:'20px 16px 16px',background:'linear-gradient(180deg,rgba(168,85,247,0.08) 0%,transparent 100%)'}},
       h('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:6}},
@@ -1577,7 +1563,7 @@ function CricketDNAPage() {
     h('div',{style:{display:'flex',padding:'0 16px 0',gap:4,overflowX:'auto',borderBottom:'1px solid rgba(48,54,61,0.5)',marginBottom:16}},
       TABS.map(function(t){
         var active=tab===t.id;
-        return h('button',{key:t.id,onPointerDown:function(){if(window.SC_APP&&window.SC_APP.UIAudio)window.SC_APP.UIAudio.tick();setTab(t.id);},onClick:function(e){if(e.detail===0)setTab(t.id);},
+        return h('button',{key:t.id,onPointerDown:function(){if(A.playTabClick)A.playTabClick();setTab(t.id);},
           style:{display:'flex',alignItems:'center',gap:5,padding:'10px 12px',border:'none',
             borderBottom:'2px solid '+(active?'#a855f7':'transparent'),
             background:'transparent',color:active?'#c084fc':'#6b7280',
@@ -1587,13 +1573,19 @@ function CricketDNAPage() {
         );
       })
     ),
-    _AP && _mDiv
-      ? h(_AP, { mode: 'wait' },
-          h(_mDiv, Object.assign({ key: tab }, TAB_ANIM, { style: { width: '100%' } }),
-            getTabContent()
-          )
-        )
-      : h('div', { key: tab, className: 'sc-tab-content' }, getTabContent())
+    (function() {
+      var _tabEl = h(React.Fragment, null,
+    tab==='profiles'    && renderProfilesTab(),
+    tab==='promatch'    && renderProMatchTab(),
+    tab==='performance' && renderPerformanceTab(),
+    tab==='technique'   && renderTechniqueTab(),
+    tab==='growth'      && renderGrowthTab()
+      );
+      if (!_FM || !_AP || !_mDiv) return _tabEl;
+      return h(_AP, { mode:'wait' },
+        h(_mDiv, { key:tab, initial:{opacity:0,y:8}, animate:{opacity:1,y:0}, exit:{opacity:0,y:-8}, transition:{duration:0.18,ease:'easeInOut'} }, _tabEl)
+      );
+    })()
   );
 }
 
