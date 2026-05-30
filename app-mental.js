@@ -221,7 +221,7 @@ function MentalPage(){
           h('div',{style:{display:'flex',flexDirection:'column',gap:7}},
             scenarioSessions.slice(0,3).map(s=>{
               const sc2=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
-              return h('button',{key:s.id,onClick:()=>{A._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
+              return h('button',{key:s.id,onClick:()=>{window.SC_APP._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
                 display:'flex',alignItems:'center',gap:10,padding:'11px 12px',borderRadius:9,
                 background:'rgba(13,17,23,0.6)',border:'1px solid rgba(48,54,61,0.7)',
                 cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
@@ -279,7 +279,7 @@ function MentalPage(){
               const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
               const mins=Math.floor(s.duration_seconds/60);
               const isDone=done.includes(s.id);
-              return h('button',{key:'pick-'+s.id,onClick:()=>{A._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
+              return h('button',{key:'pick-'+s.id,onClick:()=>{window.SC_APP._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
                 display:'flex',alignItems:'center',gap:12,padding:'13px 14px',borderRadius:11,
                 background:'rgba(22,27,34,0.95)',border:'1px solid rgba(139,92,246,0.35)',
                 cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
@@ -313,7 +313,7 @@ function MentalPage(){
             :filtered.map(s=>{
               const mins=Math.floor(s.duration_seconds/60),isDone=done.includes(s.id);
               const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
-              return h('button',{key:s.id,onClick:()=>{A._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
+              return h('button',{key:s.id,onClick:()=>{window.SC_APP._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
                 display:'flex',alignItems:'center',gap:12,padding:'14px',borderRadius:10,
                 background:'rgba(22,27,34,0.9)',border:`1px solid ${isDone?'rgba(22,163,74,0.3)':'rgba(48,54,61,0.9)'}`,
                 cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',marginBottom:8,
