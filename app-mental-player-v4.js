@@ -352,11 +352,31 @@ function MentalPlayerPage(props) {
   var [done,setDone]=useState(false);
   var [started,setStarted]=useState(false);
   var doneRef=useRef(false);
+  var prevPiRef=useRef(-1);
+
+  // Start YouTube soundtrack + speak first phase text when session begins
+  useEffect(function(){
+    if(!started) return;
+    if(A.MentalYouTube) A.MentalYouTube.playSession(type);
+    var firstText = phases[0] && phases[0].text;
+    if(firstText && A.MentalTTS) A.MentalTTS.speak(firstText);
+    prevPiRef.current = 0;
+  },[started]);
+
+  // Stop all audio on unmount (e.g. navigating away mid-session)
+  useEffect(function(){
+    return function(){
+      if(A.MentalTTS) A.MentalTTS.stop();
+      if(A.MentalYouTube) A.MentalYouTube.stop();
+    };
+  },[]);
 
   function finish(){
     if(doneRef.current)return;
     doneRef.current=true;
     setRunning(false);setDone(true);
+    if(A.MentalTTS) A.MentalTTS.stop();
+    if(A.MentalYouTube) A.MentalYouTube.fadeOut(5000);
     if(A.awardXP) A.awardXP(session.xp||50,session.duration_minutes||5,'mental','mental',slug);
     if(A.fireConfetti) A.fireConfetti();
     window.dispatchEvent(new CustomEvent('sc_update'));
@@ -365,6 +385,15 @@ function MentalPlayerPage(props) {
   var pm=usePhases(phases,running,finish);
   var {pi,pe,te,total}=pm;
   var curPhase=phases[pi]||phases[0];
+
+  // Speak each phase's text as it advances (skip pi=0 — spoken on session start)
+  useEffect(function(){
+    if(!started || !running) return;
+    if(pi === 0 || pi === prevPiRef.current) return;
+    prevPiRef.current = pi;
+    var text = phases[pi] && phases[pi].text;
+    if(text && A.MentalTTS) A.MentalTTS.speak(text);
+  },[pi, started, running]);
   var sessProgress=total>0?Math.min(1,te/total):0;
   var type=(content&&content.type)||'GROUND';
 
@@ -401,7 +430,7 @@ function MentalPlayerPage(props) {
     h('button',{
       onClick:function(){setStarted(true);setRunning(true);},
       style:{padding:'16px 52px',background:'linear-gradient(135deg,'+color+','+color+'bb)',color:'#fff',border:'none',borderRadius:14,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 6px 24px rgba('+glow+',0.32)'}
-    },'Begin Session'),
+    },'Begin Session ▶'),
     h('button',{onClick:shareSession,style:{marginTop:12,background:'none',border:'none',color:'#374151',fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Share this session →')
   );
 
@@ -409,7 +438,12 @@ function MentalPlayerPage(props) {
   return h('div',{style:{minHeight:'100dvh',background:'#080b0f',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:'max(44px,calc(44px + env(safe-area-inset-top)))',paddingBottom:'calc(20px + env(safe-area-inset-bottom))'}},
     // Top bar
     h('div',{style:{width:'100%',padding:'0 18px',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}},
-      h('button',{onClick:function(){setRunning(false);A.nav('Mental');},style:{background:'none',border:'none',color:'#374151',fontSize:13,cursor:'pointer',fontFamily:'inherit'}},'← Exit'),
+      h('button',{onClick:function(){
+        setRunning(false);
+        if(A.MentalTTS) A.MentalTTS.stop();
+        if(A.MentalYouTube) A.MentalYouTube.stop();
+        A.nav('Mental');
+      },style:{background:'none',border:'none',color:'#374151',fontSize:13,cursor:'pointer',fontFamily:'inherit'}},'← Exit'),
       h('div',{style:{fontSize:11,color:'#2d3748'}},fmt(te)+' / '+fmt(total))
     ),
     // Progress
@@ -431,7 +465,13 @@ function MentalPlayerPage(props) {
     // Pause/resume
     h('div',{style:{width:'100%',padding:'0 28px',marginTop:20}},
       h('button',{
-        onClick:function(){setRunning(function(r){return !r;});},
+        onClick:function(){
+          setRunning(function(r){
+            if(r){ if(A.MentalYouTube) A.MentalYouTube.pause(); if(A.MentalTTS) A.MentalTTS.pause(); }
+            else { if(A.MentalYouTube) A.MentalYouTube.resume(); if(A.MentalTTS) A.MentalTTS.resume(); }
+            return !r;
+          });
+        },
         style:{width:'100%',padding:14,background:running?'rgba(255,255,255,0.05)':color,border:running?'1px solid rgba(255,255,255,0.1)':'none',borderRadius:12,color:running?'#6b7280':'#fff',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'inherit',transition:'all 0.2s'}
       }, running?'⏸ Pause':'▶ Resume')
     )
