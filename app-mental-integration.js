@@ -87,7 +87,7 @@ function handleDeepLink() {
     return s.slug === slug || toSlug(s.name) === slug;
   });
   if (found && A.nav) {
-    A.nav('MentalSession', { session: found });
+    A._mentalSession = found; A.nav('MentalPlayer', { id: found.id });
     // clean URL
     history.replaceState(null, '', window.location.pathname);
   }
