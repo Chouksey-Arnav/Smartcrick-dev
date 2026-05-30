@@ -9,10 +9,11 @@
 // ================================================================
 (function () {
 'use strict';
+const A = window.SC_APP;
 const { createElement:h, useState, useEffect, useRef, Fragment } = React;
-const { nav, DB, awardXP, fireConfetti, fmtTime, getEncouragement } = window.SC_APP;
-const { MENTAL_SESSIONS, MENT_CATS } = window.SC_APP;
-const { Icon, XPBadge, PremiumBadge, EmptyState, PageHeader } = window.SC_APP;
+const { nav, DB, awardXP, fireConfetti, fmtTime, getEncouragement } = A;
+const { MENTAL_SESSIONS, MENT_CATS } = A;
+const { Icon, XPBadge, PremiumBadge, EmptyState, PageHeader } = A;
 const MentalRoutineCreatorTab = () => window.SC_APP.MentalRoutineCreatorTab ? h(window.SC_APP.MentalRoutineCreatorTab, null) : null;
 
 // ── M-B: Scenarios ────────────────────────────────────────────────
@@ -372,6 +373,7 @@ function MentalPlayerPage({params}){
   const [timeLeft,setTimeLeft]=useState(0);
   const [done,setDone]=useState(false);
   const [paused,setPaused]=useState(false);
+  const [voiceOn, setVoiceOn] = useState(A.SpeechEngine ? A.SpeechEngine.isEnabled() : true);
   const [showRating,setShowRating]=useState(false);
   const intRef=useRef(null);
   const awardedRef=useRef(false);
@@ -379,7 +381,14 @@ function MentalPlayerPage({params}){
 
   useEffect(()=>{if(!started){awardedRef.current=false;completingRef.current=false;}},[started]);
   useEffect(()=>{
-    if(started&&sess&&!done){clearInterval(intRef.current);setTimeLeft(sess.steps[step]?.duration_seconds||60);setPaused(false);}
+    if(started&&sess&&!done){
+      clearInterval(intRef.current);
+      setTimeLeft(sess.steps[step]?.duration_seconds||60);
+      setPaused(false);
+      if (A.SpeechEngine && voiceOn) {
+        A.SpeechEngine.speak(sess.steps[step]?.instruction);
+      }
+    }
     return()=>clearInterval(intRef.current);
   },[step,started,done]);
   useEffect(()=>{
@@ -463,6 +472,23 @@ function MentalPlayerPage({params}){
     h('div',{style:{textAlign:'center',maxWidth:340,flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'1.25rem 0'}},
       h('p',{style:{fontSize:'1.075rem',color:'#e2d9f3',lineHeight:1.8,fontWeight:500}},cur?.instruction)),
     h('div',{style:{width:'100%',maxWidth:380,display:'flex',flexDirection:'column',gap:9}},
+      h('button', {
+        onClick: () => {
+          const now = !voiceOn;
+          setVoiceOn(now);
+          if (A.SpeechEngine) {
+            A.SpeechEngine.setEnabled(now);
+            if (now) A.SpeechEngine.speak("Voice guidance on");
+            else A.SpeechEngine.stop();
+          }
+        },
+        style: {
+          width:'100%', padding:'10px', borderRadius:10, fontSize:12, fontWeight:700,
+          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)',
+          color: voiceOn ? '#a855f7' : '#4b5563', marginBottom: 4,
+          cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', justifyContent:'center', gap:8
+        }
+      }, voiceOn ? '🔊 Voice On' : '🔇 Voice Off'),
       h('div',{style:{display:'flex',gap:9}},
         step>0&&h('button',{onClick:()=>{clearInterval(intRef.current);setStep(s=>s-1);},style:{flex:'0 0 auto',padding:'13px 16px',background:'rgba(255,255,255,0.07)',color:'#a78bfa',borderRadius:10,fontWeight:700,border:'1px solid rgba(168,85,247,0.20)',cursor:'pointer',fontSize:14,fontFamily:'inherit'}},
           h(Icon,{n:'arrowL',cls:'w-4 h-4'})),

@@ -336,6 +336,45 @@ var ToneEngine = (function() {
   return { play: play, stop: stop, setVol: setVol, isPlaying: function() { return running; }, getCurrentType: function() { return currentType; } };
 })();
 
+// ── WEB SPEECH ENGINE ────────────────────────────────────────────
+var SpeechEngine = (function() {
+  var synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
+  var voice = null;
+  var enabled = true;
+
+  function loadVoices() {
+    if (!synth) return;
+    var voices = synth.getVoices();
+    voice = voices.find(function(v) { return v.lang.includes('en') && v.name.includes('Google'); }) ||
+            voices.find(function(v) { return v.lang.includes('en'); }) ||
+            voices[0];
+  }
+
+  if (synth) {
+    if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+    loadVoices();
+  }
+
+  function speak(text, rate) {
+    if (!synth || !enabled || !text) return;
+    try {
+      synth.cancel();
+      var utter = new SpeechSynthesisUtterance(text);
+      if (voice) utter.voice = voice;
+      utter.rate = rate || 0.9;
+      utter.pitch = 1.0;
+      utter.volume = 1.0;
+      synth.speak(utter);
+    } catch(e) { console.warn('[SpeechEngine]', e); }
+  }
+
+  function stop() { if (synth) synth.cancel(); }
+  function setEnabled(val) { enabled = !!val; }
+  function isEnabled() { return enabled; }
+
+  return { speak: speak, stop: stop, setEnabled: setEnabled, isEnabled: isEnabled };
+})();
+
 // ── PRESETS BY SESSION TYPE ──────────────────────────────────────
 var PRESETS = {
   calm:       { beatHz:8,  carrier:190, ambience:'pink',  ytId:'n4YghVcjbpw', label:'Calm & Clear',        desc:'Alpha 8Hz — stress relief, relaxed awareness' },
@@ -492,6 +531,7 @@ function SessionAudioPlayer({ sessionName, minutes }) {
 A.SessionAudioPlayer = SessionAudioPlayer;
 A.AudioEngine = AudioEngine;
 A.ToneEngine = ToneEngine;
+A.SpeechEngine = SpeechEngine;
 A.MentalPresets = PRESETS;
 A.getMentalPreset = getPreset;
 
