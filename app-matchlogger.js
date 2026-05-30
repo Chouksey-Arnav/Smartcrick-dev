@@ -8,15 +8,6 @@ var useState = React.useState;
 var useEffect = React.useEffect;
 var useRef = React.useRef;
 var Fragment = React.Fragment;
-var _FM   = window.framerMotion || window.FramerMotion || null;
-var _AP   = _FM ? _FM.AnimatePresence : null;
-var _mDiv = (_FM && _FM.motion) ? _FM.motion.div : null;
-var TAB_ANIM = {
-  initial:    { opacity: 0, y: 8  },
-  animate:    { opacity: 1, y: 0  },
-  exit:       { opacity: 0, y: -8 },
-  transition: { duration: 0.18, ease: 'easeInOut' },
-};
 var A = window.SC_APP;
 var DB = A.DB;
 var nav = A.nav;
@@ -211,61 +202,6 @@ function MatchForm(props) {
   var inp = { background: 'rgba(22,27,34,0.9)', border: '1px solid rgba(48,54,61,0.9)', borderRadius: 8, color: '#f0fdf4', fontSize: 14, padding: '10px 12px', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
   var lbl = { fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 };
 
-  function getTabContent() {
-    if (tab === 'bat') return h('div', null,
-      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
-        h('div', null, h('label', { style: lbl }, 'Runs'), h('input', { type: 'number', min: 0, value: form.batting.runs, onChange: function(e) { setBat('runs', e.target.value); }, style: inp })),
-        h('div', null, h('label', { style: lbl }, 'Balls'), h('input', { type: 'number', min: 0, value: form.batting.balls, onChange: function(e) { setBat('balls', e.target.value); }, style: inp }))
-      ),
-      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 } },
-        h('div', null, h('label', { style: lbl }, '4s'), h('input', { type: 'number', min: 0, value: form.batting.fours, onChange: function(e) { setBat('fours', e.target.value); }, style: inp })),
-        h('div', null, h('label', { style: lbl }, '6s'), h('input', { type: 'number', min: 0, value: form.batting.sixes, onChange: function(e) { setBat('sixes', e.target.value); }, style: inp })),
-        h('div', null, h('label', { style: lbl }, 'Position'), h('input', { type: 'number', min: 1, max: 11, value: form.batting.position, onChange: function(e) { setBat('position', e.target.value); }, style: inp }))
-      ),
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-        h('input', { type: 'checkbox', id: 'notout', checked: form.batting.notOut, onChange: function(e) { setBat('notOut', e.target.checked); }, style: { width: 18, height: 18 } }),
-        h('label', { htmlFor: 'notout', style: { fontSize: 13, color: '#8b949e', cursor: 'pointer' } }, 'Not out')
-      )
-    );
-    if (tab === 'bowl') return h('div', null,
-      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
-        h('div', null, h('label', { style: lbl }, 'Wickets'), h('input', { type: 'number', min: 0, max: 10, value: form.bowling.wickets, onChange: function(e) { setBowl('wickets', e.target.value); }, style: inp })),
-        h('div', null, h('label', { style: lbl }, 'Runs'), h('input', { type: 'number', min: 0, value: form.bowling.runs, onChange: function(e) { setBowl('runs', e.target.value); }, style: inp }))
-      ),
-      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
-        h('div', null, h('label', { style: lbl }, 'Overs'), h('input', { type: 'number', min: 0, step: 0.1, value: form.bowling.overs, onChange: function(e) { setBowl('overs', e.target.value); }, style: inp })),
-        h('div', null, h('label', { style: lbl }, 'Maidens'), h('input', { type: 'number', min: 0, value: form.bowling.maidens, onChange: function(e) { setBowl('maidens', e.target.value); }, style: inp }))
-      )
-    );
-    if (tab === 'field') return h('div', null,
-      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 } },
-        h('div', null, h('label', { style: lbl }, 'Catches'), h('input', { type: 'number', min: 0, value: form.fielding.catches, onChange: function(e) { setField('catches', e.target.value); }, style: inp })),
-        h('div', null, h('label', { style: lbl }, 'Run-outs'), h('input', { type: 'number', min: 0, value: form.fielding.runouts, onChange: function(e) { setField('runouts', e.target.value); }, style: inp })),
-        h('div', null, h('label', { style: lbl }, 'Stumpings'), h('input', { type: 'number', min: 0, value: form.fielding.stumpings, onChange: function(e) { setField('stumpings', e.target.value); }, style: inp }))
-      )
-    );
-    if (tab === 'wheel') return h('div', { style: { textAlign: 'center' } },
-      h('p', { style: { fontSize: 12, color: '#6b7280', marginBottom: 12 } }, 'Tap a sector to log where your shots went. Build your personal wagon wheel.'),
-      h('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 12 } },
-        h(WagonWheel, { shots: form.shots, interactive: true, onSectorClick: function(i) { setPendingSector(i); } })
-      ),
-      pendingSector !== null && h('div', { style: { background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10, padding: '12px', marginBottom: 10 } },
-        h('p', { style: { fontSize: 12, color: '#4ade80', marginBottom: 8 } }, 'Sector: ' + SECTORS[pendingSector].label + ' — How many runs?'),
-        h('div', { style: { display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 8 } },
-          [1, 2, 3, 4, 6].map(function(r) {
-            return h('button', { key: r, onClick: function() { setPendingRuns(r); }, style: { width: 40, height: 40, borderRadius: 8, border: '1px solid ' + (pendingRuns === r ? '#16a34a' : 'rgba(48,54,61,0.9)'), background: pendingRuns === r ? 'rgba(22,163,74,0.15)' : 'rgba(22,27,34,0.9)', color: pendingRuns === r ? '#4ade80' : '#8b949e', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, r);
-          })
-        ),
-        h('button', { onClick: addShot, style: { width: '100%', padding: '9px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, 'Add Shot +')
-      ),
-      form.shots.length > 0 && h('div', { style: { display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' } },
-        h('span', { style: { fontSize: 12, color: '#6b7280' } }, form.shots.length + ' shots logged'),
-        h('button', { onClick: removeLastShot, style: { fontSize: 11, color: '#ef4444', background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' } }, 'Undo last')
-      )
-    );
-    return null;
-  }
-
   return h('div', { style: { position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }, onClick: onClose },
     h('div', { onClick: function(e) { e.stopPropagation(); }, style: { width: '100%', maxWidth: 520, background: '#0d1117', borderRadius: '20px 20px 0 0', border: '1px solid rgba(48,54,61,0.9)', borderBottom: 'none', maxHeight: '92vh', overflowY: 'auto', padding: '0 20px 40px' } },
       h('div', { style: { width: 40, height: 4, borderRadius: 2, background: 'rgba(75,85,99,0.6)', margin: '12px auto 16px' } }),
@@ -302,18 +238,87 @@ function MatchForm(props) {
       h('div', { style: { display: 'flex', gap: 0, marginBottom: 16, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(48,54,61,0.9)' } },
         ['bat', 'bowl', 'field', 'wheel'].map(function(t) {
           var labels = { bat: '🏏 Bat', bowl: '🎳 Bowl', field: '🤸 Field', wheel: '🎯 Wheel' };
-          return h('button', { key: t, onPointerDown: function() { if (window.SC_APP && window.SC_APP.UIAudio) window.SC_APP.UIAudio.tick(); setTab(t); }, onClick: function(e) { if (e.detail === 0) setTab(t); }, style: { flex: 1, padding: '9px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: tab === t ? 'rgba(22,163,74,0.15)' : 'rgba(22,27,34,0.9)', color: tab === t ? '#4ade80' : '#6b7280', borderRight: t !== 'wheel' ? '1px solid rgba(48,54,61,0.9)' : 'none' } }, labels[t]);
+          return h('button', { key: t, onPointerDown: function() { if(A.playTabClick) A.playTabClick(); setTab(t); }, style: { flex: 1, padding: '9px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: tab === t ? 'rgba(22,163,74,0.15)' : 'rgba(22,27,34,0.9)', color: tab === t ? '#4ade80' : '#6b7280', borderRight: t !== 'wheel' ? '1px solid rgba(48,54,61,0.9)' : 'none' } }, labels[t]);
         })
       ),
 
-      // Tab content
-      _AP && _mDiv
-        ? h(_AP, { mode: 'wait' },
-            h(_mDiv, Object.assign({ key: tab }, TAB_ANIM, { style: { width: '100%' } }),
-              getTabContent()
-            )
-          )
-        : h('div', { key: tab, className: 'sc-tab-content' }, getTabContent()),
+      // Tab content with animation
+      (function() {
+        var FM = window.FramerMotion;
+        var tabContent = h(Fragment, null,
+
+      // Batting tab
+      tab === 'bat' && h('div', null,
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
+          h('div', null, h('label', { style: lbl }, 'Runs'), h('input', { type: 'number', min: 0, value: form.batting.runs, onChange: function(e) { setBat('runs', e.target.value); }, style: inp })),
+          h('div', null, h('label', { style: lbl }, 'Balls'), h('input', { type: 'number', min: 0, value: form.batting.balls, onChange: function(e) { setBat('balls', e.target.value); }, style: inp }))
+        ),
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 } },
+          h('div', null, h('label', { style: lbl }, '4s'), h('input', { type: 'number', min: 0, value: form.batting.fours, onChange: function(e) { setBat('fours', e.target.value); }, style: inp })),
+          h('div', null, h('label', { style: lbl }, '6s'), h('input', { type: 'number', min: 0, value: form.batting.sixes, onChange: function(e) { setBat('sixes', e.target.value); }, style: inp })),
+          h('div', null, h('label', { style: lbl }, 'Position'), h('input', { type: 'number', min: 1, max: 11, value: form.batting.position, onChange: function(e) { setBat('position', e.target.value); }, style: inp }))
+        ),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+          h('input', { type: 'checkbox', id: 'notout', checked: form.batting.notOut, onChange: function(e) { setBat('notOut', e.target.checked); }, style: { width: 18, height: 18 } }),
+          h('label', { htmlFor: 'notout', style: { fontSize: 13, color: '#8b949e', cursor: 'pointer' } }, 'Not out')
+        )
+      ),
+
+      // Bowling tab
+      tab === 'bowl' && h('div', null,
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 } },
+          h('div', null, h('label', { style: lbl }, 'Wickets'), h('input', { type: 'number', min: 0, max: 10, value: form.bowling.wickets, onChange: function(e) { setBowl('wickets', e.target.value); }, style: inp })),
+          h('div', null, h('label', { style: lbl }, 'Runs'), h('input', { type: 'number', min: 0, value: form.bowling.runs, onChange: function(e) { setBowl('runs', e.target.value); }, style: inp }))
+        ),
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 } },
+          h('div', null, h('label', { style: lbl }, 'Overs'), h('input', { type: 'number', min: 0, step: 0.1, value: form.bowling.overs, onChange: function(e) { setBowl('overs', e.target.value); }, style: inp })),
+          h('div', null, h('label', { style: lbl }, 'Maidens'), h('input', { type: 'number', min: 0, value: form.bowling.maidens, onChange: function(e) { setBowl('maidens', e.target.value); }, style: inp }))
+        )
+      ),
+
+      // Fielding tab
+      tab === 'field' && h('div', null,
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 } },
+          h('div', null, h('label', { style: lbl }, 'Catches'), h('input', { type: 'number', min: 0, value: form.fielding.catches, onChange: function(e) { setField('catches', e.target.value); }, style: inp })),
+          h('div', null, h('label', { style: lbl }, 'Run-outs'), h('input', { type: 'number', min: 0, value: form.fielding.runouts, onChange: function(e) { setField('runouts', e.target.value); }, style: inp })),
+          h('div', null, h('label', { style: lbl }, 'Stumpings'), h('input', { type: 'number', min: 0, value: form.fielding.stumpings, onChange: function(e) { setField('stumpings', e.target.value); }, style: inp }))
+        )
+      ),
+
+      // Wagon wheel tab
+      tab === 'wheel' && h('div', { style: { textAlign: 'center' } },
+        h('p', { style: { fontSize: 12, color: '#6b7280', marginBottom: 12 } }, 'Tap a sector to log where your shots went. Build your personal wagon wheel.'),
+        h('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 12 } },
+          h(WagonWheel, { shots: form.shots, interactive: true, onSectorClick: function(i) { setPendingSector(i); } })
+        ),
+        pendingSector !== null && h('div', { style: { background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10, padding: '12px', marginBottom: 10 } },
+          h('p', { style: { fontSize: 12, color: '#4ade80', marginBottom: 8 } }, 'Sector: ' + SECTORS[pendingSector].label + ' — How many runs?'),
+          h('div', { style: { display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 8 } },
+            [1, 2, 3, 4, 6].map(function(r) {
+              return h('button', { key: r, onClick: function() { setPendingRuns(r); }, style: { width: 40, height: 40, borderRadius: 8, border: '1px solid ' + (pendingRuns === r ? '#16a34a' : 'rgba(48,54,61,0.9)'), background: pendingRuns === r ? 'rgba(22,163,74,0.15)' : 'rgba(22,27,34,0.9)', color: pendingRuns === r ? '#4ade80' : '#8b949e', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, r);
+            })
+          ),
+          h('button', { onClick: addShot, style: { width: '100%', padding: '9px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' } }, 'Add Shot +')
+        ),
+        form.shots.length > 0 && h('div', { style: { display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' } },
+          h('span', { style: { fontSize: 12, color: '#6b7280' } }, form.shots.length + ' shots logged'),
+          h('button', { onClick: removeLastShot, style: { fontSize: 11, color: '#ef4444', background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit' } }, 'Undo last')
+        )
+      )
+
+        ); // end tabContent Fragment
+        if (!FM) return tabContent;
+        return h(FM.AnimatePresence, { mode: 'wait' },
+          h(FM.motion.div, {
+            key: tab,
+            initial: { opacity: 0, y: 8 },
+            animate: { opacity: 1, y: 0 },
+            exit: { opacity: 0, y: -8 },
+            transition: { duration: 0.18, ease: 'easeInOut' },
+            style: { width: '100%' },
+          }, tabContent)
+        );
+      })(),
 
       // Notes
       h('div', { style: { marginTop: 16 } },
