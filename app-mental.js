@@ -363,125 +363,6 @@ function MentalPage(){
 }
 
 // ================================================================
-// MENTAL PLAYER — M-A breathing orb + M-D rating
-// ================================================================
-function MentalPlayerPage({params}){
-  const sess=MENTAL_SESSIONS.find(s=>s.id===params?.id);
-  const [started,setStarted]=useState(false);
-  const [step,setStep]=useState(0);
-  const [timeLeft,setTimeLeft]=useState(0);
-  const [done,setDone]=useState(false);
-  const [paused,setPaused]=useState(false);
-  const [showRating,setShowRating]=useState(false);
-  const intRef=useRef(null);
-  const awardedRef=useRef(false);
-  const completingRef=useRef(false);
-
-  useEffect(()=>{if(!started){awardedRef.current=false;completingRef.current=false;}},[started]);
-  useEffect(()=>{
-    if(started&&sess&&!done){clearInterval(intRef.current);setTimeLeft(sess.steps[step]?.duration_seconds||60);setPaused(false);}
-    return()=>clearInterval(intRef.current);
-  },[step,started,done]);
-  useEffect(()=>{
-    if(!started||done||paused){clearInterval(intRef.current);return;}
-    clearInterval(intRef.current);
-    intRef.current=setInterval(()=>setTimeLeft(t=>{
-      if(t<=1){clearInterval(intRef.current);if(step<sess.steps.length-1){setStep(s=>s+1);}else{finishSession();}return 0;}
-      return t-1;
-    }),1000);
-    return()=>clearInterval(intRef.current);
-  },[started,done,paused,step]);
-  useEffect(()=>()=>clearInterval(intRef.current),[]);
-
-  const finishSession=()=>{
-    if(awardedRef.current)return;awardedRef.current=true;
-    setDone(true);setShowRating(true);
-    awardXP(sess.xp_value,Math.floor(sess.duration_seconds/60),'mental','mental',sess.id);
-    fireConfetti();
-  };
-  const handleRate=(rating)=>{if(rating)DB.saveMentalRating(sess.id,rating);setShowRating(false);};
-  const goNext=()=>{if(completingRef.current)return;clearInterval(intRef.current);if(step<sess.steps.length-1){setStep(s=>s+1);}else{completingRef.current=true;finishSession();}};
-  const skipStep=()=>{clearInterval(intRef.current);if(step<sess.steps.length-1){setStep(s=>s+1);}else{completingRef.current=true;finishSession();}};
-
-  if(!sess) return h('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',minHeight:'80vh',padding:'20px',textAlign:'center'}},
-    h('p',{style:{color:'#f0fdf4',fontWeight:700,marginBottom:16}},'Session not found'),
-    h('button',{onClick:()=>nav('Mental'),style:{background:'#16a34a',color:'#fff',border:'none',borderRadius:10,padding:'12px 24px',cursor:'pointer',fontFamily:'inherit',fontWeight:700}},'Back'));
-
-  if(done) return h('div',{style:{minHeight:'100vh',background:'linear-gradient(135deg,#0f0824,#1e1040,#0f172a)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'1.5rem',textAlign:'center'}},
-    h('div',{style:{width:72,height:72,borderRadius:18,background:'rgba(124,58,237,0.2)',border:'1px solid rgba(168,85,247,0.3)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20}},
-      h(Icon,{n:'circleCheck',cls:'w-9 h-9',style:{color:'#a855f7'}})),
-    h('h2',{style:{fontSize:'1.5rem',fontWeight:800,color:'#fff',marginBottom:8}},'Session Complete!'),
-    h('p',{style:{color:'#a78bfa',marginBottom:12,fontSize:14}},sess.title),
-    h(XPBadge,{xp:sess.xp_value}),
-    h('p',{style:{fontSize:13,color:'rgba(167,139,250,0.7)',marginTop:12,maxWidth:280,lineHeight:1.6}},getEncouragement('mental_complete')),
-    showRating&&h('div',{style:{marginTop:20,width:'100%',maxWidth:360,background:'rgba(255,255,255,0.04)',borderRadius:14,border:'1px solid rgba(168,85,247,0.2)'}},
-      h(PostSessionRating,{onRate:handleRate})),
-    !showRating&&h('div',{style:{marginTop:24,display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:280}},
-      h('button',{onClick:()=>nav('Mental'),style:{background:'#16a34a',color:'#fff',border:'none',borderRadius:10,padding:'13px',cursor:'pointer',fontFamily:'inherit',fontWeight:700}},'More Sessions'),
-      h('button',{onClick:()=>{setDone(false);setStarted(false);setStep(0);awardedRef.current=false;completingRef.current=false;setShowRating(false);},style:{background:'transparent',color:'#9ca3af',border:'1px solid rgba(48,54,61,0.9)',borderRadius:10,padding:'12px',cursor:'pointer',fontFamily:'inherit',fontWeight:600}},'Repeat Session')
-    )
-  );
-
-  if(!started) return h('div',{style:{paddingBottom:120}},
-    h(PageHeader,{title:sess.title,subtitle:`${Math.floor(sess.duration_seconds/60)} min · ${sess.xp_value} XP · ${sess.steps.length} steps`,gradient:'linear-gradient(135deg,#5b21b6,#4338ca)',onBack:()=>nav('Mental')}),
-    h('div',{style:{maxWidth:860,margin:'0 auto',padding:'20px 16px'}},
-      h('div',{style:{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',marginBottom:16,borderRadius:11,background:'rgba(109,40,217,0.10)',border:'1px solid rgba(109,40,217,0.25)'}},
-        h('div',{style:{width:40,height:40,borderRadius:'50%',flexShrink:0,background:'radial-gradient(circle at 35% 33%,rgba(220,150,255,0.8),rgba(109,40,217,0.6))',boxShadow:'0 0 12px rgba(168,85,247,0.35)'}}),
-        h('p',{style:{fontSize:12,color:'rgba(196,130,255,0.9)',lineHeight:1.5,fontWeight:500}},'A breathing guide appears during this session to help you stay calm and present.')),
-      h('div',{style:{background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)',borderRadius:10,padding:16,marginBottom:16}},
-        h('p',{style:{fontSize:13,color:'#8b949e',lineHeight:1.7}},sess.description)),
-      h('div',{style:{marginBottom:20}},
-        h('p',{style:{fontSize:11,fontWeight:700,color:'#484f58',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}},`${sess.steps.length} Steps`),
-        h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
-          sess.steps.map((s,i)=>h('div',{key:i,style:{display:'flex',alignItems:'flex-start',gap:12,padding:'12px 14px',borderRadius:8,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)'}},
-            h('div',{style:{width:22,height:22,borderRadius:'50%',background:'rgba(168,85,247,0.2)',border:'1px solid rgba(168,85,247,0.3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:10,fontWeight:800,color:'#a855f7'}},i+1),
-            h('p',{style:{fontSize:13,color:'#8b949e',flex:1,lineHeight:1.6}},s.instruction),
-            h('span',{style:{fontSize:11,color:'#484f58',flexShrink:0}},`${s.duration_seconds}s`)))
-        )),
-      window.SC_APP.SessionAudioPlayer&&h(window.SC_APP.SessionAudioPlayer,{sessionName:sess.title,minutes:Math.floor(sess.duration_seconds/60)}),
-      h('button',{onClick:()=>{setStarted(true);setStep(0);setTimeLeft(sess.steps[0].duration_seconds);},
-        style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,width:'100%',padding:'14px',background:'#16a34a',color:'#fff',border:'none',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontSize:15,fontWeight:700,marginTop:window.SC_APP.SessionAudioPlayer?0:0}},
-        h(Icon,{n:'play',cls:'w-5 h-5'}),' Begin Session')
-    )
-  );
-
-  const cur=sess.steps[step],isLastStep=step===sess.steps.length-1;
-  const stepProgress=Math.round(((step+1)/sess.steps.length)*100);
-
-  return h('div',{style:{minHeight:'100vh',background:'linear-gradient(160deg,#0f0824 0%,#170b35 45%,#0f172a 100%)',display:'flex',flexDirection:'column',alignItems:'center',padding:'max(1.25rem,env(safe-area-inset-top)) 1.25rem max(1.5rem,env(safe-area-inset-bottom))'}},
-    h('div',{style:{width:'100%',maxWidth:380,display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.875rem'}},
-      h('button',{onClick:()=>nav('Mental'),style:{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.10)',borderRadius:8,padding:'6px 12px',cursor:'pointer',color:'#a78bfa',fontSize:12,fontWeight:600,fontFamily:'inherit'}},'← Exit'),
-      h('div',{style:{textAlign:'center',flex:1,padding:'0 12px'}},
-        h('div',{style:{fontSize:11,fontWeight:700,color:'#7c3aed',textTransform:'uppercase',letterSpacing:'0.06em',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},sess.title.slice(0,30)),
-        h('div',{style:{fontSize:10,color:'#6d28d9',marginTop:1}},`Step ${step+1} of ${sess.steps.length}`)),
-      h('div',{style:{fontSize:11,fontWeight:700,color:'#7c3aed',background:'rgba(109,40,217,0.15)',border:'1px solid rgba(109,40,217,0.25)',borderRadius:6,padding:'4px 8px'}},`${stepProgress}%`)
-    ),
-    h('div',{style:{width:'100%',maxWidth:380,height:3,background:'rgba(109,40,217,0.18)',borderRadius:2,marginBottom:'2rem'}},
-      h('div',{style:{height:'100%',borderRadius:2,background:'linear-gradient(to right,#7c3aed,#a855f7)',width:`${stepProgress}%`,transition:'width 0.6s ease'}})),
-    h(BreathingOrb,{isPlaying:started&&!paused&&!done}),
-    h('div',{style:{marginTop:12,fontSize:15,fontWeight:700,color:'rgba(168,85,247,0.55)',fontVariantNumeric:'tabular-nums'}},fmtTime(timeLeft)),
-    h('div',{style:{textAlign:'center',maxWidth:340,flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'1.25rem 0'}},
-      h('p',{style:{fontSize:'1.075rem',color:'#e2d9f3',lineHeight:1.8,fontWeight:500}},cur?.instruction)),
-    h('div',{style:{width:'100%',maxWidth:380,display:'flex',flexDirection:'column',gap:9}},
-      h('div',{style:{display:'flex',gap:9}},
-        step>0&&h('button',{onClick:()=>{clearInterval(intRef.current);setStep(s=>s-1);},style:{flex:'0 0 auto',padding:'13px 16px',background:'rgba(255,255,255,0.07)',color:'#a78bfa',borderRadius:10,fontWeight:700,border:'1px solid rgba(168,85,247,0.20)',cursor:'pointer',fontSize:14,fontFamily:'inherit'}},
-          h(Icon,{n:'arrowL',cls:'w-4 h-4'})),
-        h('button',{onClick:goNext,style:{flex:1,padding:'14px',border:'none',cursor:'pointer',fontSize:14,fontWeight:700,borderRadius:10,color:'#fff',fontFamily:'inherit',
-          background:isLastStep?'#16a34a':'linear-gradient(135deg,#5b21b6,#4338ca)'}},
-          isLastStep?h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8}},h(Icon,{n:'circleCheck',cls:'w-4 h-4'}),'Complete Session')
-          :h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:6}},'Next Step ',h(Icon,{n:'chevR',cls:'w-4 h-4'}))
-        )
-      ),
-      h('div',{style:{display:'flex',gap:9}},
-        h('button',{onClick:skipStep,style:{flex:1,padding:'11px',background:'transparent',color:'rgba(109,40,217,0.8)',borderRadius:10,fontWeight:600,border:'1px solid rgba(109,40,217,0.30)',cursor:'pointer',fontSize:13,fontFamily:'inherit'}},isLastStep?'Skip & Complete':'Skip Step'),
-        h('button',{onClick:()=>{setPaused(p=>!p);if(!paused)clearInterval(intRef.current);},style:{flex:'0 0 auto',padding:'11px 16px',background:'transparent',color:'rgba(109,40,217,0.8)',borderRadius:10,fontWeight:600,border:'1px solid rgba(109,40,217,0.30)',cursor:'pointer',fontSize:13,fontFamily:'inherit'}},
-          h(Icon,{n:paused?'play':'pause',cls:'w-4 h-4'}))
-      )
-    )
-  );
-}
-
-// ================================================================
 // M-C: Routine pages
 // ================================================================
 function MentalRoutinesPage({params}){
@@ -616,7 +497,7 @@ function EmbeddedSessionPlayer({session,routineTitle,sessionNum,totalSessions,on
 }
 
 Object.assign(window.SC_APP,{
-  MentalPage,MentalPlayerPage,MentalRoutinesPage,MentalRoutinePlayerPage,
+  MentalPage,MentalRoutinesPage,MentalRoutinePlayerPage,
   BreathingOrb,PostSessionRating,MENTAL_SCENARIOS,MENTAL_ROUTINES,
 });
 console.log('[SC] app-mental v3.2 — responsive layout fix');
