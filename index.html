@@ -17,6 +17,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config={theme:{extend:{}},corePlugins:{preflight:false}};</script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles-patch.css">
 
   <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds. -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
@@ -32,6 +33,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+  <!-- Framer Motion UMD — page & tab transition animations -->
+  <script src="https://cdn.jsdelivr.net/npm/framer-motion@10/dist/framer-motion.js"></script>
 
   <style>
     /* ── CRITICAL LAYOUT STYLES ── */
@@ -102,6 +105,7 @@
   <script src="app-data.js"></script>
   <script src="app-ui.js"></script>
   <script src="app-ui-patch.js"></script>
+  <script src="app-ui-audio.js"></script>
   <script src="app-onboard.js"></script>
   <script src="app-assessment.js"></script>
   <script src="app-cricketer-db.js"></script>
