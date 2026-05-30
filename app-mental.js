@@ -1,11 +1,11 @@
 // ================================================================
 // Save as: app-mental.js
-// SmartCrick AI — Mental Training v3.3
-// Changes from v3.2:
-//   - Tab buttons use onPointerDown for zero-latency UIAudio.tick()
-//   - AnimatePresence wraps tab content (sessions ↔ routines y-slide)
-//   - getTabContent() helper eliminates code duplication in FM/fallback paths
-//   - Graceful fallback when Framer Motion CDN is unavailable
+// SmartCrick AI — Mental Training v3.2
+// LAYOUT FIX: Content properly fills desktop width.
+//   - Scenario grid now uses auto-fill columns (responsive)
+//   - Page padding works on both phone and desktop
+//   - All sections use consistent padding/max-width logic
+// Features: M-A breathing orb, M-B scenarios, M-C routines, M-D rating
 // ================================================================
 (function () {
 'use strict';
@@ -13,19 +13,7 @@ const { createElement:h, useState, useEffect, useRef, Fragment } = React;
 const { nav, DB, awardXP, fireConfetti, fmtTime, getEncouragement } = window.SC_APP;
 const { MENTAL_SESSIONS, MENT_CATS } = window.SC_APP;
 const { Icon, XPBadge, PremiumBadge, EmptyState, PageHeader } = window.SC_APP;
-
-// ── Framer Motion helpers — graceful fallback if CDN not loaded ───
-const _FM   = window.framerMotion || window.FramerMotion || null;
-const _AP   = _FM ? _FM.AnimatePresence : null;   // AnimatePresence component
-const _mDiv = (_FM && _FM.motion) ? _FM.motion.div : null; // motion.div component
-
-// Tab transition props — y-axis slide, fast + subtle (per spec)
-const TAB_ANIM = {
-  initial:    { opacity:0, y:8  },
-  animate:    { opacity:1, y:0  },
-  exit:       { opacity:0, y:-8 },
-  transition: { duration:0.18, ease:'easeInOut' },
-};
+const MentalRoutineCreatorTab = () => window.SC_APP.MentalRoutineCreatorTab ? h(window.SC_APP.MentalRoutineCreatorTab, null) : null;
 
 // ── M-B: Scenarios ────────────────────────────────────────────────
 const MENTAL_SCENARIOS=[
@@ -109,12 +97,14 @@ function PostSessionRating({onRate}){
 }
 
 // ── Page inner padding — consistent on phone + desktop ───────────
+// On desktop (no bottom nav), pb-28 becomes pb-8 via CSS media query.
+// This wrapper provides consistent horizontal padding.
 function ContentWrap({children}){
   return h('div',{style:{width:'100%',maxWidth:860,margin:'0 auto',padding:'0 0 120px 0'},className:'mental-content-wrap'},children);
 }
 
 // ================================================================
-// MENTAL PAGE — fully responsive, with animated tab transitions
+// MENTAL PAGE — fully responsive
 // ================================================================
 function MentalPage(){
   const [cat,setCat]=useState('all');
@@ -130,17 +120,33 @@ function MentalPage(){
     :[];
   const filtered=MENTAL_SESSIONS.filter(s=>(cat==='all'||s.category===cat)&&(search===''||s.title.toLowerCase().includes(search.toLowerCase())));
 
+  // SmartCrick Picks — personalised for this user
   const user=DB.getUser?DB.getUser():(DB.get?DB.get('user'):null);
   const pickSessions=(window.SC_APP.PersonalisationEngine&&user)
     ?window.SC_APP.PersonalisationEngine.getPickSessions(MENTAL_SESSIONS,user,done)
     :[];
   const pickIds=new Set(pickSessions.map(s=>s.id));
 
-  // ── Tab content helper — called by both FM and no-FM paths ───────
-  // Defined here so it closes over the component's state.
-  function getTabContent(){
-    if(tab==='routines'){
-      return h('div',{style:{padding:'12px 16px 0'}},
+  return h('div',{style:{minHeight:'100dvh',background:'#0d1117'}},
+    h(PageHeader,{title:'Mental Training',subtitle:`${MENTAL_SESSIONS.length} sessions · ${MENTAL_ROUTINES.length} routines · 77 routines`,gradient:'linear-gradient(135deg,#5b21b6,#4f46e5)'}),
+
+    h(ContentWrap,null,
+      // Sessions / Routines / Creator tab
+      h('div',{style:{display:'flex',gap:0,margin:'16px 16px 0',borderRadius:10,overflow:'hidden',border:'1px solid rgba(48,54,61,0.9)'}},
+        ['sessions','routines','creator'].map(t=>h('button',{key:t,onClick:()=>{setTab(t);setScenario(null);},style:{
+          flex:1,padding:'10px 4px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',border:'none',
+          background:tab===t?'linear-gradient(135deg,#5b21b6,#4f46e5)':'rgba(22,27,34,0.9)',
+          color:tab===t?'#fff':'#6b7280',transition:'all 0.15s',
+        }},t==='sessions'?'🧠 Sessions':t==='routines'?'🔗 Routines':'✨ Creator'))
+      ),
+
+      // Tab content with animation
+      (function(){
+        var FM=window.FramerMotion;
+        var tabContent=h(Fragment,null,
+
+      // ── Routines tab ──────────────────────────────────────────
+      tab==='routines'&&h('div',{style:{padding:'12px 16px 0'}},
         h('p',{style:{fontSize:12,color:'#6b7280',marginBottom:12,lineHeight:1.6}},'Chain multiple sessions together. Complete a full routine for bonus XP!'),
         h('div',{style:{display:'flex',flexDirection:'column',gap:10}},
           MENTAL_ROUTINES.map(r=>{
@@ -148,7 +154,7 @@ function MentalPage(){
             const totalXP=sessions.reduce((s,x)=>s+x.xp_value,0)+r.bonusXP;
             return h('button',{key:r.id,onClick:()=>nav('MentalRoutines',{id:r.id}),style:{
               display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderRadius:12,
-              background:r.bg,border:`1px solid ${r.border}`,cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
+              background:r.bg,border:`1px solid ${r.border}`,cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',border:'none',
             }},
               h('div',{style:{width:44,height:44,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:'rgba(0,0,0,0.2)'}},
                 h(Icon,{n:r.icon,cls:'w-5 h-5',style:{color:r.color}})),
@@ -165,211 +171,193 @@ function MentalPage(){
             );
           })
         )
-      );
-    }
-
-    // ── Sessions tab content ──────────────────────────────────────
-    return h(Fragment,null,
-      // M-B: Scenario entry — 3-column responsive grid
-      h('div',{style:{padding:'14px 16px 0'}},
-        h('p',{style:{fontSize:11,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}},'How are you feeling right now?'),
-        h('div',{style:{
-          display:'grid',
-          gridTemplateColumns:'repeat(3, minmax(0, 1fr))',
-          gap:8,
-          width:'100%',
-          overflow:'hidden',
-        }},
-          MENTAL_SCENARIOS.map(sc=>{
-            const isActive=activeScenario?.id===sc.id;
-            return h('button',{key:sc.id,onClick:()=>setScenario(prev=>prev?.id===sc.id?null:sc),style:{
-              display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,
-              padding:'10px 4px',borderRadius:10,cursor:'pointer',fontFamily:'inherit',
-              background:isActive?sc.bg:'rgba(22,27,34,0.9)',
-              border:`1.5px solid ${isActive?sc.border:'rgba(48,54,61,0.8)'}`,
-              transform:isActive?'scale(1.04)':'scale(1)',transition:'all 0.15s',
-              minHeight:70,
-            }},
-              h('span',{style:{fontSize:20,lineHeight:1}},sc.emoji),
-              h('span',{style:{
-                fontSize:10,fontWeight:600,textAlign:'center',lineHeight:1.3,
-                color:isActive?sc.color:'#6b7280',
-                overflowWrap:'break-word',wordBreak:'break-word',
-                width:'100%',
-              }},sc.label)
-            );
-          })
-        )
       ),
 
-      // Scenario recommendations
-      activeScenario&&h('div',{style:{margin:'12px 16px 0',padding:'14px',borderRadius:12,background:activeScenario.bg,border:`1px solid ${activeScenario.border}`}},
-        h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
-          h('p',{style:{fontSize:12,fontWeight:700,color:activeScenario.color,textTransform:'uppercase',letterSpacing:'0.08em'}},'Recommended for you'),
-          h('button',{onClick:()=>setScenario(null),style:{fontSize:11,color:'#6b7280',background:'none',border:'none',cursor:'pointer',fontWeight:600}},'Clear ×')
-        ),
-        h('div',{style:{display:'flex',flexDirection:'column',gap:7}},
-          scenarioSessions.slice(0,3).map(s=>{
-            const sc2=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
-            return h('button',{key:s.id,onClick:()=>nav('MentalPlayer',{id:s.id}),style:{
-              display:'flex',alignItems:'center',gap:10,padding:'11px 12px',borderRadius:9,
-              background:'rgba(13,17,23,0.6)',border:'1px solid rgba(48,54,61,0.7)',
-              cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
-            }},
-              h('div',{style:{width:36,height:36,borderRadius:7,flexShrink:0,background:`linear-gradient(135deg,${sc2.from},${sc2.to})`,display:'flex',alignItems:'center',justifyContent:'center'}},
-                h(Icon,{n:sc2.icon,cls:'w-4 h-4 text-white'})),
-              h('div',{style:{flex:1,minWidth:0}},
-                h('div',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title),
-                h('div',{style:{display:'flex',alignItems:'center',gap:6,marginTop:3}},
-                  h('span',{style:{fontSize:11,color:'#6b7280'}},`${Math.floor(s.duration_seconds/60)} min`),
-                  h(XPBadge,{xp:s.xp_value}))
-              ),
-              h(Icon,{n:'play',cls:'w-4 h-4 flex-shrink-0',style:{color:activeScenario.color}})
-            );
-          })
-        )
-      ),
-
-      // Category pills
-      h('div',{style:{display:'flex',gap:8,padding:'12px 16px 0',overflowX:'auto',scrollbarWidth:'none'}},
-        MENT_CATS.map(c=>h('button',{key:c.id,onClick:()=>{setCat(c.id);setScenario(null);},
-          style:{
-            display:'flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:20,
-            fontSize:12,fontWeight:700,whiteSpace:'nowrap',flexShrink:0,cursor:'pointer',fontFamily:'inherit',
-            background:cat===c.id?`linear-gradient(135deg,${c.from},${c.to})`:'rgba(22,27,34,0.9)',
-            color:cat===c.id?'#fff':'#8b949e',
-            border:cat===c.id?'none':'1px solid rgba(48,54,61,0.9)',
-            boxShadow:cat===c.id?`0 4px 14px ${c.from}40`:'none',
+      // ── Sessions tab ──────────────────────────────────────────
+      tab==='sessions'&&h(Fragment,null,
+        // M-B: Scenario entry — 3-column responsive grid
+        h('div',{style:{padding:'14px 16px 0'}},
+          h('p',{style:{fontSize:11,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:10}},'How are you feeling right now?'),
+          // KEY FIX: Use minmax so columns are auto-sized and never overflow
+          h('div',{style:{
+            display:'grid',
+            gridTemplateColumns:'repeat(3, minmax(0, 1fr))',
+            gap:8,
+            // Ensure grid never exceeds container
+            width:'100%',
+            overflow:'hidden',
           }},
-          h(Icon,{n:c.icon,cls:'w-3.5 h-3.5',style:{color:cat===c.id?'#fff':'#484f58'}}),c.label))
-      ),
-
-      // Search
-      h('div',{style:{padding:'8px 16px 8px'}},
-        h('div',{style:{position:'relative'}},
-          h(Icon,{n:'search',cls:'w-4 h-4',style:{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'#484f58'}}),
-          h('input',{type:'text',placeholder:'Search sessions…',value:search,onChange:e=>{setSearch(e.target.value);setScenario(null);},
-            style:{width:'100%',padding:'10px 14px 10px 38px',borderRadius:10,fontSize:14,outline:'none',boxSizing:'border-box',
-              background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)',color:'#e6edf3',fontFamily:'inherit'}})
-        )
-      ),
-
-      // SmartCrick Picks
-      pickSessions.length>0&&!search&&cat==='all'&&h('div',{style:{padding:'8px 16px 0'}},
-        h('style',null,
-          '@keyframes sc-mental-pick{0%,100%{border-color:rgba(139,92,246,0.3)}50%{border-color:rgba(139,92,246,0.6)}}'
-        ),
-        h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
-          h('span',{style:{fontSize:11,fontWeight:800,color:'#a78bfa',letterSpacing:'0.08em',textTransform:'uppercase'}},'✦ SmartCrick Pick'),
-          h('div',{style:{flex:1,height:1,background:'linear-gradient(to right,rgba(167,139,250,0.3),transparent)'}}),
-          h('span',{style:{fontSize:10,color:'#6b7280',fontWeight:600}},'personalised for you')
-        ),
-        h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
-          pickSessions.map(s=>{
-            const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
-            const mins=Math.floor(s.duration_seconds/60);
-            const isDone=done.includes(s.id);
-            return h('button',{key:'pick-'+s.id,onClick:()=>nav('MentalPlayer',{id:s.id}),style:{
-              display:'flex',alignItems:'center',gap:12,padding:'13px 14px',borderRadius:11,
-              background:'rgba(22,27,34,0.95)',border:'1px solid rgba(139,92,246,0.35)',
-              cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
-              boxShadow:'0 0 0 1px rgba(139,92,246,0.08),0 4px 14px rgba(109,40,217,0.10)',
-              animation:'sc-mental-pick 3s ease-in-out infinite',
-            }},
-              h('div',{style:{width:40,height:40,borderRadius:8,flexShrink:0,position:'relative',background:`linear-gradient(135deg,${sc.from},${sc.to})`,display:'flex',alignItems:'center',justifyContent:'center'}},
-                h(Icon,{n:sc.icon,cls:'w-4 h-4 text-white'}),
-                isDone&&h('div',{style:{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center'}},
-                  h(Icon,{n:'check',cls:'w-2.5 h-2.5 text-white'}))
-              ),
-              h('div',{style:{flex:1,minWidth:0}},
-                h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:3}},
-                  h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'1px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.06em',textTransform:'uppercase'}},'✦ Pick'),
-                  h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title)
-                ),
-                h('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                  h('span',{style:{fontSize:11,color:'#6b7280'}},mins+' min'),
-                  h(XPBadge,{xp:s.xp_value}))
-              ),
-              h(Icon,{n:'play',cls:'w-4 h-4 flex-shrink-0',style:{color:'#8b5cf6'}})
-            );
-          })
-        )
-      ),
-
-      // Session list
-      h('div',{style:{padding:'4px 16px 0'}},
-        filtered.length===0
-          ?h(EmptyState,{icon:'brain',title:'No sessions found',desc:'Try a different category or search term'})
-          :filtered.map(s=>{
-            const mins=Math.floor(s.duration_seconds/60),isDone=done.includes(s.id);
-            const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
-            return h('button',{key:s.id,onClick:()=>nav('MentalPlayer',{id:s.id}),style:{
-              display:'flex',alignItems:'center',gap:12,padding:'14px',borderRadius:10,
-              background:'rgba(22,27,34,0.9)',border:`1px solid ${isDone?'rgba(22,163,74,0.3)':'rgba(48,54,61,0.9)'}`,
-              cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',marginBottom:8,
-            }},
-              h('div',{style:{width:44,height:44,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',background:`linear-gradient(135deg,${sc.from},${sc.to})`}},
-                h(Icon,{n:sc.icon,cls:'w-5 h-5 text-white'}),
-                isDone&&h('div',{style:{position:'absolute',top:-4,right:-4,width:18,height:18,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center'}},
-                  h(Icon,{n:'check',cls:'w-3 h-3 text-white'}))
-              ),
-              h('div',{style:{flex:1,minWidth:0}},
-                h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:4}},
-                  h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title),
-                  h('div',{style:{display:'flex',alignItems:'center',gap:4,flexShrink:0}},
-                    pickIds.has(s.id)&&h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'1px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.04em',textTransform:'uppercase'}},'✦ Pick'),
-                    s.is_premium&&h(PremiumBadge)
-                  )
-                ),
-                h('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                  h('span',{style:{fontSize:11,color:'#484f58'}},`${mins} min`),
-                  h(XPBadge,{xp:s.xp_value}),
-                  isDone&&h('span',{style:{fontSize:11,fontWeight:700,color:'#4ade80'}},'✓')
-                )
-              )
-            );
-          })
-      )
-    );
-  }
-  // ── end getTabContent ─────────────────────────────────────────────
-
-  return h('div',{style:{minHeight:'100dvh',background:'#0d1117'}},
-    h(PageHeader,{title:'Mental Training',subtitle:`${MENTAL_SESSIONS.length} sessions · ${MENTAL_ROUTINES.length} routines`,gradient:'linear-gradient(135deg,#5b21b6,#4f46e5)'}),
-
-    h(ContentWrap,null,
-      // ── Sessions / Routines tab bar — STATIC, not animated ────────
-      // onPointerDown fires at the INSTANT of contact → zero-latency tick.
-      // onClick handles keyboard (Enter) as accessibility fallback.
-      h('div',{style:{display:'flex',gap:0,margin:'16px 16px 0',borderRadius:10,overflow:'hidden',border:'1px solid rgba(48,54,61,0.9)'}},
-        ['sessions','routines'].map(t=>h('button',{key:t,
-          onPointerDown:function(){
-            if(window.SC_APP&&window.SC_APP.UIAudio)window.SC_APP.UIAudio.tick();
-            setTab(t);setScenario(null);
-          },
-          onClick:function(e){
-            // detail===0 → keyboard activation (Enter key); pointer already handled above
-            if(e.detail===0){setTab(t);setScenario(null);}
-          },
-          style:{
-            flex:1,padding:'10px 8px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',border:'none',
-            background:tab===t?'linear-gradient(135deg,#5b21b6,#4f46e5)':'rgba(22,27,34,0.9)',
-            color:tab===t?'#fff':'#6b7280',transition:'all 0.15s',
-          }
-        },t==='sessions'?'🧠 Sessions':'🔗 Routines'))
-      ),
-
-      // ── Animated tab content ──────────────────────────────────────
-      // AnimatePresence mode="wait": exit completes before enter starts.
-      // key=tab: changing tab triggers exit → enter cycle.
-      // Fallback: instant swap when Framer Motion CDN unavailable.
-      _AP&&_mDiv
-        ?h(_AP,{mode:'wait'},
-            h(_mDiv,Object.assign({key:tab},TAB_ANIM),
-              getTabContent()
-            )
+            MENTAL_SCENARIOS.map(sc=>{
+              const isActive=activeScenario?.id===sc.id;
+              return h('button',{key:sc.id,onClick:()=>setScenario(prev=>prev?.id===sc.id?null:sc),style:{
+                display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,
+                // Use padding that scales with column width
+                padding:'10px 4px',borderRadius:10,cursor:'pointer',fontFamily:'inherit',
+                background:isActive?sc.bg:'rgba(22,27,34,0.9)',
+                border:`1.5px solid ${isActive?sc.border:'rgba(48,54,61,0.8)'}`,
+                transform:isActive?'scale(1.04)':'scale(1)',transition:'all 0.15s',
+                // MIN SIZE: always touch-friendly
+                minHeight:70,
+              }},
+                h('span',{style:{fontSize:20,lineHeight:1}},sc.emoji),
+                h('span',{style:{
+                  fontSize:10,fontWeight:600,textAlign:'center',lineHeight:1.3,
+                  color:isActive?sc.color:'#6b7280',
+                  // Don't overflow — wrap text
+                  overflowWrap:'break-word',wordBreak:'break-word',
+                  width:'100%',
+                }},sc.label)
+              );
+            })
           )
-        :getTabContent()
+        ),
+
+        // Scenario recommendations
+        activeScenario&&h('div',{style:{margin:'12px 16px 0',padding:'14px',borderRadius:12,background:activeScenario.bg,border:`1px solid ${activeScenario.border}`}},
+          h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}},
+            h('p',{style:{fontSize:12,fontWeight:700,color:activeScenario.color,textTransform:'uppercase',letterSpacing:'0.08em'}},'Recommended for you'),
+            h('button',{onClick:()=>setScenario(null),style:{fontSize:11,color:'#6b7280',background:'none',border:'none',cursor:'pointer',fontWeight:600}},'Clear ×')
+          ),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:7}},
+            scenarioSessions.slice(0,3).map(s=>{
+              const sc2=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
+              return h('button',{key:s.id,onClick:()=>nav('MentalPlayer',{id:s.id}),style:{
+                display:'flex',alignItems:'center',gap:10,padding:'11px 12px',borderRadius:9,
+                background:'rgba(13,17,23,0.6)',border:'1px solid rgba(48,54,61,0.7)',
+                cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
+              }},
+                h('div',{style:{width:36,height:36,borderRadius:7,flexShrink:0,background:`linear-gradient(135deg,${sc2.from},${sc2.to})`,display:'flex',alignItems:'center',justifyContent:'center'}},
+                  h(Icon,{n:sc2.icon,cls:'w-4 h-4 text-white'})),
+                h('div',{style:{flex:1,minWidth:0}},
+                  h('div',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title),
+                  h('div',{style:{display:'flex',alignItems:'center',gap:6,marginTop:3}},
+                    h('span',{style:{fontSize:11,color:'#6b7280'}},`${Math.floor(s.duration_seconds/60)} min`),
+                    h(XPBadge,{xp:s.xp_value}))
+                ),
+                h(Icon,{n:'play',cls:'w-4 h-4 flex-shrink-0',style:{color:activeScenario.color}})
+              );
+            })
+          )
+        ),
+
+        // Category pills
+        h('div',{style:{display:'flex',gap:8,padding:'12px 16px 0',overflowX:'auto',scrollbarWidth:'none'}},
+          MENT_CATS.map(c=>h('button',{key:c.id,onClick:()=>{setCat(c.id);setScenario(null);},
+            style:{
+              display:'flex',alignItems:'center',gap:6,padding:'7px 14px',borderRadius:20,
+              fontSize:12,fontWeight:700,whiteSpace:'nowrap',flexShrink:0,cursor:'pointer',fontFamily:'inherit',
+              background:cat===c.id?`linear-gradient(135deg,${c.from},${c.to})`:'rgba(22,27,34,0.9)',
+              color:cat===c.id?'#fff':'#8b949e',
+              border:cat===c.id?'none':'1px solid rgba(48,54,61,0.9)',
+              boxShadow:cat===c.id?`0 4px 14px ${c.from}40`:'none',
+            }},
+            h(Icon,{n:c.icon,cls:'w-3.5 h-3.5',style:{color:cat===c.id?'#fff':'#484f58'}}),c.label))
+        ),
+
+        // Search
+        h('div',{style:{padding:'8px 16px 8px'}},
+          h('div',{style:{position:'relative'}},
+            h(Icon,{n:'search',cls:'w-4 h-4',style:{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'#484f58'}}),
+            h('input',{type:'text',placeholder:'Search sessions…',value:search,onChange:e=>{setSearch(e.target.value);setScenario(null);},
+              style:{width:'100%',padding:'10px 14px 10px 38px',borderRadius:10,fontSize:14,outline:'none',boxSizing:'border-box',
+                background:'rgba(22,27,34,0.9)',border:'1px solid rgba(48,54,61,0.9)',color:'#e6edf3',fontFamily:'inherit'}})
+          )
+        ),
+
+        // ── SmartCrick Picks for Mental ───────────────────────────────
+        pickSessions.length>0&&!search&&cat==='all'&&h('div',{style:{padding:'8px 16px 0'}},
+          h('style',null,
+            '@keyframes sc-mental-pick{0%,100%{border-color:rgba(139,92,246,0.3)}50%{border-color:rgba(139,92,246,0.6)}}'
+          ),
+          h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
+            h('span',{style:{fontSize:11,fontWeight:800,color:'#a78bfa',letterSpacing:'0.08em',textTransform:'uppercase'}},'✦ SmartCrick Pick'),
+            h('div',{style:{flex:1,height:1,background:'linear-gradient(to right,rgba(167,139,250,0.3),transparent)'}}),
+            h('span',{style:{fontSize:10,color:'#6b7280',fontWeight:600}},'personalised for you')
+          ),
+          h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
+            pickSessions.map(s=>{
+              const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
+              const mins=Math.floor(s.duration_seconds/60);
+              const isDone=done.includes(s.id);
+              return h('button',{key:'pick-'+s.id,onClick:()=>nav('MentalPlayer',{id:s.id}),style:{
+                display:'flex',alignItems:'center',gap:12,padding:'13px 14px',borderRadius:11,
+                background:'rgba(22,27,34,0.95)',border:'1px solid rgba(139,92,246,0.35)',
+                cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',
+                boxShadow:'0 0 0 1px rgba(139,92,246,0.08),0 4px 14px rgba(109,40,217,0.10)',
+                animation:'sc-mental-pick 3s ease-in-out infinite',
+              }},
+                h('div',{style:{width:40,height:40,borderRadius:8,flexShrink:0,position:'relative',background:`linear-gradient(135deg,${sc.from},${sc.to})`,display:'flex',alignItems:'center',justifyContent:'center'}},
+                  h(Icon,{n:sc.icon,cls:'w-4 h-4 text-white'}),
+                  isDone&&h('div',{style:{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center'}},
+                    h(Icon,{n:'check',cls:'w-2.5 h-2.5 text-white'}))
+                ),
+                h('div',{style:{flex:1,minWidth:0}},
+                  h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:3}},
+                    h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'1px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.06em',textTransform:'uppercase'}},'✦ Pick'),
+                    h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title)
+                  ),
+                  h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                    h('span',{style:{fontSize:11,color:'#6b7280'}},mins+' min'),
+                    h(XPBadge,{xp:s.xp_value}))
+                ),
+                h(Icon,{n:'play',cls:'w-4 h-4 flex-shrink-0',style:{color:'#8b5cf6'}})
+              );
+            })
+          )
+        ),
+
+        // Session list
+        h('div',{style:{padding:'4px 16px 0'}},
+          filtered.length===0
+            ?h(EmptyState,{icon:'brain',title:'No sessions found',desc:'Try a different category or search term'})
+            :filtered.map(s=>{
+              const mins=Math.floor(s.duration_seconds/60),isDone=done.includes(s.id);
+              const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
+              return h('button',{key:s.id,onClick:()=>nav('MentalPlayer',{id:s.id}),style:{
+                display:'flex',alignItems:'center',gap:12,padding:'14px',borderRadius:10,
+                background:'rgba(22,27,34,0.9)',border:`1px solid ${isDone?'rgba(22,163,74,0.3)':'rgba(48,54,61,0.9)'}`,
+                cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',marginBottom:8,
+              }},
+                h('div',{style:{width:44,height:44,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',background:`linear-gradient(135deg,${sc.from},${sc.to})`}},
+                  h(Icon,{n:sc.icon,cls:'w-5 h-5 text-white'}),
+                  isDone&&h('div',{style:{position:'absolute',top:-4,right:-4,width:18,height:18,borderRadius:'50%',background:'#16a34a',display:'flex',alignItems:'center',justifyContent:'center'}},
+                    h(Icon,{n:'check',cls:'w-3 h-3 text-white'}))
+                ),
+                h('div',{style:{flex:1,minWidth:0}},
+                  h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:4}},
+                    h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title),
+                    h('div',{style:{display:'flex',alignItems:'center',gap:4,flexShrink:0}},
+                      pickIds.has(s.id)&&h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'1px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.04em',textTransform:'uppercase'}},'✦ Pick'),
+                      s.is_premium&&h(PremiumBadge)
+                    )
+                  ),
+                  h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                    h('span',{style:{fontSize:11,color:'#484f58'}},`${mins} min`),
+                    h(XPBadge,{xp:s.xp_value}),
+                    isDone&&h('span',{style:{fontSize:11,fontWeight:700,color:'#4ade80'}},'✓')
+                  )
+                )
+              );
+            })
+        )
+      ),
+
+      // ── Creator tab ───────────────────────────────────────────
+      tab==='creator'&&h(MentalRoutineCreatorTab,null)
+
+        );// end tabContent Fragment
+        if(!FM) return tabContent;
+        return h(FM.AnimatePresence,{mode:'wait'},
+          h(FM.motion.div,{
+            key:tab,
+            initial:{opacity:0,y:8},
+            animate:{opacity:1,y:0},
+            exit:{opacity:0,y:-8},
+            transition:{duration:0.18,ease:'easeInOut'},
+            style:{width:'100%'},
+          },tabContent)
+        );
+      })()
     )
   );
 }
@@ -631,5 +619,5 @@ Object.assign(window.SC_APP,{
   MentalPage,MentalPlayerPage,MentalRoutinesPage,MentalRoutinePlayerPage,
   BreathingOrb,PostSessionRating,MENTAL_SCENARIOS,MENTAL_ROUTINES,
 });
-console.log('[SC] app-mental v3.3 — onPointerDown audio + AnimatePresence tab transitions');
+console.log('[SC] app-mental v3.2 — responsive layout fix');
 })();
