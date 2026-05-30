@@ -5,16 +5,6 @@ const A = window.SC_APP;
 const { DB, nav, awardXP } = A;
 const { Icon, XPBadge, PageHeader, BottomNav, TopBar } = A;
 
-var _FM   = window.framerMotion || window.FramerMotion || null;
-var _AP   = _FM ? _FM.AnimatePresence : null;
-var _mDiv = (_FM && _FM.motion) ? _FM.motion.div : null;
-var TAB_ANIM = {
-  initial:    { opacity: 0, y: 8  },
-  animate:    { opacity: 1, y: 0  },
-  exit:       { opacity: 0, y: -8 },
-  transition: { duration: 0.18, ease: 'easeInOut' },
-};
-
 // ===== jsPDF TRAINING REPORT (P5-G) =====
 function generateTrainingReport() {
   try {
@@ -498,302 +488,6 @@ function ProfilePage(props) {
     { key: 'consistency', label: 'Consistency', color: '#14b8a6' },
   ];
 
-  function getTabContent() {
-    if (activeTab === 'overview') return h(Fragment, null,
-      // Stats grid with icons
-      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 } },
-        [
-          { icon: '🏏', label: 'Drills done',   value: progress.drills_done || 0,   color: '#3b82f6' },
-          { icon: '🧘', label: 'Mental done',   value: progress.mental_done || 0,   color: '#8b5cf6' },
-          { icon: '💪', label: 'Workouts',      value: progress.workouts_done || 0, color: '#10b981' },
-          { icon: '🔥', label: 'Best streak',   value: (progress.longest_streak || 0) + ' days', color: '#f59e0b' },
-          { icon: '⏱', label: 'Practice min',  value: (progress.practice_minutes || 0).toLocaleString(), color: '#6b7280' },
-          { icon: '🏅', label: 'Badges earned', value: earned.length, color: '#f59e0b' },
-        ].map(function(s, i) {
-          return h('div', {
-            key: i,
-            style: {
-              background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
-              borderRadius: 12, padding: '14px',
-              transition: 'transform .15s, box-shadow .15s',
-            },
-            onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.35)'; },
-            onMouseLeave: function(e) { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; },
-          },
-            h('div', { style: { fontSize: 18, marginBottom: 6 } }, s.icon),
-            h('div', { style: { fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 } }, s.value),
-            h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 4, fontWeight: 500 } }, s.label),
-          );
-        })
-      ),
-
-      // 7-day XP chart
-      h('div', { style: { marginBottom: 16, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: '14px' } },
-        h('div', { style: { fontSize: 13, fontWeight: 600, color: '#e5e7eb', marginBottom: 10 } }, 'Last 7 Days'),
-        h('div', { style: { display: 'flex', gap: 6, alignItems: 'flex-end', height: 60 },
-          role: 'img', 'aria-label': '7 day XP bar chart',
-        },
-          xpLog.map(function(d) {
-            var maxXP = Math.max.apply(null, xpLog.map(function(x) { return x.xp || 0; }).concat([1]));
-            var h2 = Math.max(((d.xp || 0) / maxXP) * 52, d.xp > 0 ? 4 : 1);
-            return h('div', { key: d.date, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
-              h('div', { style: { fontSize: 9, color: '#6b7280' } }, d.xp > 0 ? d.xp : ''),
-              h('div', { style: { width: '100%', height: h2 + 'px', background: d.xp > 0 ? '#16a34a' : 'rgba(255,255,255,.05)', borderRadius: 3, transition: 'height .4s' } }),
-              h('div', { style: { fontSize: 9, color: '#4b5563' } }, (d.date || '').slice(5)),
-            );
-          })
-        ),
-      ),
-
-      // Download report button
-      h('button', {
-        onClick: handleDownloadReport,
-        disabled: reportGenerating,
-        'aria-label': 'Download training report as PDF',
-        style: {
-          width: '100%', padding: '14px', borderRadius: 10, border: 'none',
-          background: reportGenerating ? 'rgba(255,255,255,.06)' : 'linear-gradient(135deg,#1a3a2a,#16a34a20)',
-          border: '1px solid rgba(22,163,74,.3)', color: reportGenerating ? '#6b7280' : '#4ade80',
-          fontSize: 14, fontWeight: 600, cursor: reportGenerating ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        },
-        onFocus: function(e) { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(22,163,74,.3)'; },
-        onBlur:  function(e) { e.currentTarget.style.boxShadow = 'none'; },
-      },
-        reportGenerating ? '⏳ Generating...' : '📄 Download Training Report (PDF)',
-      ),
-      h('p', { style: { fontSize: 11, color: '#4b5563', textAlign: 'center', marginTop: 6 } },
-        'Full 9-section PDF report · Earns +20 XP',
-      ),
-    );
-    if (activeTab === 'skills') return h('div', null,
-      h('div', { style: { marginBottom: 12 } },
-        h('div', { style: { fontSize: 20, fontWeight: 700, color: '#e5e7eb', textAlign: 'center' } },
-          Math.round(rating.overall || 0),
-        ),
-        h('div', { style: { fontSize: 12, color: '#6b7280', textAlign: 'center', marginBottom: 16 } }, 'Overall Rating'),
-      ),
-      axes.map(function(ax) {
-        var score = Math.round(rating[ax.key] || 0);
-        var grade = score >= 80 ? 'Elite' : score >= 60 ? 'Strong' : score >= 40 ? 'Developing' : 'Beginner';
-        return h('div', { key: ax.key, style: { marginBottom: 14 } },
-          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
-            h('span', { style: { fontSize: 13, fontWeight: 600, color: '#e5e7eb' } }, ax.label),
-            h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
-              h('span', { style: { fontSize: 10, color: '#6b7280', background: 'rgba(255,255,255,.06)', padding: '2px 7px', borderRadius: 4 } }, grade),
-              h('span', { style: { fontSize: 15, fontWeight: 800, color: ax.color } }, score),
-            ),
-          ),
-          h('div', { style: { height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, overflow: 'hidden' },
-            role: 'progressbar', 'aria-valuenow': score, 'aria-valuemin': 0, 'aria-valuemax': 100,
-            'aria-label': ax.label + ': ' + score + ' out of 100',
-          },
-            h('div', { style: {
-              height: '100%', width: score + '%', borderRadius: 4,
-              background: 'linear-gradient(90deg,' + ax.color + ',' + ax.color + 'cc)',
-              boxShadow: '0 0 8px ' + ax.color + '60',
-              transition: 'width .8s ease-out',
-            } }),
-          ),
-        );
-      }),
-
-      // Mental Fitness
-      h('div', { style: { marginTop: 16, padding: '16px', background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.2)', borderRadius: 12 } },
-        h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
-          h('div', { style: { fontSize: 13, fontWeight: 600, color: '#c4b5fd' } }, '🧠 Mental Fitness Score'),
-          h('div', { style: { fontSize: 24, fontWeight: 800, color: '#8b5cf6' } }, Math.round(mfScore)),
-        ),
-        h('div', { style: { height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, overflow: 'hidden' } },
-          h('div', { style: {
-            height: '100%', width: mfScore + '%', borderRadius: 4,
-            background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
-            boxShadow: '0 0 10px rgba(139,92,246,.5)',
-            transition: 'width .8s ease-out',
-          } }),
-        ),
-      ),
-    );
-    if (activeTab === 'badges') return h('div', null,
-      h('style', null,
-        '@keyframes sc-badge-flip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}' +
-        '.sc-badge-card{perspective:400px}.sc-badge-card:hover .sc-badge-inner{animation:sc-badge-flip .5s ease}'
-      ),
-      earned.length === 0 ? (
-        h('div', { style: { textAlign: 'center', padding: '48px 20px' } },
-          h('div', { style: { fontSize: 48, marginBottom: 12 } }, '🏅'),
-          h('div', { style: { fontSize: 15, fontWeight: 600, color: '#e5e7eb', marginBottom: 6 } }, 'No badges yet'),
-          h('div', { style: { fontSize: 13, color: '#6b7280' } }, 'Complete drills and sessions to earn them!'),
-        )
-      ) : (
-        h('div', null,
-          h('div', { style: { fontSize: 12, color: '#6b7280', marginBottom: 14, fontWeight: 500 } }, earned.length + ' badges earned'),
-          h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }, role: 'list' },
-            earned.map(function(b) {
-              var def = badgeDefs[b] || { icon: '⭐', label: b, desc: '' };
-              return h('div', {
-                key: b, role: 'listitem', className: 'sc-badge-card',
-                style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 12, padding: '14px 12px', cursor: 'default' },
-              },
-                h('div', { className: 'sc-badge-inner' },
-                  h('div', { style: { fontSize: 24, marginBottom: 6 }, 'aria-hidden': 'true' }, '🏅'),
-                  h('div', { style: { fontSize: 12, fontWeight: 700, color: '#fbbf24', marginBottom: 3 } }, def.label),
-                  h('div', { style: { fontSize: 11, color: '#6b7280' } }, def.desc || ''),
-                )
-              );
-            })
-          ),
-        )
-      ),
-    );
-    if (activeTab === 'goals') return h('div', null,
-      // Add goal
-      h('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
-        h('input', {
-          value: goalInput,
-          onChange: function(e) { setGoalInput(e.target.value); },
-          onKeyDown: function(e) { if (e.key === 'Enter') addGoal(); },
-          placeholder: 'Add a new cricket goal...',
-          'aria-label': 'New goal text',
-          style: {
-            flex: 1, padding: '10px 12px',
-            background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)',
-            borderRadius: 8, color: '#e5e7eb', fontSize: 14, outline: 'none',
-          },
-        }),
-        h('button', {
-          onClick: addGoal, 'aria-label': 'Add goal',
-          style: { padding: '10px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 600 },
-        }, '+'),
-      ),
-
-      // Goals list
-      goals.length === 0 ? (
-        h('div', { style: { textAlign: 'center', padding: '30px 20px', color: '#6b7280' } },
-          h('div', { style: { fontSize: 13 } }, 'No goals yet. What do you want to achieve?'),
-        )
-      ) : (
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 }, role: 'list', 'aria-label': 'Your cricket goals' },
-          goals.map(function(g) {
-            return h('div', {
-              key: g.id, role: 'listitem',
-              style: {
-                display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px',
-                background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10,
-              },
-            },
-              h('button', {
-                onClick: function() { toggleGoal(g.id); },
-                'aria-checked': g.completed ? 'true' : 'false', role: 'checkbox',
-                'aria-label': (g.completed ? 'Mark incomplete: ' : 'Mark complete: ') + g.text,
-                style: {
-                  width: 20, height: 20, borderRadius: 5, flexShrink: 0,
-                  background: g.completed ? '#16a34a' : 'transparent',
-                  border: '2px solid ' + (g.completed ? '#16a34a' : '#374151'),
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, color: '#fff',
-                },
-              }, g.completed ? '✓' : ''),
-              h('div', { style: { flex: 1 } },
-                h('div', { style: { fontSize: 13, color: g.completed ? '#6b7280' : '#e5e7eb', textDecoration: g.completed ? 'line-through' : 'none' } }, g.text),
-                g.created && h('div', { style: { fontSize: 11, color: '#4b5563', marginTop: 2 } }, 'Added ' + g.created),
-              ),
-              h('button', {
-                onClick: function() { deleteGoal(g.id); },
-                'aria-label': 'Delete goal: ' + g.text,
-                style: { background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: 16, padding: '0 4px' },
-              }, '×'),
-            );
-          })
-        )
-      ),
-    );
-    if (activeTab === 'dna') return h('div', null,
-      (function() {
-        var dnaReport = null;
-        try { if (A.getFullDNAReport) dnaReport = A.getFullDNAReport(); } catch(e) {}
-        var layer1 = dnaReport && dnaReport.layer1;
-        var layer5 = dnaReport && dnaReport.layer5;
-        var topFive = dnaReport && dnaReport.topFive;
-        var styleLabel = null;
-        try {
-          if (A.BrainEngine && A.BrainEngine.getStyleLabel && A.BrainEngine.buildStyleSignals) {
-            var sig = A.BrainEngine.buildStyleSignals();
-            if (sig) styleLabel = A.BrainEngine.getStyleLabel(sig);
-          }
-        } catch(e) {}
-        return h('div', null,
-          layer1 && layer1.primary ? h('div', {
-            style: { padding: '14px', borderRadius: 14, marginBottom: 12,
-              background: layer1.primary.clr + '10', border: '1px solid ' + layer1.primary.clr + '30' }
-          },
-            h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 } },
-              h('div', { style: { fontSize: 28 } }, layer1.primary.icon),
-              h('div', null,
-                h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'Primary DNA Archetype'),
-                h('div', { style: { fontSize: 16, fontWeight: 800, color: layer1.primary.clr } }, layer1.primary.name),
-                h('div', { style: { fontSize: 11, color: '#6b7280' } }, layer1.primary.tag)
-              )
-            ),
-            h('div', { style: { display: 'flex', gap: 5, flexWrap: 'wrap' } },
-              (layer1.primary.traits || []).map(function(t) {
-                return h('span', { key: t, style: { fontSize: 10, padding: '2px 8px', borderRadius: 99,
-                  background: layer1.primary.clr + '15', color: layer1.primary.clr, fontWeight: 600 } }, t);
-              })
-            )
-          ) : h('div', { style: { padding: 16, textAlign: 'center', color: '#6b7280', fontSize: 13 } },
-            'Complete training sessions to unlock your DNA archetype'
-          ),
-
-          styleLabel && h('div', { style: { padding: '10px 14px', borderRadius: 10, marginBottom: 12,
-            background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)',
-            display: 'flex', alignItems: 'center', gap: 10 } },
-            h('div', { style: { fontSize: 18 } }, '🧠'),
-            h('div', null,
-              h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'AI Playing Style'),
-              h('div', { style: { fontSize: 14, fontWeight: 700, color: '#c084fc' } }, styleLabel)
-            )
-          ),
-
-          layer5 && h('div', { style: { padding: '10px 14px', borderRadius: 10, marginBottom: 12,
-            background: layer5.color + '10', border: '1px solid ' + layer5.color + '25',
-            display: 'flex', alignItems: 'center', gap: 10 } },
-            h('div', { style: { fontSize: 18 } }, layer5.emoji),
-            h('div', null,
-              h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'Growth Trajectory'),
-              h('div', { style: { fontSize: 14, fontWeight: 700, color: layer5.color } }, layer5.label)
-            )
-          ),
-
-          topFive && topFive.length > 0 && h('div', { style: { marginBottom: 14 } },
-            h('div', { style: { fontSize: 12, fontWeight: 700, color: '#e5e7eb', marginBottom: 8 } }, 'Top Pro Matches'),
-            topFive.slice(0, 2).map(function(m) {
-              var p = m.pro, pct = Math.round(m.score * 100);
-              var color = p.era === 'legend' ? '#f59e0b' : '#3b82f6';
-              return h('div', { key: p.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                borderRadius: 10, marginBottom: 6, background: 'rgba(22,27,34,0.9)', border: '1px solid rgba(48,54,61,0.6)' } },
-                h('div', { style: { fontSize: 22 } }, p.emoji || '🏏'),
-                h('div', { style: { flex: 1 } },
-                  h('div', { style: { fontSize: 13, fontWeight: 700, color: '#f0fdf4' } }, p.name),
-                  h('div', { style: { fontSize: 11, color: '#6b7280' } }, p.role + ' · ' + p.country)
-                ),
-                h('div', { style: { fontSize: 16, fontWeight: 900, color: color } }, pct + '%')
-              );
-            })
-          ),
-
-          h('button', { onClick: function() { if (nav) nav('CricketDNA'); },
-            style: { width: '100%', padding: '12px', border: 'none', borderRadius: 10, cursor: 'pointer',
-              background: 'linear-gradient(135deg,#4f046e20,#a855f730)', border: '1px solid rgba(168,85,247,0.3)',
-              color: '#c084fc', fontSize: 14, fontWeight: 700, fontFamily: 'inherit' } },
-            '🧬 Explore Full Cricket DNA →'
-          )
-        );
-      })()
-    );
-    return null;
-  }
-
   return h('div', { style: { paddingBottom: 100, background: '#0d1117', minHeight: '100dvh' } },
     h(TopBar, { title: 'Profile' }),
 
@@ -882,24 +576,329 @@ function ProfilePage(props) {
     h('div', { style: { display: 'flex', borderBottom: '1px solid rgba(255,255,255,.07)', margin: '0 16px' }, role: 'tablist' },
       ['overview', 'skills', 'badges', 'goals', 'dna'].map(function(t) {
         var labels = { overview: 'Overview', skills: 'Skills', badges: 'Badges', goals: 'Goals', dna: '🧬 DNA' };
-        return h('button', { key: t, role: 'tab', 'aria-selected': activeTab === t ? 'true' : 'false',
-          onPointerDown: function() {
-            if (window.SC_APP && window.SC_APP.UIAudio) window.SC_APP.UIAudio.tick();
-            setActiveTab(t);
-          },
-          onClick: function(e) { if (e.detail === 0) setActiveTab(t); },
-          style: tabStyle(t) }, labels[t]);
+        return h('button', { key: t, role: 'tab', 'aria-selected': activeTab === t ? 'true' : 'false', onClick: function() { if(A.playTabClick) A.playTabClick(); setActiveTab(t); }, style: tabStyle(t) }, labels[t]);
       })
     ),
 
     h('div', { style: { padding: '16px 16px 0' } },
-      _AP && _mDiv
-        ? h(_AP, { mode: 'wait' },
-            h(_mDiv, Object.assign({ key: activeTab }, TAB_ANIM, { style: { width: '100%' } }),
-              getTabContent()
-            )
+      (function() {
+        var FM = window.FramerMotion;
+        var tabContent = h(Fragment, null,
+
+      // ===== OVERVIEW TAB =====
+      activeTab === 'overview' && h(Fragment, null,
+        // Stats grid with icons
+        h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 } },
+          [
+            { icon: '🏏', label: 'Drills done',   value: progress.drills_done || 0,   color: '#3b82f6' },
+            { icon: '🧘', label: 'Mental done',   value: progress.mental_done || 0,   color: '#8b5cf6' },
+            { icon: '💪', label: 'Workouts',      value: progress.workouts_done || 0, color: '#10b981' },
+            { icon: '🔥', label: 'Best streak',   value: (progress.longest_streak || 0) + ' days', color: '#f59e0b' },
+            { icon: '⏱', label: 'Practice min',  value: (progress.practice_minutes || 0).toLocaleString(), color: '#6b7280' },
+            { icon: '🏅', label: 'Badges earned', value: earned.length, color: '#f59e0b' },
+          ].map(function(s, i) {
+            return h('div', {
+              key: i,
+              style: {
+                background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)',
+                borderRadius: 12, padding: '14px',
+                transition: 'transform .15s, box-shadow .15s',
+              },
+              onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.35)'; },
+              onMouseLeave: function(e) { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; },
+            },
+              h('div', { style: { fontSize: 18, marginBottom: 6 } }, s.icon),
+              h('div', { style: { fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1 } }, s.value),
+              h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 4, fontWeight: 500 } }, s.label),
+            );
+          })
+        ),
+
+        // 7-day XP chart
+        h('div', { style: { marginBottom: 16, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: '14px' } },
+          h('div', { style: { fontSize: 13, fontWeight: 600, color: '#e5e7eb', marginBottom: 10 } }, 'Last 7 Days'),
+          h('div', { style: { display: 'flex', gap: 6, alignItems: 'flex-end', height: 60 },
+            role: 'img', 'aria-label': '7 day XP bar chart',
+          },
+            xpLog.map(function(d) {
+              var maxXP = Math.max.apply(null, xpLog.map(function(x) { return x.xp || 0; }).concat([1]));
+              var h2 = Math.max(((d.xp || 0) / maxXP) * 52, d.xp > 0 ? 4 : 1);
+              return h('div', { key: d.date, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
+                h('div', { style: { fontSize: 9, color: '#6b7280' } }, d.xp > 0 ? d.xp : ''),
+                h('div', { style: { width: '100%', height: h2 + 'px', background: d.xp > 0 ? '#16a34a' : 'rgba(255,255,255,.05)', borderRadius: 3, transition: 'height .4s' } }),
+                h('div', { style: { fontSize: 9, color: '#4b5563' } }, (d.date || '').slice(5)),
+              );
+            })
+          ),
+        ),
+
+        // Download report button
+        h('button', {
+          onClick: handleDownloadReport,
+          disabled: reportGenerating,
+          'aria-label': 'Download training report as PDF',
+          style: {
+            width: '100%', padding: '14px', borderRadius: 10, border: 'none',
+            background: reportGenerating ? 'rgba(255,255,255,.06)' : 'linear-gradient(135deg,#1a3a2a,#16a34a20)',
+            border: '1px solid rgba(22,163,74,.3)', color: reportGenerating ? '#6b7280' : '#4ade80',
+            fontSize: 14, fontWeight: 600, cursor: reportGenerating ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          },
+          onFocus: function(e) { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(22,163,74,.3)'; },
+          onBlur:  function(e) { e.currentTarget.style.boxShadow = 'none'; },
+        },
+          reportGenerating ? '⏳ Generating...' : '📄 Download Training Report (PDF)',
+        ),
+        h('p', { style: { fontSize: 11, color: '#4b5563', textAlign: 'center', marginTop: 6 } },
+          'Full 9-section PDF report · Earns +20 XP',
+        ),
+      ),
+
+      // ===== SKILLS TAB =====
+      activeTab === 'skills' && h('div', null,
+        h('div', { style: { marginBottom: 12 } },
+          h('div', { style: { fontSize: 20, fontWeight: 700, color: '#e5e7eb', textAlign: 'center' } },
+            Math.round(rating.overall || 0),
+          ),
+          h('div', { style: { fontSize: 12, color: '#6b7280', textAlign: 'center', marginBottom: 16 } }, 'Overall Rating'),
+        ),
+        axes.map(function(ax) {
+          var score = Math.round(rating[ax.key] || 0);
+          var grade = score >= 80 ? 'Elite' : score >= 60 ? 'Strong' : score >= 40 ? 'Developing' : 'Beginner';
+          return h('div', { key: ax.key, style: { marginBottom: 14 } },
+            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
+              h('span', { style: { fontSize: 13, fontWeight: 600, color: '#e5e7eb' } }, ax.label),
+              h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+                h('span', { style: { fontSize: 10, color: '#6b7280', background: 'rgba(255,255,255,.06)', padding: '2px 7px', borderRadius: 4 } }, grade),
+                h('span', { style: { fontSize: 15, fontWeight: 800, color: ax.color } }, score),
+              ),
+            ),
+            h('div', { style: { height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, overflow: 'hidden' },
+              role: 'progressbar', 'aria-valuenow': score, 'aria-valuemin': 0, 'aria-valuemax': 100,
+              'aria-label': ax.label + ': ' + score + ' out of 100',
+            },
+              h('div', { style: {
+                height: '100%', width: score + '%', borderRadius: 4,
+                background: 'linear-gradient(90deg,' + ax.color + ',' + ax.color + 'cc)',
+                boxShadow: '0 0 8px ' + ax.color + '60',
+                transition: 'width .8s ease-out',
+              } }),
+            ),
+          );
+        }),
+
+        // Mental Fitness
+        h('div', { style: { marginTop: 16, padding: '16px', background: 'rgba(139,92,246,.08)', border: '1px solid rgba(139,92,246,.2)', borderRadius: 12 } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
+            h('div', { style: { fontSize: 13, fontWeight: 600, color: '#c4b5fd' } }, '🧠 Mental Fitness Score'),
+            h('div', { style: { fontSize: 24, fontWeight: 800, color: '#8b5cf6' } }, Math.round(mfScore)),
+          ),
+          h('div', { style: { height: 7, background: 'rgba(255,255,255,.05)', borderRadius: 4, overflow: 'hidden' } },
+            h('div', { style: {
+              height: '100%', width: mfScore + '%', borderRadius: 4,
+              background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
+              boxShadow: '0 0 10px rgba(139,92,246,.5)',
+              transition: 'width .8s ease-out',
+            } }),
+          ),
+        ),
+      ),
+
+      // ===== BADGES TAB =====
+      activeTab === 'badges' && h('div', null,
+        h('style', null,
+          '@keyframes sc-badge-flip{0%{transform:rotateY(0)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0)}}' +
+          '.sc-badge-card{perspective:400px}.sc-badge-card:hover .sc-badge-inner{animation:sc-badge-flip .5s ease}'
+        ),
+        earned.length === 0 ? (
+          h('div', { style: { textAlign: 'center', padding: '48px 20px' } },
+            h('div', { style: { fontSize: 48, marginBottom: 12 } }, '🏅'),
+            h('div', { style: { fontSize: 15, fontWeight: 600, color: '#e5e7eb', marginBottom: 6 } }, 'No badges yet'),
+            h('div', { style: { fontSize: 13, color: '#6b7280' } }, 'Complete drills and sessions to earn them!'),
           )
-        : h('div', { key: activeTab, className: 'sc-tab-content' }, getTabContent())
+        ) : (
+          h('div', null,
+            h('div', { style: { fontSize: 12, color: '#6b7280', marginBottom: 14, fontWeight: 500 } }, earned.length + ' badges earned'),
+            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }, role: 'list' },
+              earned.map(function(b) {
+                var def = badgeDefs[b] || { icon: '⭐', label: b, desc: '' };
+                return h('div', {
+                  key: b, role: 'listitem', className: 'sc-badge-card',
+                  style: { background: 'rgba(255,255,255,.04)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 12, padding: '14px 12px', cursor: 'default' },
+                },
+                  h('div', { className: 'sc-badge-inner' },
+                    h('div', { style: { fontSize: 24, marginBottom: 6 }, 'aria-hidden': 'true' }, '🏅'),
+                    h('div', { style: { fontSize: 12, fontWeight: 700, color: '#fbbf24', marginBottom: 3 } }, def.label),
+                    h('div', { style: { fontSize: 11, color: '#6b7280' } }, def.desc || ''),
+                  )
+                );
+              })
+            ),
+          )
+        ),
+      ),
+
+      // ===== GOALS TAB =====
+      activeTab === 'goals' && h('div', null,
+        // Add goal
+        h('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
+          h('input', {
+            value: goalInput,
+            onChange: function(e) { setGoalInput(e.target.value); },
+            onKeyDown: function(e) { if (e.key === 'Enter') addGoal(); },
+            placeholder: 'Add a new cricket goal...',
+            'aria-label': 'New goal text',
+            style: {
+              flex: 1, padding: '10px 12px',
+              background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)',
+              borderRadius: 8, color: '#e5e7eb', fontSize: 14, outline: 'none',
+            },
+          }),
+          h('button', {
+            onClick: addGoal, 'aria-label': 'Add goal',
+            style: { padding: '10px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', fontWeight: 600 },
+          }, '+'),
+        ),
+
+        // Goals list
+        goals.length === 0 ? (
+          h('div', { style: { textAlign: 'center', padding: '30px 20px', color: '#6b7280' } },
+            h('div', { style: { fontSize: 13 } }, 'No goals yet. What do you want to achieve?'),
+          )
+        ) : (
+          h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 }, role: 'list', 'aria-label': 'Your cricket goals' },
+            goals.map(function(g) {
+              return h('div', {
+                key: g.id, role: 'listitem',
+                style: {
+                  display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px',
+                  background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10,
+                },
+              },
+                h('button', {
+                  onClick: function() { toggleGoal(g.id); },
+                  'aria-checked': g.completed ? 'true' : 'false', role: 'checkbox',
+                  'aria-label': (g.completed ? 'Mark incomplete: ' : 'Mark complete: ') + g.text,
+                  style: {
+                    width: 20, height: 20, borderRadius: 5, flexShrink: 0,
+                    background: g.completed ? '#16a34a' : 'transparent',
+                    border: '2px solid ' + (g.completed ? '#16a34a' : '#374151'),
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, color: '#fff',
+                  },
+                }, g.completed ? '✓' : ''),
+                h('div', { style: { flex: 1 } },
+                  h('div', { style: { fontSize: 13, color: g.completed ? '#6b7280' : '#e5e7eb', textDecoration: g.completed ? 'line-through' : 'none' } }, g.text),
+                  g.created && h('div', { style: { fontSize: 11, color: '#4b5563', marginTop: 2 } }, 'Added ' + g.created),
+                ),
+                h('button', {
+                  onClick: function() { deleteGoal(g.id); },
+                  'aria-label': 'Delete goal: ' + g.text,
+                  style: { background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: 16, padding: '0 4px' },
+                }, '×'),
+              );
+            })
+          )
+        ),
+      ),
+
+      // ===== DNA TAB =====
+      activeTab === 'dna' && h('div', null,
+        (function() {
+          var dnaReport = null;
+          try { if (A.getFullDNAReport) dnaReport = A.getFullDNAReport(); } catch(e) {}
+          var layer1 = dnaReport && dnaReport.layer1;
+          var layer5 = dnaReport && dnaReport.layer5;
+          var topFive = dnaReport && dnaReport.topFive;
+          var styleLabel = null;
+          try {
+            if (A.BrainEngine && A.BrainEngine.getStyleLabel && A.BrainEngine.buildStyleSignals) {
+              var sig = A.BrainEngine.buildStyleSignals();
+              if (sig) styleLabel = A.BrainEngine.getStyleLabel(sig);
+            }
+          } catch(e) {}
+          return h('div', null,
+            layer1 && layer1.primary ? h('div', {
+              style: { padding: '14px', borderRadius: 14, marginBottom: 12,
+                background: layer1.primary.clr + '10', border: '1px solid ' + layer1.primary.clr + '30' }
+            },
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 } },
+                h('div', { style: { fontSize: 28 } }, layer1.primary.icon),
+                h('div', null,
+                  h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'Primary DNA Archetype'),
+                  h('div', { style: { fontSize: 16, fontWeight: 800, color: layer1.primary.clr } }, layer1.primary.name),
+                  h('div', { style: { fontSize: 11, color: '#6b7280' } }, layer1.primary.tag)
+                )
+              ),
+              h('div', { style: { display: 'flex', gap: 5, flexWrap: 'wrap' } },
+                (layer1.primary.traits || []).map(function(t) {
+                  return h('span', { key: t, style: { fontSize: 10, padding: '2px 8px', borderRadius: 99,
+                    background: layer1.primary.clr + '15', color: layer1.primary.clr, fontWeight: 600 } }, t);
+                })
+              )
+            ) : h('div', { style: { padding: 16, textAlign: 'center', color: '#6b7280', fontSize: 13 } },
+              'Complete training sessions to unlock your DNA archetype'
+            ),
+
+            styleLabel && h('div', { style: { padding: '10px 14px', borderRadius: 10, marginBottom: 12,
+              background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)',
+              display: 'flex', alignItems: 'center', gap: 10 } },
+              h('div', { style: { fontSize: 18 } }, '🧠'),
+              h('div', null,
+                h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'AI Playing Style'),
+                h('div', { style: { fontSize: 14, fontWeight: 700, color: '#c084fc' } }, styleLabel)
+              )
+            ),
+
+            layer5 && h('div', { style: { padding: '10px 14px', borderRadius: 10, marginBottom: 12,
+              background: layer5.color + '10', border: '1px solid ' + layer5.color + '25',
+              display: 'flex', alignItems: 'center', gap: 10 } },
+              h('div', { style: { fontSize: 18 } }, layer5.emoji),
+              h('div', null,
+                h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'Growth Trajectory'),
+                h('div', { style: { fontSize: 14, fontWeight: 700, color: layer5.color } }, layer5.label)
+              )
+            ),
+
+            topFive && topFive.length > 0 && h('div', { style: { marginBottom: 14 } },
+              h('div', { style: { fontSize: 12, fontWeight: 700, color: '#e5e7eb', marginBottom: 8 } }, 'Top Pro Matches'),
+              topFive.slice(0, 2).map(function(m) {
+                var p = m.pro, pct = Math.round(m.score * 100);
+                var color = p.era === 'legend' ? '#f59e0b' : '#3b82f6';
+                return h('div', { key: p.id, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                  borderRadius: 10, marginBottom: 6, background: 'rgba(22,27,34,0.9)', border: '1px solid rgba(48,54,61,0.6)' } },
+                  h('div', { style: { fontSize: 22 } }, p.emoji || '🏏'),
+                  h('div', { style: { flex: 1 } },
+                    h('div', { style: { fontSize: 13, fontWeight: 700, color: '#f0fdf4' } }, p.name),
+                    h('div', { style: { fontSize: 11, color: '#6b7280' } }, p.role + ' · ' + p.country)
+                  ),
+                  h('div', { style: { fontSize: 16, fontWeight: 900, color: color } }, pct + '%')
+                );
+              })
+            ),
+
+            h('button', { onClick: function() { if (nav) nav('CricketDNA'); },
+              style: { width: '100%', padding: '12px', border: 'none', borderRadius: 10, cursor: 'pointer',
+                background: 'linear-gradient(135deg,#4f046e20,#a855f730)', border: '1px solid rgba(168,85,247,0.3)',
+                color: '#c084fc', fontSize: 14, fontWeight: 700, fontFamily: 'inherit' } },
+              '🧬 Explore Full Cricket DNA →'
+            )
+          );
+        })()
+      )
+
+        ); // end tabContent Fragment
+        if (!FM) return tabContent;
+        return h(FM.AnimatePresence, { mode: 'wait' },
+          h(FM.motion.div, {
+            key: activeTab,
+            initial: { opacity: 0, y: 8 },
+            animate: { opacity: 1, y: 0 },
+            exit: { opacity: 0, y: -8 },
+            transition: { duration: 0.18, ease: 'easeInOut' },
+          }, tabContent)
+        );
+      })()
     ),
 
     // ===== PRESTIGE CONFIRMATION MODAL =====
