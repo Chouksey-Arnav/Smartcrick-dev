@@ -1,10 +1,12 @@
 // app-mental-audio.js
 // ================================================================
-// SmartCrick — Mental Audio v3.0
-// Replaces ToneJS soundscapes with:
-//   1. MentalYouTube  — hidden auto-playing YouTube soundtrack
-//   2. MentalTTS      — Web Speech API voice guide (warm, sentence-chunked)
-//   3. AudioEngine    — Web Audio API binaural beats (unchanged)
+// SmartCrick — Mental Audio v3.1
+// Changes from v3.0:
+//   - Voice: slower rate (0.76), deeper pitch (0.88), full volume
+//   - Enhanced/Neural voices prioritised (macOS Ava, Edge Aria/Jenny)
+//   - 1.5s warm-up pause before first utterance (YT settles first)
+//   - 950ms inter-sentence breath pause (more contemplative)
+//   - Graceful YT fade-back after TTS ends (300ms ramp)
 // ================================================================
 (function() {
 'use strict';
@@ -111,16 +113,14 @@ var AudioEngine = (function() {
 })();
 
 // ── YouTube Soundtrack Mapping ─────────────────────────────────────
-// Curated long-form ambient/focus videos matched to each mental session type.
-// Videos are 1–8 hours, start at a random offset so every session feels fresh.
 var SESSION_TYPE_TRACKS = {
-  BREATH:    'n4YghVcjbpw',  // Alpha 8Hz calm — breathing & relaxation
-  GROUND:    'MTg-gZy9oLM',  // Theta 6Hz deep — grounding & presence
-  VISUALIZE: 'MTg-gZy9oLM',  // Theta cinematic — mental imagery & flow
-  ACTIVATE:  'n4YghVcjbpw',  // Alpha energised — pre-match activation
-  RECOVER:   'Z2dK_m2LfrY',  // Delta 2Hz rest — deep nervous system recovery
-  REFLECT:   'n4YghVcjbpw',  // Calm ambient — journaling & reflection
-  PRESSURE:  'Z8ANihFXlgU',  // Beta 18Hz focus — pressure simulation
+  BREATH:    'n4YghVcjbpw',
+  GROUND:    'MTg-gZy9oLM',
+  VISUALIZE: 'MTg-gZy9oLM',
+  ACTIVATE:  'n4YghVcjbpw',
+  RECOVER:   'Z2dK_m2LfrY',
+  REFLECT:   'n4YghVcjbpw',
+  PRESSURE:  'Z8ANihFXlgU',
 };
 
 var CREATOR_FOCUS_TRACKS = {
@@ -176,7 +176,6 @@ var MentalYouTube = (function() {
     if (!videoId) return;
     vol = (vol != null) ? vol : 65;
     clearInterval(fadeTimer);
-    // Random start offset (0-120s) so each session feels unique
     var startSec = Math.floor(Math.random() * 120);
 
     _loadYTApi(function() {
@@ -251,46 +250,63 @@ var MentalYouTube = (function() {
 })();
 
 // ── MentalTTS — warm voice guide via Web Speech API ───────────────
-// Uses sentence-level chunking (≤180 chars each) to stay well under
-// any browser's utterance limits and avoid the Chrome 15s pause bug.
-// Ducks the YouTube volume while speaking, restores it after.
+// Sentence-level chunking to avoid Chrome's 15s utterance bug.
+// 1.5s warm-up delay so ambient audio settles before voice starts.
+// Ducks YouTube while speaking; graceful 300ms fade-back on finish.
 var MentalTTS = (function() {
   var synth = window.speechSynthesis;
   var _queue     = [];
   var _speaking  = false;
   var _stopped   = true;
   var _voice     = null;
+  var _warmupTimer = null;
 
-  // Split text into bite-sized sentences the browser can handle cleanly
   function splitToChunks(text) {
     if (!text) return [];
     var clean = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-    // Split at sentence endings followed by space/newline, or at newlines
-    var sentences = clean.split(/(?<=[.!?])\s+|\n+/)
+    var sentences = clean.split(/(?<=[.!?…])\s+|\n+/)
       .map(function(s) { return s.trim(); })
       .filter(Boolean);
     var chunks = [];
     sentences.forEach(function(s) {
-      if (s.length <= 180) {
+      if (s.length <= 200) {
         chunks.push(s);
       } else {
-        // Break long sentences at commas, fitting within 160 chars
-        var parts = s.match(/.{1,160}(?:[,\s]|$)/g) || [s];
-        parts.forEach(function(p) { if (p.trim()) chunks.push(p.trim()); });
+        // Prefer comma/semicolon breaks, keeping natural phrasing
+        var parts = s.split(/(?<=,|;)\s+/);
+        var current = '';
+        parts.forEach(function(p) {
+          if ((current + ' ' + p).trim().length <= 200) {
+            current = (current + ' ' + p).trim();
+          } else {
+            if (current) chunks.push(current);
+            current = p;
+          }
+        });
+        if (current) chunks.push(current);
       }
     });
     return chunks;
   }
 
-  // Priority order of warm, natural-sounding English voices
+  // Priority: Neural/Enhanced voices first, then warm system voices
   var WARM_VOICES = [
-    'Google UK English Female',  // Android Chrome — warm & clear
-    'Samantha',                  // macOS / iOS — natural
-    'Karen',                     // macOS / iOS AU — soft
-    'Victoria',                  // macOS — calm
-    'Moira',                     // macOS IE — gentle
-    'Daniel',                    // macOS UK male — deep, calm
-    'Google US English',         // Chrome desktop fallback
+    'Ava (Enhanced)',
+    'Samantha (Enhanced)',
+    'Microsoft Aria Online (Natural) - English (United States)',
+    'Microsoft Jenny Online (Natural) - English (United States)',
+    'Google UK English Female',
+    'Ava',
+    'Samantha',
+    'Karen (Enhanced)',
+    'Karen',
+    'Victoria (Enhanced)',
+    'Victoria',
+    'Moira',
+    'Daniel (Enhanced)',
+    'Daniel',
+    'Microsoft Zira Desktop - English (United States)',
+    'Google US English',
   ];
 
   function selectVoice() {
@@ -302,12 +318,12 @@ var MentalTTS = (function() {
       if (found) { _voice = found; return found; }
     }
     _voice = voices.find(function(v) { return v.lang === 'en-GB'; })
+           || voices.find(function(v) { return v.lang === 'en-AU'; })
            || voices.find(function(v) { return v.lang.startsWith('en'); })
            || voices[0] || null;
     return _voice;
   }
 
-  // Pre-load voices on first chance (async in some browsers)
   if (synth) {
     synth.getVoices();
     if (typeof synth.onvoiceschanged !== 'undefined') {
@@ -317,12 +333,19 @@ var MentalTTS = (function() {
 
   function _duckYT() {
     var YT = window.SC_APP && window.SC_APP.MentalYouTube;
-    if (YT) YT.setVolume(26);
+    if (YT) YT.setVolume(22);
   }
 
   function _restoreYT() {
     var YT = window.SC_APP && window.SC_APP.MentalYouTube;
-    if (YT) YT.setVolume(65);
+    if (!YT) return;
+    // Graceful 300ms ramp back to full volume
+    var step = 0, steps = 10, target = 65;
+    var t = setInterval(function() {
+      step++;
+      try { YT.setVolume(Math.round(22 + (target - 22) * (step / steps))); } catch(e) {}
+      if (step >= steps) clearInterval(t);
+    }, 30);
   }
 
   function _nextChunk() {
@@ -335,14 +358,13 @@ var MentalTTS = (function() {
     var chunk = _queue.shift();
     var u = new SpeechSynthesisUtterance(chunk);
     u.voice  = selectVoice();
-    u.rate   = 0.82;   // meditative pace
-    u.pitch  = 0.93;   // slightly lower = warmth
-    u.volume = 0.95;
+    u.rate   = 0.76;   // unhurried, meditative
+    u.pitch  = 0.88;   // deeper = warmth & calm
+    u.volume = 1.0;    // full presence
     u.lang   = (u.voice && u.voice.lang) || 'en-GB';
     u.onend  = function() {
       if (_stopped) return;
-      // Natural inter-sentence pause
-      setTimeout(_nextChunk, _queue.length ? 620 : 0);
+      setTimeout(_nextChunk, _queue.length ? 950 : 0);
     };
     u.onerror = function() { setTimeout(_nextChunk, 100); };
     synth.speak(u);
@@ -355,23 +377,30 @@ var MentalTTS = (function() {
     _queue = splitToChunks(text);
     if (!_queue.length) return;
     _duckYT();
-    // If voices not yet loaded, wait for them before starting
-    if (synth.getVoices().length === 0 && typeof synth.onvoiceschanged !== 'undefined') {
-      var prev = synth.onvoiceschanged;
-      synth.onvoiceschanged = function() {
-        synth.onvoiceschanged = prev;
-        _voice = null;
+
+    function _start() {
+      if (_stopped) return;
+      if (synth.getVoices().length === 0 && typeof synth.onvoiceschanged !== 'undefined') {
+        var prev = synth.onvoiceschanged;
+        synth.onvoiceschanged = function() {
+          synth.onvoiceschanged = prev;
+          _voice = null;
+          if (!_stopped) _nextChunk();
+        };
+      } else {
         _nextChunk();
-      };
-    } else {
-      _nextChunk();
+      }
     }
+
+    // 1.5s warm-up: let ambient audio settle before voice begins
+    _warmupTimer = setTimeout(_start, 1500);
   }
 
   function stop() {
     _stopped = true;
     _speaking = false;
     _queue = [];
+    if (_warmupTimer) { clearTimeout(_warmupTimer); _warmupTimer = null; }
     if (synth) { try { synth.cancel(); } catch(e) {} }
     _restoreYT();
   }
@@ -392,5 +421,5 @@ Object.assign(window.SC_APP || (window.SC_APP = {}), {
   MentalTTS:      MentalTTS,
 });
 
-console.log('[SC] app-mental-audio v3.0 — YouTube soundtrack + TTS voice guide ready');
+console.log('[SC] app-mental-audio v3.1 — warmer voice, 1.5s warmup, graceful YT fade-back');
 })();
