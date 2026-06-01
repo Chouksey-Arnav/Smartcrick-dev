@@ -309,11 +309,7 @@ function WorkoutDetailPage({ params }) {
   );
 
   const complete = () => {
-    if (completing.current) return;
-    completing.current = true;
-    awardXP(w.xp_value, w.duration_minutes, 'workout', 'workout', w.id);
-    fireConfetti();
-    setDone(true);
+    nav('WorkoutPlayer', { id: w.id });
   };
 
   if(done) return h('div', { style:{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:'2rem', minHeight:'100dvh', background:'#0a0f1e' } },
@@ -370,8 +366,7 @@ function WorkoutDetailPage({ params }) {
           color:'#fff', boxShadow:`0 4px 20px rgba(194,65,12,0.45)`,
         }
       },
-        h(Icon, { n:'circleCheck', cls:'w-5 h-5' }),
-        ' Complete Workout (+'+w.xp_value+' XP)'
+        '🏋️  Start Workout →'
       )
     )
   );
