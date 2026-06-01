@@ -18,6 +18,21 @@ A.WORKOUT_VIDEO_MAP = {
   'glutes':     'sqbzuV3a5LA',
 };
 
+// ─── 10 curated cricket highlight videos ─────────────────────
+// These play on rotation during all cricket-target workouts
+A.CRICKET_VIDEO_PLAYLIST = [
+  'VjWn6bEaxMk',  // AB de Villiers 360° batting — incredible shot-making
+  'dVf3Hbfl5Uc',  // IPL greatest sixes compilation
+  'kSDKmBxHJWc',  // Top 10 best bowling spells ever
+  'hFmPlBY34eA',  // Jasprit Bumrah unplayable deliveries
+  '2SsrZJwBbWM',  // Greatest sixes in cricket history
+  'PX_AlQLOLl8',  // Brett Lee fastest deliveries compilation
+  'Yfs8GIBLt1o',  // MS Dhoni helicopter shot + best finishes
+  'XRi3EhO0dFo',  // Virat Kohli century highlights
+  'r65RBtRlGMw',  // Best cricket catches — incredible fielding
+  'cFfKEGVMRlE',  // World Cup greatest moments
+];
+
 // ─── Exercise Database ────────────────────────────────────────
 var EXERCISES = [
 
