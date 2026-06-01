@@ -127,38 +127,48 @@ function WeeklySummaryOverlay({ weekNum, completed, onClose }) {
 function DayCell({ task, isDone, isAvailable, onPress }) {
   var isRest = task.type === 'rest';
   var isMilestone = task.isMilestone;
+  // Determine if this is a missed day (past available but not done) — approximated by day < nextAvailable and not done
+  var isMissed = !isDone && !isAvailable && task.day < 30; // will be styled as future; actual missed logic handled below
   return h('button', {
     onClick: onPress,
     disabled: isDone,
     title: 'Day '+task.day+': '+task.title,
     style:{
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-      aspectRatio:'1', borderRadius:10, cursor: isDone ? 'default' : 'pointer',
+      minWidth:38, minHeight:38, borderRadius:10, cursor: isDone ? 'default' : 'pointer',
       fontFamily:'inherit', padding:2,
       background: isDone
-        ? (isRest ? 'rgba(59,130,246,0.35)' : 'rgba(22,163,74,0.35)')
+        ? (isRest ? 'rgba(59,130,246,0.25)' : 'rgba(34,197,94,0.2)')
         : isAvailable
-          ? 'rgba(22,163,74,0.08)'
-          : isRest
-            ? 'rgba(30,41,59,0.4)'
-            : 'rgba(22,27,34,0.9)',
+          ? 'transparent'
+          : 'rgba(255,255,255,0.03)',
       border: isDone
-        ? ('2px solid '+(isRest?'rgba(59,130,246,0.6)':'rgba(22,163,74,0.6)'))
+        ? ('1px solid '+(isRest?'rgba(59,130,246,0.5)':'rgba(34,197,94,0.4)'))
         : isAvailable
-          ? '2px solid #16a34a'
-          : '2px solid rgba(48,54,61,0.6)',
-      boxShadow: isAvailable ? '0 0 0 0 rgba(22,163,74,0.4)' : 'none',
+          ? '2px solid #22c55e'
+          : '1px solid rgba(255,255,255,0.06)',
+      boxShadow: isDone && !isRest
+        ? '0 0 8px rgba(34,197,94,0.2)'
+        : isAvailable
+          ? '0 0 12px rgba(34,197,94,0.3)'
+          : 'none',
       animation: isAvailable ? 'dayCellPulse 2s ease-in-out infinite' : 'none',
-      opacity: !isDone && !isAvailable ? 0.4 : 1,
+      color: isDone
+        ? (isRest ? '#60a5fa' : '#4ade80')
+        : isAvailable
+          ? '#22c55e'
+          : '#334155',
+      opacity: 1,
       transition: 'all 0.2s',
       position: 'relative',
+      fontWeight: isDone ? 700 : isAvailable ? 800 : 400,
     }
   },
     isDone
       ? h('span', { style:{ fontSize:14, lineHeight:1 }}, isRest ? '😴' : (isMilestone ? '🏅' : '✓'))
       : isRest
         ? h('span', { style:{ fontSize:14, lineHeight:1 }}, '😴')
-        : h('span', { style:{ fontSize:11, fontWeight:900, color: isAvailable ? '#16a34a' : '#4b5563', lineHeight:1 }}, task.day)
+        : h('span', { style:{ fontSize:11, fontWeight: isAvailable ? 800 : 400, color: 'inherit', lineHeight:1 }}, task.day)
   );
 }
 
@@ -176,24 +186,24 @@ function AvailableDayCard({ task, onComplete }) {
   var typeBadgeLabel = task.type==='rest' ? '😴 REST DAY' : task.type==='mental' ? '🧠 MENTAL' : task.type==='drill' ? '🏏 DRILL' : '🏏🧠 DRILL + MENTAL';
 
   return h('div', { style:{
-    borderRadius:14, overflow:'hidden',
-    border:'1px solid '+(wt.border||'rgba(48,54,61,0.9)'),
-    background:wt.bg||'rgba(22,27,34,0.9)',
+    borderRadius:16, overflow:'hidden',
+    background:'rgba(16,22,36,0.95)',
+    border:'1px solid rgba(255,255,255,0.10)',
+    borderLeft:'4px solid #22c55e',
     marginTop:10,
+    boxShadow:'0 4px 20px rgba(0,0,0,0.5)',
   }},
-    // Header bar
-    h('div', { style:{ height:4, background:wt.color }}),
-    h('div', { style:{ padding:'16px 16px 20px' }},
+    h('div', { style:{ padding:'20px' }},
       // Day label + type badge
       h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }},
-        h('span', { style:{ fontSize:11, fontWeight:800, color:'#484f58', textTransform:'uppercase', letterSpacing:'0.1em' }}, 'Day '+task.day+' — '+task.theme),
+        h('span', { style:{ fontSize:11, fontWeight:700, color:'#22c55e', textTransform:'uppercase', letterSpacing:'0.08em' }}, 'Day '+task.day+' — '+task.theme),
         h('span', { style:{ fontSize:10, fontWeight:700, padding:'3px 9px', borderRadius:5,
           background:'rgba(0,0,0,0.3)', color:typeBadgeColor, border:'1px solid '+typeBadgeColor+'40' }}, typeBadgeLabel)
       ),
 
       // Title
-      h('h3', { style:{ fontSize:16, fontWeight:900, color:'#f0fdf4', marginBottom:6, lineHeight:1.3 }}, task.title),
-      h('p', { style:{ fontSize:12, color:'#8b949e', lineHeight:1.65, marginBottom:14 }}, task.desc),
+      h('h3', { style:{ fontSize:18, fontWeight:800, color:'#f8fafc', marginBottom:8, lineHeight:1.3 }}, task.title),
+      h('p', { style:{ fontSize:14, color:'#94a3b8', lineHeight:1.6, marginBottom:14 }}, task.desc),
 
       // XP
       h('div', { style:{ marginBottom:14 }}, h(XPBadge, { xp:task.xp })),
@@ -266,9 +276,9 @@ function AvailableDayCard({ task, onComplete }) {
         disabled:!canComplete||saving,
         style:{
           display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-          width:'100%', padding:'13px', border:'none', borderRadius:10,
-          fontFamily:'inherit', fontSize:14, fontWeight:700, cursor:canComplete?'pointer':'not-allowed',
-          background: canComplete ? wt.color : 'rgba(48,54,61,0.5)',
+          width:'100%', padding:'14px', border:'none', borderRadius:12,
+          fontFamily:'inherit', fontSize:15, fontWeight:700, cursor:canComplete?'pointer':'not-allowed',
+          background: canComplete ? 'linear-gradient(135deg,#22c55e,#16a34a)' : 'rgba(48,54,61,0.5)',
           color:'#fff', opacity:canComplete?1:0.5,
           transition:'all 0.15s',
         }
@@ -457,13 +467,14 @@ function ThirtyDayPage() {
 
         // ── Overall progress bar ─────────────────────────────────
         h('div', { style:{
-          padding:'18px 20px', borderRadius:14, marginBottom:12,
-          background:'rgba(217,119,6,0.08)', border:'1px solid rgba(217,119,6,0.28)',
+          background:'rgba(10,15,30,0.9)', borderRadius:16, border:'1px solid rgba(255,255,255,0.08)',
+          padding:'20px', marginBottom:20, boxShadow:'0 4px 20px rgba(0,0,0,0.5)',
         }},
-          h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }},
+          h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }},
             h('div', null,
-              h('div', { style:{ fontSize:22, fontWeight:900, color:'#fff' }}, 'Day '+doneCount+' / 30'),
-              h('div', { style:{ fontSize:12, fontWeight:700, color:'#fbbf24', marginTop:2 }},
+              h('div', { style:{ fontSize:11, fontWeight:600, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}, 'Challenge Progress'),
+              h('div', { style:{ fontSize:28, fontWeight:900, color:'#f8fafc' }}, 'Day '+doneCount+' of 30'),
+              h('div', { style:{ fontSize:11, fontWeight:700, color:'#94a3b8', marginTop:2 }},
                 doneCount===30 ? '🏆 Challenge Complete — You Are The Champion!' :
                 doneCount===0  ? 'Begin your journey today' :
                 doneCount<7   ? 'Building the foundation...' :
@@ -473,16 +484,20 @@ function ThirtyDayPage() {
               )
             ),
             h('div', { style:{
-              width:52,height:52,borderRadius:'50%',flexShrink:0,
-              border:'3px solid #f59e0b',display:'flex',alignItems:'center',justifyContent:'center',
-              fontWeight:900,color:'#f59e0b',fontSize:13,
-            }}, pct+'%')
+              display:'flex', alignItems:'center', gap:4,
+              padding:'4px 10px', borderRadius:99,
+              background:'rgba(245,158,11,0.12)', border:'1px solid rgba(245,158,11,0.3)',
+            }},
+              h('span', { style:{ fontSize:14 }}, '🔥'),
+              h('span', { style:{ fontSize:14, fontWeight:700, color:'#f59e0b' }}, pct+'%')
+            )
           ),
-          h('div', { style:{ height:8, background:'rgba(51,65,85,0.6)', borderRadius:99, overflow:'hidden' }},
+          h('div', { style:{ height:8, background:'rgba(255,255,255,0.06)', borderRadius:99, overflow:'hidden' }},
             h('div', { style:{
               width:pct+'%', height:'100%', borderRadius:99,
-              background:'linear-gradient(to right,#f59e0b,#d97706)',
+              background:'linear-gradient(90deg,#22c55e,#4ade80)',
               transition:'width 0.7s ease',
+              boxShadow:'0 0 12px rgba(74,222,128,0.5)',
             }})
           )
         ),
