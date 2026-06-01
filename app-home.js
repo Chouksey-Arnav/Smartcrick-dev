@@ -144,7 +144,8 @@ function SpinWheelWidget(){
   }
 
   return h('div',{style:{margin:'0 16px 12px',padding:'20px 16px',
-    background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)',borderRadius:16}},
+    background:'rgba(10,15,30,0.85)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,
+    boxShadow:'0 4px 20px rgba(0,0,0,0.5)'}},
     h('style',null,'@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-70px) scale(1.4)}}'),
     h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
       h('div',{style:{fontSize:14,fontWeight:700,color:'#e5e7eb'}},'🎰 Daily Bonus Spin'),
@@ -513,12 +514,12 @@ function StreakCalendarSection(){
            {val:bs===0?'—':bs+'d',label:'Best ever',color:'#8b5cf6'},
            {val:weekXP>0?weekXP.toLocaleString():'0',label:'Week XP',color:'#4ade80'}
           ].map(function(stat){
-            return h('div',{key:stat.label,style:{flex:1,padding:'8px 6px',
-              background:'rgba(22,27,34,0.85)',border:'1px solid rgba(48,54,61,0.6)',
-              borderRadius:8,textAlign:'center'}},
-              h('div',{style:{fontSize:16,fontWeight:800,color:stat.color,lineHeight:1}},stat.val),
-              h('div',{style:{fontSize:9,fontWeight:700,color:'#484f58',
-                textTransform:'uppercase',letterSpacing:'0.06em',marginTop:3}},stat.label)
+            return h('div',{key:stat.label,style:{flex:1,padding:'16px 6px',
+              background:'rgba(16,22,36,0.9)',border:'1px solid rgba(255,255,255,0.08)',
+              borderRadius:12,textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.4)'}},
+              h('div',{style:{fontSize:26,fontWeight:800,color:'#f8fafc',lineHeight:1}},stat.val),
+              h('div',{style:{fontSize:11,fontWeight:600,color:'#94a3b8',
+                textTransform:'uppercase',letterSpacing:'0.06em',marginTop:4}},stat.label)
             );
           })
         ),
@@ -563,9 +564,11 @@ function WeeklyGoalSection(props){
     ),
     h('div',{role:'progressbar','aria-valuenow':Math.min(Math.round((weekXP/goal)*100),100),
       'aria-valuemin':0,'aria-valuemax':100,
-      style:{height:6,background:'rgba(255,255,255,.06)',borderRadius:3,overflow:'hidden',marginBottom:8}},
+      style:{height:8,background:'rgba(255,255,255,.06)',borderRadius:99,overflow:'hidden',marginBottom:8}},
       h('div',{style:{height:'100%',width:Math.min((weekXP/goal)*100,100)+'%',
-        background:weekXP>=goal?'#4ade80':'#f59e0b',borderRadius:3,transition:'width .4s'}})
+        background:weekXP>=goal?'linear-gradient(90deg, #22c55e, #4ade80)':'linear-gradient(90deg, #22c55e, #4ade80)',
+        borderRadius:99,transition:'width .4s',
+        boxShadow:'0 0 10px rgba(74,222,128,0.6)'}})
     ),
     !showCustom
       ? h('div',{style:{display:'flex',gap:6}},
@@ -684,41 +687,46 @@ function HomePage(){
   var greet=(function(){var hr=new Date().getHours();return hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';})();
   var nextLevelName=levelInfo.next?levelInfo.next.name:'max level'; // ✅ fixed [object Object]
 
-  return h('div',{style:{background:'#0d1117',minHeight:'100dvh'}},
+  return h('div',{style:{background:'#0d1117',minHeight:'100dvh',
+    backgroundImage:'radial-gradient(ellipse at 20% -20%, rgba(34,197,94,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 60%, rgba(59,130,246,0.06) 0%, transparent 50%)'}},
     h('style',null,'@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}'),
 
     // ── Hero ───────────────────────────────────────────────────────
     h('div',{style:{padding:'16px 16px 12px',
       background:'linear-gradient(180deg,rgba(22,163,74,.07) 0%,transparent 100%)'}},
       h('div',{style:{marginBottom:12}},
-        h('div',{style:{fontSize:13,color:'#9ca3af'}},greet+', '+(user.name||'Cricketer')+' 👋'),
-        h('h1',{style:{fontSize:22,fontWeight:800,color:'#e5e7eb',margin:'4px 0 2px'}},'Today\'s Training'),
-        h('div',{style:{fontSize:12,color:'#6b7280'}},
+        h('div',{style:{fontSize:13,color:'#94a3b8'}},greet+', '+(user.name||'Cricketer')+' 👋'),
+        h('h1',{style:{fontSize:24,fontWeight:800,color:'#f8fafc',margin:'4px 0 2px'}},'Today\'s Training'),
+        h('div',{style:{fontSize:12,color:'#64748b'}},
           new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}))
       ),
       h('div',{style:{display:'flex',gap:10,marginBottom:10}},
-        h('div',{style:{flex:1,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',
-          borderRadius:12,padding:'12px'},role:'region','aria-label':'XP level progress'},
+        h('div',{style:{flex:1,background:'rgba(16,22,36,0.9)',border:'1px solid rgba(255,255,255,0.08)',
+          borderRadius:12,padding:'16px',boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},role:'region','aria-label':'XP level progress'},
           h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
-            h('span',{style:{fontSize:11,color:'#6b7280'}},'Level '+levelInfo.level),
-            h('span',{style:{fontSize:11,color:'#4ade80',fontWeight:600}},
+            h('span',{style:{fontSize:11,fontWeight:600,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em'}},'Level '+levelInfo.level),
+            h('span',{style:{fontSize:11,color:'#4ade80',fontWeight:700}},
               (progress.total_xp||0).toLocaleString()+' XP')
           ),
-          h('div',{style:{fontSize:14,fontWeight:700,color:'#e5e7eb',marginBottom:6}},levelInfo.name),
-          h('div',{style:{height:4,background:'rgba(255,255,255,.08)',borderRadius:2,overflow:'hidden'},
+          h('div',{style:{fontSize:16,fontWeight:800,color:'#f8fafc',marginBottom:8}},levelInfo.name),
+          h('div',{style:{position:'relative',height:8,background:'rgba(255,255,255,.08)',borderRadius:99,overflow:'visible'},
             role:'progressbar','aria-valuenow':Math.round(levelInfo.pct||0),'aria-valuemin':0,'aria-valuemax':100},
-            h('div',{style:{height:'100%',width:(levelInfo.pct||0)+'%',background:'#16a34a',
-              borderRadius:2,transition:'width .5s'}})
+            h('div',{style:{
+              position:'relative',height:'100%',width:(levelInfo.pct||0)+'%',
+              background:'linear-gradient(90deg, #22c55e, #4ade80)',
+              borderRadius:99,transition:'width .5s',
+              boxShadow:'0 0 10px rgba(74,222,128,0.6)',overflow:'visible'
+            }})
           ),
-          h('div',{style:{fontSize:10,color:'#4b5563',marginTop:4}},
+          h('div',{style:{fontSize:10,color:'#475569',marginTop:6}},
             (levelInfo.xpToNext||0).toLocaleString()+' XP to '+nextLevelName)
         ),
-        h('div',{style:{background:'rgba(245,158,11,.08)',border:'1px solid rgba(245,158,11,.2)',
-          borderRadius:12,padding:'12px',minWidth:95,textAlign:'center'},
+        h('div',{style:{background:'rgba(16,22,36,0.9)',border:'1px solid rgba(255,255,255,0.08)',
+          borderRadius:12,padding:'16px',minWidth:95,textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},
           role:'region','aria-label':streak+' day streak'},
-          h('div',{style:{fontSize:28,fontWeight:800,color:'#f59e0b',lineHeight:1.1}},streak),
-          h('div',{style:{fontSize:11,color:'#f59e0b',fontWeight:600}},'day streak'),
-          h('div',{style:{fontSize:18,marginTop:4},'aria-hidden':'true'},streak>0?'🔥':'💤')
+          h('div',{style:{fontSize:26,fontWeight:800,color:'#f8fafc',lineHeight:1.1}},streak),
+          h('div',{style:{fontSize:11,fontWeight:600,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',marginTop:2}},'Streak'),
+          h('div',{style:{fontSize:18,marginTop:6},'aria-hidden':'true'},streak>0?'🔥':'💤')
         )
       ),
       // ✅ DNA mini-badge (only if app-cricket-dna.js is loaded)
@@ -739,11 +747,14 @@ function HomePage(){
 
     // ── Mission ────────────────────────────────────────────────────
     mission&&h('div',{style:{margin:'0 16px 12px'}},
-      h('div',{style:{background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.22)',
-        borderRadius:14,padding:'14px 16px'},role:'region','aria-label':'Today\'s mission'},
+      h('div',{style:{background:'rgba(16,22,36,0.9)',
+        borderLeft:'4px solid #3b82f6',
+        border:'1px solid rgba(255,255,255,0.08)',
+        borderRadius:12,padding:'14px 16px',
+        boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},role:'region','aria-label':'Today\'s mission'},
         h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
-          h('div',{style:{fontSize:14,fontWeight:600,color:'#60a5fa'}},'📋 Today\'s Mission'),
-          mission.reason&&h('div',{style:{marginLeft:'auto',fontSize:11,color:'#4b5563',fontStyle:'italic'}},mission.reason)
+          h('div',{style:{fontSize:16,fontWeight:700,color:'#f8fafc'}},'📋 Today\'s Mission'),
+          mission.reason&&h('div',{style:{marginLeft:'auto',fontSize:11,color:'#64748b',fontStyle:'italic'}},mission.reason)
         ),
         h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
           mission.drillId&&h('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'rgba(255,255,255,.04)',borderRadius:8}},
@@ -759,9 +770,11 @@ function HomePage(){
             ),
             !mission.drillDone&&h('button',{
               onClick:function(){nav('DrillDetail',{id:mission.drillId});},
-              style:{padding:'5px 12px',background:'#1d4ed8',color:'#fff',border:'none',
-                borderRadius:6,fontSize:11,cursor:'pointer',fontFamily:'inherit'}
-            },'→ Go')
+              style:{padding:'7px 14px',background:'linear-gradient(135deg, #22c55e, #16a34a)',
+                color:'#fff',border:'none',
+                borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+                boxShadow:'0 2px 8px rgba(34,197,94,0.3)'}
+            },'Begin Challenge')
           ),
           mission.mentalId&&h('div',{style:{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:'rgba(255,255,255,.04)',borderRadius:8}},
             h('div',{style:{width:20,height:20,borderRadius:4,flexShrink:0,
@@ -776,9 +789,11 @@ function HomePage(){
             ),
             !mission.mentalDone&&h('button',{
               onClick:function(){nav('MentalPlayer',{id:mission.mentalId});},
-              style:{padding:'5px 12px',background:'#7c3aed',color:'#fff',border:'none',
-                borderRadius:6,fontSize:11,cursor:'pointer',fontFamily:'inherit'}
-            },'→ Go')
+              style:{padding:'7px 14px',background:'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                color:'#fff',border:'none',
+                borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+                boxShadow:'0 2px 8px rgba(139,92,246,0.3)'}
+            },'Begin Challenge')
           )
         ),
         mission.drillDone&&mission.mentalDone&&h('div',{
@@ -792,7 +807,7 @@ function HomePage(){
 
     // ── Quick Start (AI Coach removed → Badges added) ──────────────
     h('div',{style:{margin:'0 16px 12px'}},
-      h('div',{style:{fontSize:13,fontWeight:600,color:'#e5e7eb',marginBottom:10}},'Quick Start'),
+      h('div',{style:{fontSize:13,fontWeight:700,color:'#f8fafc',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.06em'}},'Quick Start'),
       h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
         [
           {label:'Drills',      emoji:'🎯', page:'Drills',     color:'#3b82f6'},
@@ -804,14 +819,24 @@ function HomePage(){
           {label:'Progress',    emoji:'📊', page:'Progress',   color:'#6b7280'},
           {label:'Cricket DNA', emoji:'🧬', page:'CricketDNA', color:'#7c3aed'},
         ].map(function(item){
+          // Convert hex color to rgba at 12% and 25% opacity
+          var hexToRgb=function(hex){
+            var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+            return r+','+g+','+b;
+          };
+          var rgb=hexToRgb(item.color);
           return h('button',{key:item.page,onClick:function(){nav(item.page);},
             'aria-label':'Go to '+item.label,
             style:{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',cursor:'pointer',
-              background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.07)',
-              borderLeft:'3px solid '+item.color,borderRadius:10,textAlign:'left',fontFamily:'inherit'}
+              background:'rgba('+rgb+',0.12)',
+              border:'1px solid rgba('+rgb+',0.25)',
+              borderRadius:12,textAlign:'left',fontFamily:'inherit',
+              fontSize:13,fontWeight:600,
+              transition:'transform 0.15s',
+              WebkitTapHighlightColor:'transparent'}
           },
             h('div',{style:{fontSize:20},'aria-hidden':'true'},item.emoji),
-            h('div',{style:{fontSize:13,fontWeight:500,color:'#e5e7eb'}},item.label)
+            h('div',{style:{fontSize:13,fontWeight:600,color:'#e2e8f0'}},item.label)
           );
         })
       )
