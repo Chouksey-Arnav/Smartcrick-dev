@@ -1,6 +1,6 @@
 // ================================================================
-// app-workout-player.js — SmartCrick Immersive Workout Player v3.0
-// Cricket highlights on ALL workouts · premium redesign · live timers
+// app-workout-player.js — SmartCrick Immersive Workout Player v4.0
+// Per-category motivational gym videos · premium design · live timers
 // ================================================================
 (function() {
 'use strict';
@@ -18,26 +18,44 @@ var REST = {
   pro:          { sets: 15, between: 20 },
 };
 
-// ─── Cricket playlist (plays on ALL workouts) ─────────────────
-// Uses independent coaching/compilation channels — these allow embedding.
-// Official board channels (ICC, BCCI, IPL) disable embedding by default.
-var CRICKET_PLAYLIST = [
-  'FFcuJpZQ_Xc',  // Hit More Sixes Easily — Power Hitting Drills
-  'ZjddyzEoqUU',  // Hit HUGE Sixes Consistently — drill set
-  'WJTB06RIkoM',  // How PRO Players Train Power Hitting (unfiltered session)
-  'eVdkAMu01rI',  // Spectacular Ball Striking | Six Hitting 2024
-  'CV0EQKC4bzI',  // Improve Your Power Hitting — coaching session
-  '98oFiKrP0Eg',  // Cricket Power Hitting Masterclass — bat & hit sixes
-  'eHGK7F_lUyE',  // 5 Cricket Batting Drills every player MUST do
-  'm5tudvaSSiY',  // Top 10 Cricket Batting Drills of 2024
-  'KFE6HaIfaMU',  // Top 10 Cricket Drills of the Year
-  'tlNROo5VETM',  // Dean Jones — 55 biggest sixes compilation
-];
+// ─── Per-category motivational gym video playlists ────────────
+// All from Makaveli Motivation / Muscle Madness / independent fitness
+// channels — these allow iframe embedding (muted). Official sports
+// bodies (ICC, BCCI, CrossFit LLC) disable embedding; these do not.
+// 3 videos per category → YouTube cycles through them automatically.
+var MOTIVATION_VIDEOS = {
+  // People lifting, general gym montage — cinematic training footage
+  'full-body':  ['mpL7e0_jLXQ', 'Vvu4Cro0c08', 'AwZcvO4AvYM'],
+  // Chest / push — bench press, upper body intensity
+  'chest':      ['ZDVjEOAU0TM', 'ApKgIoZJedI', 'mpL7e0_jLXQ'],
+  // Back / pull — rows, deadlifts, pulling movements
+  'back':       ['lQUh0kFD1qw', 'ZDVjEOAU0TM', 'ApKgIoZJedI'],
+  // Shoulders — overhead press, lateral raises, shoulder day
+  'shoulders':  ['WWNj9dz-_Co', 'XYUDqhtjzp4', 'ZDVjEOAU0TM'],
+  // Arms — curls, tricep work, dumbbells
+  'arms':       ['7650_aSy2Fk', 'ez5imyuNh1U', 'QeOLDE9q87o'],
+  // Legs — squats, lunges, lower body power
+  'legs':       ['fwagPuXeNUU', 'Phb2Xbpgon4', 'zOUie7fSWXQ'],
+  // Glutes — same lower body footage
+  'glutes':     ['fwagPuXeNUU', 'Phb2Xbpgon4', 'zOUie7fSWXQ'],
+  // Core — planks, abs, six-pack training
+  'core':       ['0TjcEgQAs3Q', 'e2VnibH4InE', '2-SBM9dqocA'],
+  // Cricket-specific workouts — athletic HIIT / functional training
+  'cricket':    ['KmJuQ48c1Bg', 'myIbuKcT-Ss', 'oKWiG2q242Q'],
+};
+var DEFAULT_VIDEOS = ['mpL7e0_jLXQ', 'Vvu4Cro0c08', 'AwZcvO4AvYM'];
 
-var YT_SRC = 'https://www.youtube.com/embed/' + CRICKET_PLAYLIST[0] +
-  '?autoplay=1&mute=1&controls=0&loop=1' +
-  '&playlist=' + CRICKET_PLAYLIST.join(',') +
-  '&playsinline=1&enablejsapi=1&rel=0&modestbranding=1';
+// Build YouTube embed src for a given workout
+function buildYtSrc(workout) {
+  var target = (workout && workout.target) || 'full-body';
+  // cricket-id workouts (wc001–wc020) use the cricket motivational set
+  if (workout && workout.id && workout.id.indexOf('wc') === 0) target = 'cricket';
+  var vids = MOTIVATION_VIDEOS[target] || DEFAULT_VIDEOS;
+  return 'https://www.youtube.com/embed/' + vids[0] +
+    '?autoplay=1&mute=1&controls=0&loop=1' +
+    '&playlist=' + vids.join(',') +
+    '&playsinline=1&enablejsapi=1&rel=0&modestbranding=1';
+}
 
 // ─── Motivational phrases ─────────────────────────────────────
 var MOTIVATIONS = [
@@ -141,11 +159,16 @@ function RingTimer(props) {
   );
 }
 
-// ─── YouTube cover background (plays on ALL screens) ─────────
-// objectFit:cover does NOT work on iframes — use the 177.78vh technique
-function YTCover() {
+// ─── YouTube cover background ─────────────────────────────────
+// objectFit:cover does NOT work on iframes — use the 177.78vh technique.
+// Works on both mobile portrait and wide desktop screens:
+//   mobile 390×844 → 177.78vh = 1500px wide (covers 390px) ✓
+//   desktop 1440×900 → 177.78vh = 1600px wide (covers 1440px) ✓
+//   ultra-wide → minWidth:100vw kicks in as safety net ✓
+function YTCover(props) {
+  if (!props.src) return null;
   return h('iframe', {
-    src: YT_SRC,
+    src: props.src,
     allow: 'autoplay; encrypted-media',
     allowFullScreen: false,
     frameBorder: '0',
@@ -243,6 +266,7 @@ function WorkoutPlayerPage(props) {
   var timerRef         = useRef(null);
   var exTimerRef       = useRef(null);
   var handleDoneSetRef = useRef(null);
+  var ytSrc            = useRef(buildYtSrc(workout)).current;
 
   var restLevel = (workout && REST[workout.level]) || REST.beginner;
   var lvl       = (workout && LVL[workout.level])  || LVL.beginner;
@@ -377,7 +401,7 @@ function WorkoutPlayerPage(props) {
   if (status === 'preview') {
     return h('div', { style:{ position:'relative', minHeight:'100dvh', background:'#03060f', overflow:'hidden' } },
       h(CinematicBg),
-      h(YTCover),
+      h(YTCover, { src: ytSrc }),
       h('div', { style:{ position:'fixed', inset:0, zIndex:1,
         background:'radial-gradient(ellipse at center, rgba(2,5,14,0.45) 0%, rgba(2,5,14,0.94) 100%)' } }),
 
@@ -503,7 +527,7 @@ function WorkoutPlayerPage(props) {
 
     return h('div', { style:{ position:'relative', minHeight:'100dvh', background:'#03060f', overflow:'hidden' } },
       h(CinematicBg),
-      h(YTCover),
+      h(YTCover, { src: ytSrc }),
       h(Vignette, { strength:'heavy' }),
       StopBtn,
       showStop && h(StopConfirm, { onConfirm:handleStop, onCancel:function(){setShowStop(false);} }),
@@ -689,5 +713,5 @@ function WorkoutPlayerPage(props) {
 }
 
 window.SC_APP.WorkoutPlayerPage = WorkoutPlayerPage;
-console.log('[SC] app-workout-player v3.0 — cricket highlights on ALL workouts · premium redesign');
+console.log('[SC] app-workout-player v4.0 — per-category motivational gym videos · phone+desktop');
 })();
