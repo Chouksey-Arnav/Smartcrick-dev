@@ -18,19 +18,20 @@ A.WORKOUT_VIDEO_MAP = {
   'glutes':     'sqbzuV3a5LA',
 };
 
-// ─── 10 curated cricket highlight videos ─────────────────────
-// These play on rotation during all cricket-target workouts
+// ─── 10 cricket videos (embedding-allowed channels only) ──────
+// Official boards (ICC/BCCI/IPL) disable embedding — these are from
+// independent coaching channels that allow embedding.
 A.CRICKET_VIDEO_PLAYLIST = [
-  'VjWn6bEaxMk',  // AB de Villiers 360° batting — incredible shot-making
-  'dVf3Hbfl5Uc',  // IPL greatest sixes compilation
-  'kSDKmBxHJWc',  // Top 10 best bowling spells ever
-  'hFmPlBY34eA',  // Jasprit Bumrah unplayable deliveries
-  '2SsrZJwBbWM',  // Greatest sixes in cricket history
-  'PX_AlQLOLl8',  // Brett Lee fastest deliveries compilation
-  'Yfs8GIBLt1o',  // MS Dhoni helicopter shot + best finishes
-  'XRi3EhO0dFo',  // Virat Kohli century highlights
-  'r65RBtRlGMw',  // Best cricket catches — incredible fielding
-  'cFfKEGVMRlE',  // World Cup greatest moments
+  'FFcuJpZQ_Xc',  // Hit More Sixes Easily — Power Hitting Drills
+  'ZjddyzEoqUU',  // Hit HUGE Sixes Consistently — drill set
+  'WJTB06RIkoM',  // How PRO Players Train Power Hitting (unfiltered)
+  'eVdkAMu01rI',  // Spectacular Ball Striking | Six Hitting 2024
+  'CV0EQKC4bzI',  // Improve Your Power Hitting — coaching session
+  '98oFiKrP0Eg',  // Cricket Power Hitting Masterclass
+  'eHGK7F_lUyE',  // 5 Cricket Batting Drills every player MUST do
+  'm5tudvaSSiY',  // Top 10 Cricket Batting Drills of 2024
+  'KFE6HaIfaMU',  // Top 10 Cricket Drills of the Year
+  'tlNROo5VETM',  // Dean Jones — 55 biggest sixes compilation
 ];
 
 // ─── Exercise Database ────────────────────────────────────────
