@@ -15,16 +15,11 @@
 
 /* ─── CSS Custom Properties (dark mode default) ─────────────────── */
 :root {
-  --bg-base:    #0d1117;
-  --bg-card:    #161b22;
-  --bg-surface: #1c2128;
-  --bg-hover:   #22272e;
-  --border:     rgba(48,54,61,0.9);
-  --text-1:     #f0fdf4;
-  --text-2:     #8b949e;
-  --text-3:     #484f58;
-  --accent:     #16a34a;
-  --accent-dim: rgba(22,163,74,0.15);
+  /* Aliases for styles-patch compat — point to premium tokens */
+  --bg-surface: var(--bg-raised);
+  --bg-hover:   var(--bg-float);
+  --accent:     var(--green);
+  --accent-dim: var(--green-dim);
 }
 
 /* Light mode overrides — toggled by JS via applyTheme() */
