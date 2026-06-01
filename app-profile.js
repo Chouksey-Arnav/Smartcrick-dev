@@ -399,7 +399,7 @@ function ProfilePage(props) {
   }, []);
 
   if (!progress) {
-    return h('div', { style: { paddingBottom: 100, background: '#0d1117', minHeight: '100dvh' } },
+    return h('div', { style: { paddingBottom: 100, background: '#0a0f1e', minHeight: '100dvh' } },
       h(TopBar, { title: 'Profile' }),
       h('div', { style: { textAlign: 'center', padding: '60px 20px', color: '#6b7280' } }, 'Loading...'),
       h(BottomNav),
@@ -471,10 +471,12 @@ function ProfilePage(props) {
 
   var tabStyle = function(t) {
     return {
-      flex: 1, padding: '10px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 500,
-      background: 'none', borderBottom: activeTab === t ? '2px solid #16a34a' : '2px solid transparent',
+      flex: 1, padding: '9px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+      borderRadius: 10, margin: 2, fontFamily: 'inherit',
+      background: activeTab === t ? 'rgba(22,163,74,0.15)' : 'transparent',
+      border: activeTab === t ? '1px solid rgba(22,163,74,0.3)' : '1px solid transparent',
       color: activeTab === t ? '#4ade80' : '#6b7280',
-      transition: 'all .15s',
+      transition: 'all .2s',
     };
   };
 
@@ -488,11 +490,12 @@ function ProfilePage(props) {
     { key: 'consistency', label: 'Consistency', color: '#14b8a6' },
   ];
 
-  return h('div', { style: { paddingBottom: 100, background: '#0d1117', minHeight: '100dvh' } },
+  return h('div', { style: { paddingBottom: 100, background: '#0a0f1e', minHeight: '100dvh' } },
     h(TopBar, { title: 'Profile' }),
 
     // ===== HERO CARD =====
-    h('div', { style: { margin: '14px 16px', padding: '20px 18px', background: 'linear-gradient(135deg,#0f2027,#1a2a1a)', borderRadius: 16, border: '1px solid rgba(22,163,74,.2)' } },
+    h('div', { style: { margin: '14px 16px', padding: '20px 18px', background: 'rgba(16,22,36,0.95)', borderRadius: 16, border: '1px solid rgba(22,163,74,0.2)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden' } },
+      h('div', { style: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg,#22c55e,#16a34a)', borderRadius: '16px 16px 0 0' } }),
       h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 } },
         // Avatar
         h('div', {
@@ -543,14 +546,14 @@ function ProfilePage(props) {
           h('span', { style: { fontSize: 12, color: '#4ade80', fontWeight: 700 } }, 'Level ' + levelInfo.level + ' — ' + levelInfo.name),
           h('span', { style: { fontSize: 12, color: '#6b7280' } }, (progress.total_xp || 0).toLocaleString() + ' XP'),
         ),
-        h('div', { style: { height: 8, background: 'rgba(255,255,255,.06)', borderRadius: 4, overflow: 'hidden' },
+        h('div', { style: { height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 9999, overflow: 'hidden' },
           role: 'progressbar', 'aria-valuenow': levelInfo.pct || 0, 'aria-valuemin': 0, 'aria-valuemax': 100,
           'aria-label': 'Level ' + levelInfo.level + ' progress: ' + Math.round(levelInfo.pct || 0) + '%',
         },
           h('div', { style: {
-            height: '100%', width: (levelInfo.pct || 0) + '%', borderRadius: 4,
-            background: 'linear-gradient(90deg, #16a34a, #0d9488)',
-            boxShadow: '0 0 10px rgba(22,163,74,0.5)',
+            height: '100%', width: (levelInfo.pct || 0) + '%', borderRadius: 9999,
+            background: 'linear-gradient(90deg, #22c55e, #4ade80)',
+            boxShadow: '0 0 12px rgba(34,197,94,0.5)',
             transition: 'width .8s ease-out',
           } }),
         ),
@@ -573,7 +576,7 @@ function ProfilePage(props) {
     ),
 
     // ===== TABS =====
-    h('div', { style: { display: 'flex', borderBottom: '1px solid rgba(255,255,255,.07)', margin: '0 16px' }, role: 'tablist' },
+    h('div', { style: { display: 'flex', margin: '8px 16px', padding: 4, background: 'rgba(16,22,36,0.9)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14 }, role: 'tablist' },
       ['overview', 'skills', 'badges', 'goals', 'dna'].map(function(t) {
         var labels = { overview: 'Overview', skills: 'Skills', badges: 'Badges', goals: 'Goals', dna: '🧬 DNA' };
         return h('button', { key: t, role: 'tab', 'aria-selected': activeTab === t ? 'true' : 'false', onClick: function() { if(A.playTabClick) A.playTabClick(); setActiveTab(t); }, style: tabStyle(t) }, labels[t]);
