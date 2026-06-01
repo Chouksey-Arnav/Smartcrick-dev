@@ -83,7 +83,7 @@ function FitnessPage() {
     { id:'stats',  label:'📊 Stats' },
   ];
 
-  return h('div', { style:{ paddingBottom:100, background:'#0d1117', minHeight:'100dvh' } },
+  return h('div', { style:{ paddingBottom:100, background:'#0a0f1e', minHeight:'100dvh' } },
     h(PageHeader, {
       title:'Fitness Builder',
       subtitle:`${WORKOUTS.length} workouts · every level & goal`,
@@ -91,16 +91,16 @@ function FitnessPage() {
     }),
 
     // Tabs
-    h('div', { style:{ display:'flex', gap:0, margin:'0 16px 0', borderRadius:10, overflow:'hidden', border:'1px solid rgba(48,54,61,0.9)' } },
+    h('div', { style:{ display:'flex', gap:4, margin:'12px 16px', padding:4, background:'rgba(16,22,36,0.9)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:14 } },
       TABS.map(t => h('button', {
         key:t.id, onPointerDown:() => { if(A.playTabClick) A.playTabClick(); setTab(t.id); resetWizard(); },
         style:{
-          flex:1, padding:'10px 4px', fontSize:12, fontWeight:700,
-          cursor:'pointer', fontFamily:'inherit', border:'none',
-          background: tab===t.id ? 'linear-gradient(135deg,#c2410c,#dc2626)' : 'rgba(22,27,34,0.9)',
+          flex:1, padding:'9px 4px', fontSize:12, fontWeight:700,
+          cursor:'pointer', fontFamily:'inherit', border:'none', borderRadius:10,
+          transition:'all 0.2s',
+          background: tab===t.id ? 'linear-gradient(135deg,#c2410c,#ea580c)' : 'transparent',
           color: tab===t.id ? '#fff' : '#6b7280',
-          borderRight: t.id!=='stats' ? '1px solid rgba(48,54,61,0.9)' : 'none',
-          transition:'all 0.15s',
+          boxShadow: tab===t.id ? '0 2px 10px rgba(194,65,12,0.35)' : 'none',
         }
       }, t.label))
     ),
@@ -115,13 +115,13 @@ function FitnessPage() {
           type:'search', value:search, placeholder:'Search workouts…',
           onChange: e => setSearch(e.target.value),
           style:{
-            width:'100%', padding:'10px 14px 10px 38px', borderRadius:10,
-            background:'rgba(22,27,34,0.9)', border:'1px solid rgba(48,54,61,0.9)',
+            width:'100%', padding:'10px 14px 10px 38px', borderRadius:9999,
+            background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)',
             color:'#f0fdf4', fontSize:14, fontFamily:'inherit', outline:'none',
             boxSizing:'border-box',
           },
-          onFocus: e => e.target.style.borderColor='rgba(249,115,22,0.4)',
-          onBlur:  e => e.target.style.borderColor='rgba(48,54,61,0.9)',
+          onFocus: e => e.target.style.borderColor='rgba(249,115,22,0.5)',
+          onBlur:  e => e.target.style.borderColor='rgba(255,255,255,0.08)',
         }),
         h('span', { style:{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', fontSize:15 } }, '🔍')
       ),
@@ -233,7 +233,7 @@ function FitnessPage() {
     ),
 
     // ── STATS TAB ────────────────────────────────────────────────
-    tab === 'stats' && h('div', { style:{ padding:'12px 16px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 } },
+    tab === 'stats' && h('div', { style:{ padding:'12px 16px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 } },
       h(StatCard, { label:'Workouts Done',  value:progress.workouts_done||0, color:'#f97316', icon:'dumbbell' }),
       h(StatCard, { label:'Total Library',  value:WORKOUTS.length, color:'#fff', icon:'layers' }),
       h(StatCard, { label:'Levels',         value:'4 levels', color:'#16a34a', icon:'trophy' }),
@@ -262,32 +262,35 @@ function WorkoutCard({ w }) {
   return h('button', {
     onClick: () => nav('WorkoutDetail', { id:w.id }),
     style:{
-      display:'flex', alignItems:'center', gap:12, padding:'14px',
-      borderRadius:12, background:'rgba(22,27,34,0.9)', border:'1px solid rgba(48,54,61,0.9)',
+      display:'flex', flexDirection:'column',
+      borderRadius:14, background:'rgba(16,22,36,0.9)', border:'1px solid rgba(255,255,255,0.08)',
       cursor:'pointer', fontFamily:'inherit', textAlign:'left', width:'100%',
-      transition:'all 0.15s',
+      transition:'all 0.15s', overflow:'hidden', padding:0,
     },
-    onMouseEnter: e => { e.currentTarget.style.borderColor=lvlColor+'50'; e.currentTarget.style.transform='translateY(-1px)'; },
-    onMouseLeave: e => { e.currentTarget.style.borderColor='rgba(48,54,61,0.9)'; e.currentTarget.style.transform='translateY(0)'; },
+    onMouseEnter: e => { e.currentTarget.style.borderColor=lvlColor+'40'; e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.3)'; e.currentTarget.style.transform='translateY(-1px)'; },
+    onMouseLeave: e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow='none'; e.currentTarget.style.transform='translateY(0)'; },
   },
-    h('div', {
-      style:{ width:44, height:44, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:`linear-gradient(135deg,${grad})` }
-    },
-      h('span', { style:{ fontSize:20 } }, targetEmoji[w.target] || '💪')
-    ),
-    h('div', { style:{ flex:1, minWidth:0 } },
-      h('div', { style:{ fontSize:13, fontWeight:700, color:'#f0fdf4', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:3 } }, w.name),
-      h('div', { style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' } },
-        h('span', { style:{ fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:4, background:lvlColor+'18', color:lvlColor, border:'1px solid '+lvlColor+'30' } }, w.level),
-        h('span', { style:{ fontSize:11, color:'#6b7280' } }, w.target.replace('-',' ')),
-        h('span', { style:{ fontSize:11, color:'#6b7280' } }, '·'),
-        h('span', { style:{ fontSize:11, color:'#6b7280' } }, w.duration_minutes+'min'),
-        h('span', { style:{ fontSize:11, color:'#6b7280' } }, '·'),
-        h('span', { style:{ fontSize:11, color:'#6b7280' } }, goalEmoji[w.goal]||''),
-      )
-    ),
-    h(XPBadge, { xp:w.xp_value }),
-    h(Icon, { n:'chevR', cls:'w-4 h-4', style:{ color:'#374151', flexShrink:0 } })
+    h('div', { style:{ height:3, background:lvlColor, borderRadius:'14px 14px 0 0', flexShrink:0 } }),
+    h('div', { style:{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px' } },
+      h('div', {
+        style:{ width:44, height:44, borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:`linear-gradient(135deg,${grad})` }
+      },
+        h('span', { style:{ fontSize:20 } }, targetEmoji[w.target] || '💪')
+      ),
+      h('div', { style:{ flex:1, minWidth:0 } },
+        h('div', { style:{ fontSize:13, fontWeight:700, color:'#f0fdf4', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:3 } }, w.name),
+        h('div', { style:{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' } },
+          h('span', { style:{ fontSize:10, fontWeight:700, padding:'2px 6px', borderRadius:4, background:lvlColor+'18', color:lvlColor, border:'1px solid '+lvlColor+'30' } }, w.level),
+          h('span', { style:{ fontSize:11, color:'#6b7280' } }, w.target.replace('-',' ')),
+          h('span', { style:{ fontSize:11, color:'#6b7280' } }, '·'),
+          h('span', { style:{ fontSize:11, color:'#6b7280' } }, w.duration_minutes+'min'),
+          h('span', { style:{ fontSize:11, color:'#6b7280' } }, '·'),
+          h('span', { style:{ fontSize:11, color:'#6b7280' } }, goalEmoji[w.goal]||''),
+        )
+      ),
+      h(XPBadge, { xp:w.xp_value }),
+      h(Icon, { n:'chevR', cls:'w-4 h-4', style:{ color:'#374151', flexShrink:0 } })
+    )
   );
 }
 
@@ -313,13 +316,13 @@ function WorkoutDetailPage({ params }) {
     setDone(true);
   };
 
-  if(done) return h('div', { style:{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:'2rem', minHeight:'100dvh', background:'#0d1117' } },
+  if(done) return h('div', { style:{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', padding:'2rem', minHeight:'100dvh', background:'#0a0f1e' } },
     h('div', { style:{ fontSize:48, marginBottom:16 } }, '✅'),
     h('h2', { style:{ fontSize:22, fontWeight:900, color:'#f0fdf4', marginBottom:8 } }, 'Workout Complete!'),
     h('p', { style:{ color:'#9ca3af', marginBottom:12 } }, w.name),
     h(XPBadge, { xp:w.xp_value }),
     h('div', { style:{ marginTop:24, display:'flex', flexDirection:'column', gap:10, width:'100%', maxWidth:280 } },
-      h('button', { onClick:() => nav('Fitness'), style:{ padding:'13px', background:'#c2410c', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontWeight:700 } }, 'More Workouts'),
+      h('button', { onClick:() => nav('Fitness'), style:{ padding:'13px', background:'linear-gradient(135deg,#c2410c,#ea580c)', color:'#fff', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit', fontWeight:700, boxShadow:'0 4px 16px rgba(194,65,12,0.35)' } }, 'More Workouts'),
       h('button', { onClick:() => { setDone(false); completing.current=false; }, style:{ padding:'12px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(48,54,61,0.9)', borderRadius:10, color:'#9ca3af', cursor:'pointer', fontFamily:'inherit', fontWeight:600 } }, 'Do Again'),
     )
   );
@@ -328,7 +331,7 @@ function WorkoutDetailPage({ params }) {
   const lvlColor = LVL_COLOR[w.level] || '#f97316';
   const goalLabels = { 'build-muscle':'Build Muscle', 'lose-weight':'Lose Weight', 'improve-endurance':'Endurance' };
 
-  return h('div', { style:{ paddingBottom:100, background:'#0d1117', minHeight:'100dvh' } },
+  return h('div', { style:{ paddingBottom:100, background:'#0a0f1e', minHeight:'100dvh' } },
     h(PageHeader, {
       title:w.name,
       subtitle:`${w.duration_minutes} min · ${w.exercises} exercises · ${w.xp_value} XP`,
@@ -364,7 +367,7 @@ function WorkoutDetailPage({ params }) {
           width:'100%', padding:'15px', border:'none', borderRadius:12,
           fontFamily:'inherit', fontSize:15, fontWeight:700, cursor:'pointer',
           background:`linear-gradient(135deg,${grad})`,
-          color:'#fff', boxShadow:`0 4px 20px rgba(194,65,12,0.35)`,
+          color:'#fff', boxShadow:`0 4px 20px rgba(194,65,12,0.45)`,
         }
       },
         h(Icon, { n:'circleCheck', cls:'w-5 h-5' }),
