@@ -127,16 +127,18 @@ function MentalPage(){
     :[];
   const pickIds=new Set(pickSessions.map(s=>s.id));
 
-  return h('div',{style:{minHeight:'100dvh',background:'#0d1117'}},
+  return h('div',{style:{minHeight:'100dvh',background:'#0d1117',backgroundImage:'radial-gradient(ellipse at 30% -10%,rgba(109,40,217,0.08) 0%,transparent 50%)'}},
     h(PageHeader,{title:'Mental Training',subtitle:`${MENTAL_SESSIONS.length} sessions · ${MENTAL_ROUTINES.length} routines · 77 routines`,gradient:'linear-gradient(135deg,#5b21b6,#4f46e5)'}),
 
     h(ContentWrap,null,
       // Sessions / Routines / Creator tab
-      h('div',{style:{display:'flex',gap:0,margin:'16px 16px 0',borderRadius:10,overflow:'hidden',border:'1px solid rgba(48,54,61,0.9)'}},
+      h('div',{style:{display:'flex',gap:6,margin:'16px 16px 0',padding:'4px',borderRadius:99,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)'}},
         ['sessions','routines','creator'].map(t=>h('button',{key:t,onClick:()=>{setTab(t);setScenario(null);},style:{
-          flex:1,padding:'10px 4px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',border:'none',
-          background:tab===t?'linear-gradient(135deg,#5b21b6,#4f46e5)':'rgba(22,27,34,0.9)',
-          color:tab===t?'#fff':'#6b7280',transition:'all 0.15s',
+          flex:1,padding:'9px 4px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit',
+          borderRadius:99,
+          background:tab===t?'rgba(139,92,246,0.15)':'transparent',
+          border:tab===t?'1px solid rgba(139,92,246,0.3)':'1px solid rgba(255,255,255,0.07)',
+          color:tab===t?'#a78bfa':'#64748b',transition:'all 0.15s',
         }},t==='sessions'?'🧠 Sessions':t==='routines'?'🔗 Routines':'✨ Creator'))
       ),
 
@@ -152,22 +154,30 @@ function MentalPage(){
           MENTAL_ROUTINES.map(r=>{
             const sessions=r.sessionIds.map(id=>MENTAL_SESSIONS.find(s=>s.id===id)).filter(Boolean);
             const totalXP=sessions.reduce((s,x)=>s+x.xp_value,0)+r.bonusXP;
-            return h('button',{key:r.id,onClick:()=>nav('MentalRoutines',{id:r.id}),style:{
-              display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderRadius:12,
-              background:r.bg,border:`1px solid ${r.border}`,cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',border:'none',
+            return h('div',{key:r.id,style:{
+              borderRadius:14,background:'rgba(16,22,36,0.9)',
+              border:'1px solid rgba(255,255,255,0.07)',
+              borderLeft:'6px solid #8b5cf6',
+              padding:'16px',overflow:'hidden',
             }},
-              h('div',{style:{width:44,height:44,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:'rgba(0,0,0,0.2)'}},
-                h(Icon,{n:r.icon,cls:'w-5 h-5',style:{color:r.color}})),
-              h('div',{style:{flex:1,minWidth:0}},
-                h('div',{style:{fontSize:14,fontWeight:700,color:'#f0fdf4',marginBottom:3}},r.title),
-                h('div',{style:{fontSize:12,color:'rgba(255,255,255,0.55)',marginBottom:6}},r.desc),
-                h('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                  h('span',{style:{fontSize:11,color:r.color,fontWeight:600}},`${r.totalMins} min total`),
-                  h('span',{style:{fontSize:11,color:'rgba(255,255,255,0.35)'}},`${r.sessionIds.length} sessions`),
-                  h(XPBadge,{xp:totalXP})
+              h('div',{style:{display:'flex',alignItems:'flex-start',gap:12,marginBottom:10}},
+                h('div',{style:{width:44,height:44,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.3)'}},
+                  h(Icon,{n:r.icon,cls:'w-5 h-5',style:{color:'#a78bfa'}})),
+                h('div',{style:{flex:1,minWidth:0}},
+                  h('div',{style:{fontSize:14,fontWeight:700,color:'#f8fafc',marginBottom:4}},r.title),
+                  h('div',{style:{fontSize:12,color:'rgba(255,255,255,0.5)',marginBottom:8,lineHeight:1.5}},r.desc),
+                  h('div',{style:{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}},
+                    h('span',{style:{fontSize:11,padding:'2px 8px',borderRadius:99,background:'rgba(139,92,246,0.15)',color:'#a78bfa',fontWeight:600,border:'1px solid rgba(139,92,246,0.3)'}},`${r.totalMins} min`),
+                    h('span',{style:{fontSize:11,padding:'2px 8px',borderRadius:99,background:'rgba(139,92,246,0.15)',color:'#a78bfa',fontWeight:600,border:'1px solid rgba(139,92,246,0.3)'}},`${r.sessionIds.length} sessions`),
+                    h('span',{style:{fontSize:11,padding:'2px 8px',borderRadius:99,background:'rgba(245,158,11,0.12)',color:'#f59e0b',fontWeight:600,border:'1px solid rgba(245,158,11,0.3)'}},`+${r.bonusXP} bonus XP`)
+                  )
                 )
               ),
-              h(Icon,{n:'chevR',cls:'w-5 h-5 flex-shrink-0',style:{color:'rgba(255,255,255,0.25)'}})
+              h('button',{onClick:()=>nav('MentalRoutines',{id:r.id}),style:{
+                width:'100%',padding:'12px',borderRadius:10,cursor:'pointer',fontFamily:'inherit',
+                background:'linear-gradient(135deg,#7c3aed,#6d28d9)',color:'#fff',
+                border:'none',fontSize:14,fontWeight:700,
+              }},'Start Routine →')
             );
           })
         )
@@ -190,20 +200,17 @@ function MentalPage(){
             MENTAL_SCENARIOS.map(sc=>{
               const isActive=activeScenario?.id===sc.id;
               return h('button',{key:sc.id,onClick:()=>setScenario(prev=>prev?.id===sc.id?null:sc),style:{
-                display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:5,
-                // Use padding that scales with column width
-                padding:'10px 4px',borderRadius:10,cursor:'pointer',fontFamily:'inherit',
-                background:isActive?sc.bg:'rgba(22,27,34,0.9)',
-                border:`1.5px solid ${isActive?sc.border:'rgba(48,54,61,0.8)'}`,
+                display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,
+                padding:'16px 4px',borderRadius:14,cursor:'pointer',fontFamily:'inherit',
+                background:isActive?sc.bg:'rgba(16,22,36,0.9)',
+                border:`1px solid ${isActive?sc.border:'rgba(255,255,255,0.08)'}`,
                 transform:isActive?'scale(1.04)':'scale(1)',transition:'all 0.15s',
-                // MIN SIZE: always touch-friendly
-                minHeight:70,
+                minHeight:80,
               }},
-                h('span',{style:{fontSize:20,lineHeight:1}},sc.emoji),
+                h('span',{style:{fontSize:28,lineHeight:1}},sc.emoji),
                 h('span',{style:{
-                  fontSize:10,fontWeight:600,textAlign:'center',lineHeight:1.3,
-                  color:isActive?sc.color:'#6b7280',
-                  // Don't overflow — wrap text
+                  fontSize:13,fontWeight:700,textAlign:'center',lineHeight:1.3,
+                  color:isActive?sc.color:'#e2e8f0',
                   overflowWrap:'break-word',wordBreak:'break-word',
                   width:'100%',
                 }},sc.label)
@@ -314,9 +321,10 @@ function MentalPage(){
               const mins=Math.floor(s.duration_seconds/60),isDone=done.includes(s.id);
               const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
               return h('button',{key:s.id,onClick:()=>{window.SC_APP._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
-                display:'flex',alignItems:'center',gap:12,padding:'14px',borderRadius:10,
-                background:'rgba(22,27,34,0.9)',border:`1px solid ${isDone?'rgba(22,163,74,0.3)':'rgba(48,54,61,0.9)'}`,
+                display:'flex',alignItems:'center',gap:12,padding:'16px',borderRadius:14,
+                background:'rgba(16,22,36,0.9)',border:`1px solid ${isDone?'rgba(22,163,74,0.3)':'rgba(255,255,255,0.07)'}`,
                 cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',marginBottom:8,
+                borderLeft:`6px solid ${sc.from}`,
               }},
                 h('div',{style:{width:44,height:44,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,position:'relative',background:`linear-gradient(135deg,${sc.from},${sc.to})`}},
                   h(Icon,{n:sc.icon,cls:'w-5 h-5 text-white'}),
@@ -324,16 +332,16 @@ function MentalPage(){
                     h(Icon,{n:'check',cls:'w-3 h-3 text-white'}))
                 ),
                 h('div',{style:{flex:1,minWidth:0}},
-                  h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:4}},
-                    h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title),
+                  h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:6}},
+                    h('span',{style:{fontSize:15,fontWeight:700,color:'#f8fafc',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title),
                     h('div',{style:{display:'flex',alignItems:'center',gap:4,flexShrink:0}},
                       pickIds.has(s.id)&&h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'1px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.04em',textTransform:'uppercase'}},'✦ Pick'),
                       s.is_premium&&h(PremiumBadge)
                     )
                   ),
                   h('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                    h('span',{style:{fontSize:11,color:'#484f58'}},`${mins} min`),
-                    h(XPBadge,{xp:s.xp_value}),
+                    h('span',{style:{fontSize:11,padding:'2px 8px',borderRadius:99,background:`${sc.from}22`,color:sc.from,fontWeight:600}},`${mins} min`),
+                    h('span',{style:{fontSize:11,padding:'2px 8px',borderRadius:99,background:'rgba(34,197,94,0.12)',color:'#4ade80',fontWeight:600}},`+${s.xp_value} XP`),
                     isDone&&h('span',{style:{fontSize:11,fontWeight:700,color:'#4ade80'}},'✓')
                   )
                 )
