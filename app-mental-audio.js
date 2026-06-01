@@ -295,6 +295,8 @@ var MentalTTS = (function() {
     'Samantha (Enhanced)',
     'Microsoft Aria Online (Natural) - English (United States)',
     'Microsoft Jenny Online (Natural) - English (United States)',
+    'Microsoft Guy Online (Natural) - English (United States)',
+    'Microsoft David Desktop - English (United States)',
     'Google UK English Female',
     'Ava',
     'Samantha',
@@ -333,19 +335,19 @@ var MentalTTS = (function() {
 
   function _duckYT() {
     var YT = window.SC_APP && window.SC_APP.MentalYouTube;
-    if (YT) YT.setVolume(22);
+    if (YT) YT.setVolume(15);
   }
 
   function _restoreYT() {
     var YT = window.SC_APP && window.SC_APP.MentalYouTube;
     if (!YT) return;
-    // Graceful 300ms ramp back to full volume
-    var step = 0, steps = 10, target = 65;
+    // 800ms graceful restore so re-entry isn't jarring
+    var step = 0, steps = 16, target = 65;
     var t = setInterval(function() {
       step++;
-      try { YT.setVolume(Math.round(22 + (target - 22) * (step / steps))); } catch(e) {}
+      try { YT.setVolume(Math.round(15 + (target - 15) * (step / steps))); } catch(e) {}
       if (step >= steps) clearInterval(t);
-    }, 30);
+    }, 50);
   }
 
   function _nextChunk() {
@@ -358,13 +360,13 @@ var MentalTTS = (function() {
     var chunk = _queue.shift();
     var u = new SpeechSynthesisUtterance(chunk);
     u.voice  = selectVoice();
-    u.rate   = 0.76;   // unhurried, meditative
-    u.pitch  = 0.88;   // deeper = warmth & calm
+    u.rate   = 0.82;   // warm coaching pace — unhurried but present
+    u.pitch  = 0.95;   // warm, clear, coach-like
     u.volume = 1.0;    // full presence
     u.lang   = (u.voice && u.voice.lang) || 'en-GB';
     u.onend  = function() {
       if (_stopped) return;
-      setTimeout(_nextChunk, _queue.length ? 950 : 0);
+      setTimeout(_nextChunk, _queue.length ? 1200 : 0);
     };
     u.onerror = function() { setTimeout(_nextChunk, 100); };
     synth.speak(u);
@@ -393,7 +395,7 @@ var MentalTTS = (function() {
     }
 
     // 1.5s warm-up: let ambient audio settle before voice begins
-    _warmupTimer = setTimeout(_start, 1500);
+    _warmupTimer = setTimeout(_start, 800);
   }
 
   function stop() {
