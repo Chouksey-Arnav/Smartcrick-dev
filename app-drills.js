@@ -153,46 +153,75 @@ function DrillCard(props) {
   return h('div', {
     onClick: function() { onSelect(drill); },
     style: {
-      background: '#161b22', border: '1px solid #30363d', borderRadius: 12,
-      overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s',
+      background: 'rgba(16,22,36,0.9)',
+      border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 14,
+      overflow: 'hidden',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
     },
-    onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)'; },
-    onMouseLeave: function(e) { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; },
+    onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)'; },
+    onMouseLeave: function(e) { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)'; },
   },
-    h('div', { style: { height: 3, background: cat.color, opacity: 0.8 } }),
-    h('div', { style: { padding: '14px 16px' } },
-      h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 } },
-        h('span', { style: { fontSize: 26, lineHeight: 1 } }, drill.emoji),
-        h('div', { style: { flex: 1, minWidth: 0 } },
-          h('div', { style: { fontWeight: 700, fontSize: 14, color: '#f0fdf4', lineHeight: 1.3, marginBottom: 3 } }, drill.name),
-          drill.problem && h('div', { style: {
-            fontSize: 11, color: '#9ca3af', lineHeight: 1.4,
-            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}, drill.problem)
-        )
-      ),
-      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 8 } },
-        h(MechanicBadge, { mechanic: drill.appMechanic }),
+    // Category color strip at top
+    h('div', { style: { height: 6, background: cat.color, opacity: 0.85 } }),
+    h('div', { style: { padding: '14px' } },
+      // Top row: emoji + level badge + XP badge
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 } },
+        h('span', { style: { fontSize: 18, lineHeight: 1 } }, drill.emoji),
+        h('span', { style: {
+          fontSize: 10, padding: '2px 8px', borderRadius: 99,
+          background: lvl.bg, color: lvl.text, fontWeight: 700,
+        }}, drill.level),
         isPick && h('span', { style: {
           fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
           background: 'rgba(16,185,129,0.15)', color: '#34d399',
           border: '1px solid rgba(16,185,129,0.3)',
-        }}, '⭐ Picked for you'),
+        }}, '⭐ Pick'),
+        h('span', { style: { marginLeft: 'auto', fontSize: 10, padding: '2px 7px', borderRadius: 99,
+          background: 'rgba(34,197,94,0.12)', color: '#4ade80', fontWeight: 700,
+          border: '1px solid rgba(34,197,94,0.2)',
+        }}, '⚡ ' + drill.xp + ' XP')
+      ),
+      // Drill name
+      h('div', { style: { fontSize: 15, fontWeight: 700, color: '#f8fafc', marginTop: 8, lineHeight: 1.3 } }, drill.name),
+      // Problem/tagline
+      drill.problem && h('div', { style: {
+        fontSize: 12, color: '#64748b', lineHeight: 1.5, marginTop: 4, overflow: 'hidden',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+      }}, drill.problem),
+      // Bottom row: badges
+      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10 } },
+        h(MechanicBadge, { mechanic: drill.appMechanic }),
+        h('span', { style: { fontSize: 11, color: '#64748b' } }, '⏱ ' + drill.duration),
+        h('span', { style: { fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99,
+          background: cat.bg, color: cat.color } }, cat.emoji + ' ' + cat.label),
         count > 0 && h('span', { style: {
           fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
           background: 'rgba(59,130,246,0.15)', color: '#60a5fa',
           border: '1px solid rgba(59,130,246,0.3)',
-        }}, '✓ Done ' + count + 'x')
-      ),
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' } },
-        h('span', { style: {
-          fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 6,
-          background: lvl.bg, color: lvl.text,
-        }}, drill.level),
-        h('span', { style: { fontSize: 11, color: '#6b7280' } }, '⏱ ' + drill.duration),
-        h('span', { style: { fontSize: 11, color: '#fbbf24' } }, '⚡ ' + drill.xp + ' XP'),
+        }}, '✓ ' + count + 'x'),
         (drill.videoId && drill.videoId !== 'PLACEHOLDER') && h('span', { style: { fontSize: 11, color: '#f87171' } }, '▶ Video')
-      )
+      ),
+      // CTA button
+      h('button', {
+        onClick: function(e) { e.stopPropagation(); onSelect(drill); },
+        style: {
+          width: '100%',
+          padding: '11px',
+          marginTop: 12,
+          border: 'none',
+          borderRadius: 10,
+          background: (CATS[drill.category] && CATS[drill.category].bg) || 'rgba(34,197,94,0.12)',
+          color: (CATS[drill.category] && CATS[drill.category].color) || '#22c55e',
+          fontSize: 13,
+          fontWeight: 700,
+          cursor: 'pointer',
+          letterSpacing: '0.02em',
+          fontFamily: 'inherit',
+        }
+      }, 'Start Drill →')
     )
   );
 }
@@ -447,38 +476,43 @@ function DrillsPage() {
     subtitle: { fontSize: 13, color: '#6b7280', marginBottom: 14 },
     searchRow: { display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' },
     searchInput: {
-      flex: 1, background: '#161b22', border: '1px solid #30363d', borderRadius: 8,
-      padding: '9px 14px', color: '#f0fdf4', fontSize: 14, outline: 'none',
+      width: '100%', boxSizing: 'border-box',
+      background: 'rgba(16,22,36,0.9)', border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 99, padding: '9px 16px 9px 40px', color: '#e2e8f0',
+      fontSize: 14, outline: 'none',
     },
     select: {
-      background: '#161b22', border: '1px solid #30363d', borderRadius: 8,
-      padding: '9px 10px', color: '#9ca3af', fontSize: 12, outline: 'none', cursor: 'pointer',
+      background: 'rgba(16,22,36,0.9)', border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 99, padding: '8px 14px', color: '#e2e8f0',
+      fontSize: 12, outline: 'none', cursor: 'pointer',
     },
     catScroll: { display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, WebkitOverflowScrolling: 'touch' },
     catBtn: function(active, cat) {
       return {
-        flexShrink: 0, padding: '7px 14px', borderRadius: 8, border: '1px solid',
-        fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-        borderColor: active ? cat.color : '#30363d',
+        flexShrink: 0, padding: '8px 16px', borderRadius: 99, border: '1px solid',
+        fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+        borderColor: active ? cat.color : 'rgba(255,255,255,0.08)',
         background: active ? cat.bg : 'transparent',
-        color: active ? cat.color : '#9ca3af',
+        color: active ? cat.color : '#64748b',
+        boxShadow: active ? ('0 0 12px ' + cat.color + '33') : 'none',
       };
     },
     picksBtn: function(active) {
       return {
-        flexShrink: 0, padding: '7px 14px', borderRadius: 8, border: '1px solid',
-        fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
-        borderColor: active ? '#34d399' : '#30363d',
+        flexShrink: 0, padding: '8px 16px', borderRadius: 99, border: '1px solid',
+        fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+        borderColor: active ? '#34d399' : 'rgba(255,255,255,0.08)',
         background: active ? 'rgba(16,185,129,0.12)' : 'transparent',
-        color: active ? '#34d399' : '#9ca3af',
+        color: active ? '#34d399' : '#64748b',
+        boxShadow: active ? '0 0 12px rgba(52,211,153,0.2)' : 'none',
       };
     },
     grid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))',
-      gap: 12, padding: '16px', maxWidth: 960, margin: '0 auto',
+      gap: 14, padding: '14px 16px 100px', maxWidth: 960, margin: '0 auto',
     },
-    emptyMsg: { textAlign: 'center', padding: '60px 20px', color: '#6b7280' },
+    emptyMsg: { textAlign: 'center', padding: '80px 20px', color: '#6b7280' },
     statsBar: {
       display: 'flex', gap: 16, padding: '10px 16px',
       borderBottom: '1px solid #21262d', background: 'rgba(22,27,34,0.5)',
@@ -495,24 +529,33 @@ function DrillsPage() {
 
       // Stats bar
       totalDrills > 0 && h('div', { style: { marginBottom: 12 } },
-        h('div', { style: { height: 4, background: '#21262d', borderRadius: 2, overflow: 'hidden' } },
+        h('div', { style: { height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' } },
           h('div', { style: {
-            height: '100%', borderRadius: 2,
+            height: '100%', borderRadius: 99,
             width: Math.round((totalDone / totalDrills) * 100) + '%',
-            background: 'linear-gradient(90deg,#16a34a,#22c55e)',
+            background: 'linear-gradient(90deg, #22c55e, #4ade80)',
             transition: 'width 0.5s',
+            boxShadow: '0 0 10px rgba(74,222,128,0.5)',
           }})
         )
       ),
 
       // Search + Level filter
       h('div', { style: s.searchRow },
-        h('input', {
-          style: s.searchInput,
-          placeholder: '🔍 Search drills…',
-          value: search,
-          onChange: function(e) { setSearch(e.target.value); },
-        }),
+        h('div', { style: { flex: 1, position: 'relative' } },
+          h('span', { style: {
+            position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+            fontSize: 14, pointerEvents: 'none', color: '#475569',
+          } }, '🔍'),
+          h('input', {
+            style: s.searchInput,
+            placeholder: 'Search drills…',
+            value: search,
+            onChange: function(e) { setSearch(e.target.value); },
+            onFocus: function(e) { e.target.style.borderColor = '#22c55e'; },
+            onBlur: function(e) { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; },
+          })
+        ),
         h('select', {
           style: s.select,
           value: levelFilter,
@@ -552,9 +595,17 @@ function DrillsPage() {
     // Grid
     filtered.length === 0
       ? h('div', { style: s.emptyMsg },
-          h('div', { style: { fontSize: 40, marginBottom: 12 } }, '🔍'),
-          h('div', { style: { fontSize: 16, fontWeight: 600, marginBottom: 6 } }, 'No drills found'),
-          h('div', { style: { fontSize: 13 } }, 'Try a different search or filter')
+          h('div', { style: { fontSize: 40, marginBottom: 16 } }, '🔍'),
+          h('div', { style: { fontSize: 18, fontWeight: 700, color: '#f8fafc', marginBottom: 8 } }, 'No drills found'),
+          h('div', { style: { fontSize: 13, color: '#64748b', marginBottom: 20 } }, 'Try a different category or clear the search'),
+          h('button', {
+            onClick: function() { setSearch(''); setActiveCat('all'); setLevelFilter('all'); setShowPicks(false); },
+            style: {
+              padding: '10px 24px', background: 'rgba(34,197,94,0.12)', color: '#22c55e',
+              border: '1px solid rgba(34,197,94,0.25)', borderRadius: 99,
+              fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            }
+          }, 'Clear Filters')
         )
       : h('div', { style: s.grid },
           filtered.map(function(drill) {
