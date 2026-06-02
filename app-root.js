@@ -285,7 +285,21 @@ function AppShell() {
             state:   dailyReward.state,
             onClose: function() { setShowReward(false); },
           })
-        : null
+        : null,
+
+      // ── Mascot Controller singleton (renders null, drives GSAP) ──
+      A.MascotController ? h(A.MascotController, null) : null,
+
+      // ── Persistent MascotSVG — always in DOM so GSAP has a target ─
+      // Sits fixed at bottom-right, subtle in idle, animated on cheer.
+      A.Mascot ? h('div', {
+        id: 'em-mascot-fixed-host',
+        style: {
+          position: 'fixed', bottom: 70, right: 12, zIndex: 200,
+          pointerEvents: 'none', opacity: 0.18,
+          transition: 'opacity 0.4s ease',
+        },
+      }, h(A.Mascot, { size: 'sm' })) : null
     )
   );
 }
