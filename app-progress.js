@@ -71,7 +71,9 @@ function ProgressPage() {
           h('span',{style:{fontSize:14,fontWeight:700,color:'#e2e8f0'}},'7-Day XP'),
           h('span',{style:{fontSize:12,fontWeight:700,color:'#4ade80'}},`${xpDays.reduce((s,d)=>s+d.xp,0)} total`)
         ),
-        h(XPChart,{days:xpDays})
+        (window.SC_APP && window.SC_APP.TactileXPChart)
+          ? h(window.SC_APP.TactileXPChart,{days:xpDays})
+          : h(XPChart,{days:xpDays})
       ),
 
       // 30-day heatmap
@@ -95,6 +97,10 @@ function ProgressPage() {
         h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}},
           Object.entries(BADGE_DEFS).map(([id,def])=>{
             const earned=badges.includes(id);
+            // Use Badge3D for earned badges (3D tilt + glint + unlock ceremony)
+            if (window.SC_APP && window.SC_APP.Badge3D) {
+              return h(window.SC_APP.Badge3D, { key:id, badgeId:id, def:def, earned:earned });
+            }
             return h('div',{key:id,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:6,padding:12,borderRadius:12,textAlign:'center',
                 background:earned?'rgba(16,185,129,0.08)':'rgba(15,23,42,0.4)',
                 border:`1px solid ${earned?'rgba(16,185,129,0.25)':'rgba(51,65,85,0.3)'}`,
