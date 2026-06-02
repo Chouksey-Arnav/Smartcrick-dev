@@ -587,6 +587,288 @@ function BottomNav(props) {
 }
 A.BottomNav = BottomNav;
 
-// (End of app-ui additions — the existing console.log('[SC] app-ui...') line follows below)  
-console.log('[SC] app-ui v3.1 ready — inline sidebar, DesktopSidebar exported');
+// ================================================================
+// EMOTIONAL DESIGN COMPONENTS — Phase 2 + 5
+// SpringBtn, MomentumBar, TactileXPChart, Badge3D
+// Direct DOM-ref animations bypass React reconciler for 60fps.
+// ================================================================
+
+// ── SpringBtn — spring-physics CTA button ────────────────────────
+function SpringBtn(props) {
+  var label     = props.label;
+  var onClick   = props.onClick;
+  var state     = props.state    || 'idle';
+  var btnClass  = props.className || 'btn-primary';
+  var btnStyle  = props.style    || {};
+  var disabled  = props.disabled || state === 'loading';
+
+  var btnRef    = useRef(null);
+  var cancelRef = useRef(null);
+
+  function doSpring(from, to, cb) {
+    if (cancelRef.current) cancelRef.current();
+    var E = window.SC_APP && window.SC_APP.Emotion;
+    if (!E || !E.springSubmit || E.prefersReducedMotion()) {
+      if (btnRef.current) btnRef.current.style.transform = 'scale(' + to + ')';
+      if (cb) cb();
+      return;
+    }
+    cancelRef.current = E.runSpring(from, to, E.springSubmit,
+      function (p) { if (btnRef.current) btnRef.current.style.transform = 'scale(' + p + ')'; },
+      cb
+    );
+  }
+
+  useEffect(function () {
+    if (state === 'success' && btnRef.current) {
+      doSpring(1, 1.08, function () { doSpring(1.08, 1, null); });
+      var E = window.SC_APP && window.SC_APP.Emotion;
+      if (E && E.fireSparkleSVG) E.fireSparkleSVG(btnRef.current, { count: 8, color: '#4ade80' });
+    }
+  }, [state]);
+
+  useEffect(function () {
+    return function () { if (cancelRef.current) cancelRef.current(); };
+  }, []);
+
+  var content = state === 'loading' ? '…' : state === 'success' ? '✓  Done' : label;
+
+  return h('button', {
+    ref: btnRef,
+    className: 'em-spring-btn ' + btnClass,
+    style: Object.assign({ transformOrigin: 'center', outline: 'none' }, btnStyle),
+    disabled: disabled,
+    onClick: onClick,
+    onPointerDown:  function () { doSpring(1, 0.95, null); },
+    onPointerUp:    function () { if (state !== 'success') doSpring(0.95, 1, null); },
+    onPointerLeave: function () { if (state !== 'success') doSpring(0.95, 1, null); },
+  }, content);
+}
+A.SpringBtn = SpringBtn;
+
+// ── MomentumBar — spring-physics progress bar ────────────────────
+function MomentumBar(props) {
+  var pct       = props.pct       || 0;
+  var height    = props.height    || 8;
+  var gradient  = props.gradient  || 'linear-gradient(to right,#16a34a,#34d399)';
+  var glowColor = props.glowColor || 'rgba(74,222,128,0.4)';
+  var ariaLabel = props.ariaLabel;
+
+  var fillRef   = useRef(null);
+  var prevPct   = useRef(pct);
+  var cancelRef = useRef(null);
+
+  useEffect(function () {
+    var from = prevPct.current;
+    var to   = pct;
+    prevPct.current = to;
+    if (cancelRef.current) cancelRef.current();
+    var E = window.SC_APP && window.SC_APP.Emotion;
+    if (!E || E.prefersReducedMotion()) {
+      if (fillRef.current) fillRef.current.style.width = to + '%';
+      return;
+    }
+    var springFn = Math.abs(to - from) > 20
+      ? E.createSpring(120, 12, 1) : E.springBar;
+    cancelRef.current = E.runSpring(from, to, springFn, function (p) {
+      if (fillRef.current) fillRef.current.style.width = Math.max(0, p) + '%';
+    }, null);
+    return function () { if (cancelRef.current) cancelRef.current(); };
+  }, [pct]);
+
+  return h('div', {
+    style: { height: height, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+    role: ariaLabel ? 'progressbar' : undefined,
+    'aria-valuenow': ariaLabel ? Math.round(pct) : undefined,
+    'aria-valuemin': ariaLabel ? 0 : undefined,
+    'aria-valuemax': ariaLabel ? 100 : undefined,
+  },
+    h('div', {
+      ref: fillRef,
+      className: 'em-momentum-bar-fill',
+      style: { width: pct + '%', background: gradient, boxShadow: '0 0 8px ' + glowColor },
+    })
+  );
+}
+A.MomentumBar = MomentumBar;
+
+// ── TactileXPChart — SVG chart with radial glow + spring label ────
+function TactileXPChart(props) {
+  var days = props.days || [];
+  var wrapRef  = useRef(null);
+  var labelRef = useRef(null);
+  var rafRef   = useRef(null);
+  var springSt = useRef({ pos: 0, vel: 0 });
+  var targetXP = useRef(0);
+  var labelX   = useRef(0);
+  var max = Math.max.apply(null, days.map(function (d) { return d.xp; }).concat([1]));
+
+  function getIdx(clientX) {
+    if (!wrapRef.current || !days.length) return -1;
+    var rect = wrapRef.current.getBoundingClientRect();
+    var bw   = rect.width / days.length;
+    var E    = window.SC_APP && window.SC_APP.Emotion;
+    var cl   = E ? E.clamp : function (v, a, b) { return Math.max(a, Math.min(b, v)); };
+    return cl(Math.floor((clientX - rect.left) / bw), 0, days.length - 1);
+  }
+
+  function runLabel() {
+    var E = window.SC_APP && window.SC_APP.Emotion;
+    if (!E || !E.springChart) { rafRef.current = null; return; }
+    var r = E.springChart(springSt.current.pos, springSt.current.vel, targetXP.current, 0.016);
+    springSt.current.pos = r.pos; springSt.current.vel = r.vel;
+    if (labelRef.current) {
+      labelRef.current.textContent = Math.round(r.pos) + ' XP';
+      labelRef.current.style.left  = labelX.current + 'px';
+    }
+    rafRef.current = r.done ? null : requestAnimationFrame(runLabel);
+  }
+
+  function onInteract(clientX, clientY) {
+    if (!wrapRef.current) return;
+    var idx = getIdx(clientX);
+    if (idx < 0 || idx >= days.length) return;
+    var rect = wrapRef.current.getBoundingClientRect();
+    var rx = ((clientX - rect.left) / rect.width * 100).toFixed(1) + '%';
+    var ry = ((clientY - rect.top)  / rect.height * 100).toFixed(1) + '%';
+    wrapRef.current.style.backgroundImage =
+      'radial-gradient(circle 54px at ' + rx + ' ' + ry + ', rgba(74,222,128,0.2) 0%, transparent 70%)';
+    targetXP.current = days[idx].xp;
+    labelX.current = (idx + 0.5) * (rect.width / days.length);
+    if (labelRef.current) labelRef.current.classList.add('visible');
+    if (!rafRef.current) runLabel();
+  }
+
+  function onLeave() {
+    if (wrapRef.current) wrapRef.current.style.backgroundImage = 'none';
+    if (labelRef.current) labelRef.current.classList.remove('visible');
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+  }
+
+  useEffect(function () { return function () { if (rafRef.current) cancelAnimationFrame(rafRef.current); }; }, []);
+
+  var svgH = 72, bw = 36;
+
+  return h('div', {
+    ref: wrapRef,
+    className: 'em-chart-tactile',
+    style: { width: '100%', position: 'relative' },
+    onMouseMove:  function (e) { onInteract(e.clientX, e.clientY); },
+    onMouseLeave: onLeave,
+    onTouchMove:  function (e) { if (e.touches[0]) onInteract(e.touches[0].clientX, e.touches[0].clientY); },
+    onTouchEnd:   onLeave,
+  },
+    h('div', { ref: labelRef, className: 'em-chart-label' }),
+    h('svg', {
+      style: { width: '100%', height: svgH + 20, display: 'block', overflow: 'visible' },
+      viewBox: '0 0 ' + (days.length * bw) + ' ' + (svgH + 20),
+      preserveAspectRatio: 'none',
+    },
+      h('defs', null,
+        h('linearGradient', { id: 'em-xp-grad', x1: '0', y1: '0', x2: '0', y2: '1' },
+          h('stop', { offset: '0%',   stopColor: '#34d399' }),
+          h('stop', { offset: '100%', stopColor: '#059669' })
+        ),
+        h('filter', { id: 'em-bar-glow', x: '-40%', y: '-40%', width: '180%', height: '180%' },
+          h('feGaussianBlur', { stdDeviation: '3', result: 'blur' }),
+          h('feMerge', null, h('feMergeNode', { in: 'blur' }), h('feMergeNode', { in: 'SourceGraphic' }))
+        )
+      ),
+      days.map(function (d, i) {
+        var barH = Math.max(3, (d.xp / max) * svgH);
+        var x    = i * bw + 4;
+        return h('g', { key: d.date },
+          h('rect', {
+            x: x, y: svgH - barH, width: 28, height: barH, rx: 3,
+            fill: d.xp > 0 ? 'url(#em-xp-grad)' : 'rgba(30,41,59,0.6)',
+          }),
+          h('text', {
+            x: x + 14, y: svgH + 14,
+            textAnchor: 'middle',
+            style: { fontSize: 9, fill: '#4b5563', fontWeight: 500, fontFamily: 'Inter,system-ui,sans-serif' },
+          }, d.label)
+        );
+      })
+    )
+  );
+}
+A.TactileXPChart = TactileXPChart;
+
+// ── Badge3D — 3D tilt card with glint + unlock ceremony ──────────
+function Badge3D(props) {
+  var badgeId = props.badgeId;
+  var def     = props.def;
+  var earned  = props.earned;
+  var cardRef = useRef(null);
+  var glintRef= useRef(null);
+
+  function resetTilt() {
+    if (!cardRef.current) return;
+    cardRef.current.style.transition = 'transform 0.32s cubic-bezier(0.16,1,0.3,1)';
+    cardRef.current.style.transform  = 'perspective(280px) rotateY(0deg) rotateX(0deg) scale(1)';
+    if (glintRef.current) glintRef.current.style.opacity = '0';
+    setTimeout(function () { if (cardRef.current) cardRef.current.style.transition = ''; }, 350);
+  }
+
+  function onMove(e) {
+    if (!earned || !cardRef.current) return;
+    var E = window.SC_APP && window.SC_APP.Emotion;
+    if (E && E.prefersReducedMotion()) return;
+    var rect = cardRef.current.getBoundingClientRect();
+    var dx = (e.clientX - (rect.left + rect.width  / 2)) / (rect.width  / 2);
+    var dy = (e.clientY - (rect.top  + rect.height / 2)) / (rect.height / 2);
+    cardRef.current.style.transform =
+      'perspective(280px) rotateY(' + (dx * 18) + 'deg) rotateX(' + (-dy * 12) + 'deg) scale(1.04)';
+    if (glintRef.current) {
+      glintRef.current.style.background =
+        'radial-gradient(circle at ' + (50+dx*30) + '% ' + (50+dy*30) + '%, rgba(255,255,255,0.22) 0%, transparent 65%)';
+      glintRef.current.style.opacity = '1';
+    }
+  }
+
+  useEffect(function () {
+    function onUnlock(detail) {
+      if (!detail || !detail.ids || detail.ids.indexOf(badgeId) === -1) return;
+      if (!cardRef.current) return;
+      cardRef.current.classList.add('em-badge-unlock');
+      cardRef.current.addEventListener('animationend', function h2() {
+        cardRef.current && cardRef.current.classList.remove('em-badge-unlock');
+        cardRef.current && cardRef.current.removeEventListener('animationend', h2);
+      }, { once: true });
+      var E = window.SC_APP && window.SC_APP.Emotion;
+      if (E && E.fireSparkleSVG) E.fireSparkleSVG(cardRef.current, { count: 10, color: '#4ade80', radius: 30 });
+    }
+    var E = window.SC_APP && window.SC_APP.Emotion;
+    if (E) E.on('sc_badge_unlock', onUnlock);
+    return function () { if (E) E.off('sc_badge_unlock', onUnlock); };
+  }, [badgeId]);
+
+  return h('div', {
+    ref: cardRef,
+    'data-badge-id': badgeId,
+    className: earned ? 'em-card-3d' : '',
+    onMouseMove:  earned ? onMove     : undefined,
+    onMouseLeave: earned ? resetTilt  : undefined,
+    style: {
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+      padding: 12, borderRadius: 12, textAlign: 'center',
+      background: earned ? 'rgba(16,185,129,0.08)' : 'rgba(15,23,42,0.4)',
+      border: '1px solid ' + (earned ? 'rgba(16,185,129,0.25)' : 'rgba(51,65,85,0.3)'),
+      opacity: earned ? 1 : 0.4,
+      position: 'relative',
+    },
+  },
+    earned && h('div', { ref: glintRef, className: 'em-glint' }),
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' } },
+      earned
+        ? h(Icon, { n: def.icon, cls: 'w-6 h-6', style: { color: '#e6edf3' } })
+        : h(Icon, { n: 'lock',   cls: 'w-5 h-5', style: { color: '#484f58' } })
+    ),
+    h('span', { style: { fontSize: '0.65rem', fontWeight: 800, color: earned ? '#f8fafc' : '#64748b' } }, def.label)
+  );
+}
+A.Badge3D = Badge3D;
+
+// (End of app-ui additions — the existing console.log('[SC] app-ui...') line follows below)
+console.log('[SC] app-ui v3.2 ready — emotional design components added');
 })();
