@@ -154,6 +154,13 @@ const DB = {
     prog[drillId].tier=this._calcDrillTier(prog[drillId].attempts);
     this.saveDrillProgress(prog);
     window.dispatchEvent(new CustomEvent('sc_update'));
+    // Intelligence aggregator hook
+    if (window.SC_INTEL) {
+      try {
+        var drillObj = (window.SC_APP && window.SC_APP.DRILLS || []).find(function(d){ return d.id===drillId; });
+        window.SC_INTEL.updateOnDrill(drillObj || { id:drillId });
+      } catch(e) {}
+    }
     return prog[drillId];
   },
   getSingleDrillProgress: function(id) { return this.getDrillProgress()[id]||null; },
@@ -174,6 +181,15 @@ const DB = {
     var ratings=this.getMentalRatings();
     ratings.push({sessionId:sessionId,rating:rating,date:new Date().toISOString().slice(0,10),ts:Date.now()});
     this.set('mental_ratings',ratings.filter(function(r){return r.ts>Date.now()-30*864e5;}));
+    // Intelligence aggregator hook — detect session type from ID
+    if (window.SC_INTEL) {
+      try {
+        var mtype = null;
+        var mtypes = ['BREATH','GROUND','VISUALIZE','ACTIVATE','RECOVER','REFLECT','PRESSURE'];
+        if (sessionId) mtypes.forEach(function(t){ if(sessionId.toUpperCase().indexOf(t)!==-1) mtype=t; });
+        window.SC_INTEL.updateOnMental(mtype, rating);
+      } catch(e) {}
+    }
   },
   getAverageMentalRating: function(days) {
     var d=days||7, cutoff=Date.now()-d*864e5;
@@ -287,6 +303,8 @@ const DB = {
     list.push(s);
     if(list.length>50) list=list.slice(-50);
     this.set('video_sessions',list);
+    // Intelligence aggregator hook
+    if (window.SC_INTEL) { try { window.SC_INTEL.updateOnVideo(); } catch(e) {} }
   },
   getVideoSessionsByMode: function(mode) {
     return this.getVideoSessions().filter(function(s){return s.mode===mode;});
