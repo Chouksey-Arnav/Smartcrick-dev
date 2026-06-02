@@ -12,6 +12,20 @@ const { DB, nav, getLevelInfo, awardXP } = A;
 
 const TOTAL_STEPS = 5;
 
+// ── StaggerChildren — fade-up each child with staggered delay ─────
+function StaggerChildren({ children, baseDelay }) {
+  return h(Fragment, null,
+    React.Children.map(children, function (child, i) {
+      if (!child) return null;
+      return h('div', {
+        key: i,
+        className: 'em-stagger-child',
+        style: { animationDelay: ((baseDelay || 0) + i * 55) + 'ms', animationFillMode: 'both' },
+      }, child);
+    })
+  );
+}
+
 function OptionBtn({ selected, onClick, children, ariaLabel }) {
   return h('button', {
     onClick: onClick,
@@ -112,36 +126,60 @@ function OnboardShell({ step, onNext, onBack, nextLabel, nextDisabled, children 
     ),
     h('div', { style: { flex: 1, overflowY: 'auto', padding: '24px 20px 8px' }},
       h(ProgressDots, { step: step, total: TOTAL_STEPS }),
-      children
+      h(StaggerChildren, { baseDelay: 40 }, children)
     ),
     h('div', { style: { padding: '16px 20px 0' }},
-      h('button', {
-        onClick: onNext, disabled: !!nextDisabled,
-        'aria-disabled': nextDisabled ? 'true' : 'false',
-        style: {
-          width: '100%', padding: '15px', border: 'none', borderRadius: 12,
-          fontSize: 15, fontWeight: 700, fontFamily: 'inherit',
-          cursor: nextDisabled ? 'not-allowed' : 'pointer',
-          background: nextDisabled ? 'rgba(48,54,61,0.5)' : '#16a34a',
-          color: nextDisabled ? '#374151' : '#fff',
-          transition: 'all 0.15s', minHeight: 52,
-          boxShadow: nextDisabled ? 'none' : '0 4px 20px rgba(22,163,74,0.35)', outline: 'none',
-        },
-      }, nextLabel || 'Continue →')
+      A.SpringBtn
+        ? h(A.SpringBtn, {
+            label: nextLabel || 'Continue →',
+            onClick: nextDisabled ? undefined : onNext,
+            disabled: !!nextDisabled,
+            style: {
+              width: '100%', padding: '15px', borderRadius: 12,
+              fontSize: 15, fontWeight: 700, fontFamily: 'inherit', minHeight: 52,
+              background: nextDisabled ? 'rgba(48,54,61,0.5)' : '#16a34a',
+              color: nextDisabled ? '#374151' : '#fff',
+              boxShadow: nextDisabled ? 'none' : '0 4px 20px rgba(22,163,74,0.35)',
+              cursor: nextDisabled ? 'not-allowed' : 'pointer',
+              border: 'none',
+            },
+          })
+        : h('button', {
+            onClick: onNext, disabled: !!nextDisabled,
+            style: {
+              width: '100%', padding: '15px', border: 'none', borderRadius: 12,
+              fontSize: 15, fontWeight: 700, fontFamily: 'inherit',
+              cursor: nextDisabled ? 'not-allowed' : 'pointer',
+              background: nextDisabled ? 'rgba(48,54,61,0.5)' : '#16a34a',
+              color: nextDisabled ? '#374151' : '#fff',
+              transition: 'all 0.15s', minHeight: 52,
+              boxShadow: nextDisabled ? 'none' : '0 4px 20px rgba(22,163,74,0.35)', outline: 'none',
+            },
+          }, nextLabel || 'Continue →')
     )
   );
 }
 
 function Step1Welcome({ onNext }) {
-  return h(OnboardShell, { step: 1, onNext: onNext, nextLabel: "Let's Start! →" },
+  function handleStart() {
+    if (A.Emotion && A.Emotion.cheerMascot) A.Emotion.cheerMascot();
+    onNext();
+  }
+  return h(OnboardShell, { step: 1, onNext: handleStart, nextLabel: "Let's Start! →" },
     h('div', { style: { textAlign: 'center' }},
-      h('div', { 'aria-hidden': 'true', style: {
-        width: 88, height: 88, borderRadius: '50%', margin: '0 auto 24px',
-        background: 'radial-gradient(circle at 35% 35%, #dc2626, #991b1b)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 8px 32px rgba(220,38,38,0.35), 0 0 0 1px rgba(220,38,38,0.2)',
-        fontSize: 40,
-      }}, '🏏'),
+      h('div', { 'aria-hidden': 'true', style: { margin: '0 auto 24px', display: 'flex', justifyContent: 'center' }},
+        A.Mascot
+          ? h(A.Mascot, { size: 'lg' })
+          : h('div', {
+              style: {
+                width: 88, height: 88, borderRadius: '50%',
+                background: 'radial-gradient(circle at 35% 35%, #dc2626, #991b1b)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 32px rgba(220,38,38,0.35), 0 0 0 1px rgba(220,38,38,0.2)',
+                fontSize: 40,
+              }
+            }, '🏏')
+      ),
       h('h1', { style: { fontSize: '1.875rem', fontWeight: 900, color: '#f0fdf4', marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.15 }},
         'Welcome to SmartCrick'),
       h('p', { style: { fontSize: 15, color: '#8b949e', lineHeight: 1.75, marginBottom: 32, maxWidth: 320, margin: '0 auto 32px' }},
