@@ -42,16 +42,39 @@ function getFallback(q) {
 }
 
 function buildContext() {
-  var p = DB.getProgress();
-  var u = DB.getUser();
+  var p  = DB.getProgress();
+  var u  = DB.getUser();
   var li = A.getLevelInfo ? A.getLevelInfo(p.total_xp || 0) : { level:1, name:'Rookie' };
-  return 'Player: '+(u.name||'Cricketer')+
-         ' | Role: '+(u.role||'batsman')+
-         ' | Level: '+li.level+' ('+li.name+')'+
-         ' | Streak: '+(p.current_streak||0)+'d'+
-         ' | Drills: '+(p.drills_done||0)+
-         ' | Mental: '+(p.mental_done||0)+
-         ' | Total XP: '+(p.total_xp||0);
+  var base = 'Player: '+(u.name||'Cricketer')+
+             ' | Role: '+(u.role||'batsman')+
+             ' | Level: '+li.level+' ('+li.name+')'+
+             ' | Streak: '+(p.current_streak||0)+'d'+
+             ' | Drills: '+(p.drills_done||0)+
+             ' | Mental: '+(p.mental_done||0)+
+             ' | Total XP: '+(p.total_xp||0);
+  // Inject intelligence profile when sufficiently calibrated
+  try {
+    if (window.SC_INTEL) {
+      var intel = window.SC_INTEL.getProfile();
+      var cal   = intel.calibration;
+      if (cal.confidence_score >= 10) {
+        var topCat = window.SC_INTEL.getTopCategory(intel.drill_affinity.category);
+        var intelCtx = ' | AI Score: '+cal.confidence_score+'%'+
+                       ' | Training cycles: '+cal.total_cycles+
+                       ' | Top affinity: '+topCat+
+                       ' | Preference signals: '+cal.preference_signals+
+                       ' | Days of data: '+cal.days_of_behavioral_data;
+        if (intel.patterns.peak_hour !== null) {
+          intelCtx += ' | Peak training hour: '+intel.patterns.peak_hour+'h';
+        }
+        if (intel.patterns.consistency_rhythm) {
+          intelCtx += ' | Training rhythm: '+intel.patterns.consistency_rhythm;
+        }
+        base += intelCtx;
+      }
+    }
+  } catch(e) {}
+  return base;
 }
 
 async function callCoach(history) {
