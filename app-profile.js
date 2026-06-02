@@ -931,6 +931,41 @@ function ProfilePage(props) {
       ),
     ),
 
+    // ── Intelligence Summary (exit-friction card) ──────────────────
+    (function() {
+      if (!window.SC_INTEL) return null;
+      var intel = window.SC_INTEL.getProfile();
+      var cal   = intel.calibration;
+      if (cal.total_cycles < 5) return null;
+      var score    = cal.confidence_score;
+      var color    = score >= 80 ? '#0d9488' : score >= 55 ? '#16a34a' : score >= 25 ? '#f59e0b' : '#6b7280';
+      var label    = window.SC_INTEL.getCalibrationLabel(score);
+      var daysText = cal.days_of_behavioral_data > 0 ? cal.days_of_behavioral_data + ' days' : 'growing';
+      return h('div', { style: { margin:'8px 16px 12px', padding:'16px', background:'rgba(13,148,136,0.06)', border:'1px solid rgba(13,148,136,0.22)', borderRadius:14 } },
+        h('div', { style: { display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 } },
+          h('div', { style: { display:'flex', alignItems:'center', gap:8 } },
+            h('div', { style: { fontSize:16 } }, '🧠'),
+            h('div', { style: { fontSize:13, fontWeight:700, color:'#f0fdf4' } }, 'Cricket Intelligence')
+          ),
+          h('div', { style: { fontSize:11, color:color, fontWeight:700, background:color+'15', padding:'2px 8px', borderRadius:99, border:'1px solid '+color+'30' } },
+            score + ' / 100 · ' + label
+          )
+        ),
+        h('div', { style: { fontSize:12, color:'#6b7280', lineHeight:1.7, marginBottom:10 } },
+          'You have accumulated ',
+          h('span', { style: { color:'#16a34a', fontWeight:700 } }, cal.total_cycles.toLocaleString()),
+          ' training interactions that have taught your AI your unique cricket style. ',
+          'This intelligence (',
+          h('span', { style: { color:'#16a34a', fontWeight:700 } }, daysText),
+          ' of behavioral data) cannot be transferred to another platform.'
+        ),
+        h('button', {
+          onClick: function() { A.nav('IntelligenceHub'); },
+          style: { background:'none', border:'none', color:'#16a34a', fontSize:12, fontWeight:700, cursor:'pointer', padding:0, fontFamily:'inherit' }
+        }, 'View Full Intelligence Profile →')
+      );
+    })(),
+
     h(BottomNav),
   );
 }
