@@ -231,6 +231,8 @@ function DrillDetailPage(props) {
   var drill = props.drill;
   var onBack = props.onBack;
   var [done, setDone] = useState(false);
+  var [showQuickPick, setShowQuickPick] = useState(false);
+  var [quickPair,     setQuickPair]     = useState(null);
 
   var p = DB.getProgress ? DB.getProgress() : {};
   var completions = (p.drill_completions || {});
@@ -252,6 +254,13 @@ function DrillDetailPage(props) {
       } catch(e) {}
     }
     window.dispatchEvent(new CustomEvent('sc_update'));
+    // Trigger Quick Pick modal to collect preference signal
+    if (window.SC_PREFER && window.SC_PREFER.shouldShowQuickPick()) {
+      var pair = window.SC_PREFER.getQuickPickPair();
+      if (pair) {
+        setTimeout(function () { setQuickPair(pair); setShowQuickPick(true); }, 1200);
+      }
+    }
   }
 
   var cat = CATS[drill.category] || CATS.all;
@@ -276,6 +285,14 @@ function DrillDetailPage(props) {
   };
 
   return h('div', { style: s.page },
+    // Quick Pick modal — shown after every 5th completion to collect preference signals
+    showQuickPick && quickPair && window.SC_PREFER && window.SC_PREFER.QuickPickModal
+      ? h(window.SC_PREFER.QuickPickModal, {
+          pair: quickPair,
+          onClose: function () { setShowQuickPick(false); setQuickPair(null); },
+        })
+      : null,
+
     // Header
     h('div', { style: s.header },
       h('button', { style: s.backBtn, onClick: onBack }, '← Back'),
