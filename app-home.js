@@ -749,9 +749,11 @@ function HomePage(){
     ),
 
     h(MultiplierBanner,{streak:streak,multiplier:mult}),
+    A.IntelligenceDigestCard?h(A.IntelligenceDigestCard,{}):null,
     h(StreakCalendarSection,{}),
     A.DailyChallengeCard?h(A.DailyChallengeCard,{}):null,
     h(FocusCard,{}),
+    A.IntelligenceHomeCard?h(A.IntelligenceHomeCard,{}):null,
 
     A.DailyRewardMiniWidget?h(A.DailyRewardMiniWidget,{
       onOpen:function(){window.dispatchEvent(new CustomEvent('sc_open_reward_modal'));}
