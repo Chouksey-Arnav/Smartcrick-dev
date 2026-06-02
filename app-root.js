@@ -38,6 +38,7 @@ var STANDARD_PAGES = new Set([
   'PracticeSession','WorkoutDetail','WorkoutPlayer','SkillPathDetail',
   'VideoAnalysis','Performance','ReactionDrill','NinetyDay','AIWorkout',
   'MatchTracker','MiniMatch','GetOut','Assessment','CricketDNA','DailyNet',
+  'IntelligenceHub',
 ]);
 
 var FULLSCREEN_PAGES = new Set([
@@ -52,6 +53,7 @@ var PAGE_LABELS = {
   MatchLogger:'Match Logger', Performance:'Analytics',
   AICoach:'AI Coach', Assessment:'Skill Assessment',
   CricketDNA:'Cricket DNA', DailyNet:'Daily Net',
+  IntelligenceHub:'Cricket Intelligence',
   NinetyDay:'90-Day Program', MatchTracker:'Match Tracker',
   MiniMatch:'MiniMatch IQ', DrillDetail:'Drill', WorkoutDetail:'Workout',
   VideoAnalysis:'ProVision™',
@@ -78,6 +80,7 @@ function getPage(name) {
     NinetyDay:P.NinetyDayPage, MatchTracker:P.MatchTrackerPage,
     MiniMatch:P.MiniMatchPage, Quizzes:P.QuizzesPage,
     CricketDNA:P.CricketDNAPage, DailyNet:P.DailyNetPage,
+    IntelligenceHub:P.IntelligenceHubPage,
   };
   return map[name] || null;
 }
