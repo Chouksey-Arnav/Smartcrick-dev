@@ -636,9 +636,26 @@ function HomePage(){
     setXpLog(DB.getXPLast7Days?DB.getXPLast7Days():[]);
   }
 
+  var prevStreakRef = useRef(null);
+
   useEffect(function(){
     reload();
     var onUpdate=function(){
+      // Streak milestone particle burst
+      try {
+        var p = DB.getProgress ? DB.getProgress() : {};
+        var newStreak = p.current_streak || 0;
+        var MILESTONES = [7,14,21,30];
+        if (prevStreakRef.current !== null &&
+            MILESTONES.indexOf(newStreak) !== -1 &&
+            newStreak > prevStreakRef.current) {
+          var E = A.Emotion;
+          if (E && E.fireStreakParticles) E.fireStreakParticles(newStreak);
+          if (A.fireConfetti) A.fireConfetti();
+        }
+        prevStreakRef.current = newStreak;
+      } catch(e) {}
+
       reload();
       // ✅ Proactive bonus reward — 15% chance after any session
       try{
@@ -656,6 +673,8 @@ function HomePage(){
     };
     var onFirst=function(){setFirstToast(true);setTimeout(function(){setFirstToast(false);},2800);};
     var onOpenReward=function(){setShowRewardModal(true);};
+    // Initialise prevStreakRef
+    try { prevStreakRef.current = (DB.getProgress?DB.getProgress():{}).current_streak||0; } catch(e){}
     window.addEventListener('sc_update',onUpdate);
     window.addEventListener('sc_first_session',onFirst);
     window.addEventListener('sc_open_reward_modal',onOpenReward);
@@ -709,15 +728,11 @@ function HomePage(){
               (progress.total_xp||0).toLocaleString()+' XP')
           ),
           h('div',{style:{fontSize:16,fontWeight:800,color:'#f8fafc',marginBottom:8}},levelInfo.name),
-          h('div',{style:{position:'relative',height:8,background:'rgba(255,255,255,.08)',borderRadius:99,overflow:'visible'},
-            role:'progressbar','aria-valuenow':Math.round(levelInfo.pct||0),'aria-valuemin':0,'aria-valuemax':100},
-            h('div',{style:{
-              position:'relative',height:'100%',width:(levelInfo.pct||0)+'%',
-              background:'linear-gradient(90deg, #22c55e, #4ade80)',
-              borderRadius:99,transition:'width .5s',
-              boxShadow:'0 0 10px rgba(74,222,128,0.6)',overflow:'visible'
-            }})
-          ),
+          A.MomentumBar
+            ? h(A.MomentumBar,{pct:levelInfo.pct||0,height:8,gradient:'linear-gradient(to right,#22c55e,#4ade80)',glowColor:'rgba(74,222,128,0.6)',ariaLabel:'Level progress'})
+            : h('div',{style:{height:8,background:'rgba(255,255,255,.08)',borderRadius:99,overflow:'hidden'},role:'progressbar','aria-valuenow':Math.round(levelInfo.pct||0),'aria-valuemin':0,'aria-valuemax':100},
+                h('div',{style:{height:'100%',width:(levelInfo.pct||0)+'%',background:'linear-gradient(90deg,#22c55e,#4ade80)',borderRadius:99,transition:'width .5s',boxShadow:'0 0 10px rgba(74,222,128,0.6)'}})
+              ),
           h('div',{style:{fontSize:10,color:'#475569',marginTop:6}},
             (levelInfo.xpToNext||0).toLocaleString()+' XP to '+nextLevelName)
         ),
