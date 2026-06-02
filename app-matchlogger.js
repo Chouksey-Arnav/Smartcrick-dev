@@ -409,6 +409,8 @@ function MatchLoggerPage() {
       all.unshift(Object.assign({ id: 'ml_' + Date.now() }, form));
       // Award XP for logging a match
       if (A.awardXP) A.awardXP(30, 0, 'match_log', null, null);
+      // Intelligence hook — new match only, not edits
+      if (window.SC_INTEL) { try { window.SC_INTEL.updateOnMatch(); } catch(e) {} }
     }
     saveMatchLogs(all);
     setLogs(all.slice());
