@@ -146,6 +146,8 @@ function DailyRewardModal(props) {
   var onClose = props.onClose;
   var [animIn, setAnimIn] = useState(false);
   var [cnt, setCnt]       = useState(0);
+  var [phase, setPhase]   = useState('pending'); // 'pending' | 'success'
+  var emojiRef = useRef(null);
 
   useEffect(function () {
     var t1 = setTimeout(function () { setAnimIn(true); }, 40);
@@ -156,7 +158,15 @@ function DailyRewardModal(props) {
       setCnt(cur);
       if (cur >= target) clearInterval(t2);
     }, 35);
-    return function () { clearTimeout(t1); clearInterval(t2); };
+    // Transition pending → success
+    var t3 = setTimeout(function () {
+      setPhase('success');
+      var E = window.SC_APP && window.SC_APP.Emotion;
+      if (E && E.fireSparkleSVG && emojiRef.current) {
+        E.fireSparkleSVG(emojiRef.current, { count: 10, color: reward.color || '#4ade80', radius: 50 });
+      }
+    }, 650);
+    return function () { clearTimeout(t1); clearInterval(t2); clearTimeout(t3); };
   }, []);
 
   var weekDay = state.weekDay;
@@ -199,11 +209,32 @@ function DailyRewardModal(props) {
         }
       }, '\uD83C\uDF81  DAILY LOGIN REWARD'),
 
-      // Emoji
+      // Emoji + pending glow / success checkmark
       h('div', {
-        style:{ fontSize:56, lineHeight:1, marginBottom:10,
-          animation: animIn ? 'drBounce 0.65s cubic-bezier(0.16,1,0.3,1)' : 'none' }
-      }, reward.emoji),
+        ref: emojiRef,
+        className: phase === 'pending' ? 'em-pending' : (phase === 'success' ? 'em-success-flash' : ''),
+        style:{
+          fontSize: 56, lineHeight: 1, marginBottom: 10, position: 'relative', display: 'inline-block',
+          animation: animIn ? 'drBounce 0.65s cubic-bezier(0.16,1,0.3,1)' : 'none',
+          borderRadius: '50%',
+        }
+      },
+        reward.emoji,
+        // Draw-in checkmark on success
+        phase === 'success' && h('svg', {
+          width: 32, height: 32,
+          viewBox: '0 0 32 32',
+          style: { position: 'absolute', bottom: -8, right: -8, filter: 'drop-shadow(0 2px 6px rgba(74,222,128,0.6))' },
+        },
+          h('circle', { cx: 16, cy: 16, r: 15, fill: '#16a34a' }),
+          h('path', {
+            d: 'M9 16 L14 21 L23 11',
+            fill: 'none', stroke: '#fff', strokeWidth: 2.5,
+            strokeLinecap: 'round', strokeLinejoin: 'round',
+            className: 'em-checkmark-path',
+          })
+        )
+      ),
 
       // Day label
       h('div', { style:{ fontSize:13, fontWeight:700, color:reward.color, marginBottom:4 } },
