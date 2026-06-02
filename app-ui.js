@@ -244,6 +244,7 @@ function SidebarNavContent({currentPage,onNavClick,handleSmartStart}){
     h(NavBtn,{...props('Training Schedule','calendar','Schedule'),isNew:true}),
 
     h(NavSection,{label:'AI & Analytics'}),
+    h(NavBtn,{...props('Cricket Intelligence','zap','IntelligenceHub'),isNew:true}),
     h(NavBtn,{...props('ProVision™ Analysis','cpu','VideoAnalysis'),isNew:true}),
     h(NavBtn,{...props('Performance','chartLine','Performance'),isNew:true}),
     h(NavBtn,{...props('Match Logger','list','MatchLogger'),isNew:true}),
