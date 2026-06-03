@@ -577,8 +577,8 @@ function ProfilePage(props) {
 
     // ===== TABS =====
     h('div', { style: { display: 'flex', margin: '8px 16px', padding: 4, background: 'rgba(16,22,36,0.9)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14 }, role: 'tablist' },
-      ['overview', 'skills', 'badges', 'goals', 'dna'].map(function(t) {
-        var labels = { overview: 'Overview', skills: 'Skills', badges: 'Badges', goals: 'Goals', dna: '🧬 DNA' };
+      ['overview', 'skills', 'badges', 'goals', 'dna', 'settings'].map(function(t) {
+        var labels = { overview: 'Overview', skills: 'Skills', badges: 'Badges', goals: 'Goals', dna: '🧬 DNA', settings: '⚙️' };
         return h('button', { key: t, role: 'tab', 'aria-selected': activeTab === t ? 'true' : 'false', onClick: function() { if(A.playTabClick) A.playTabClick(); setActiveTab(t); }, style: tabStyle(t) }, labels[t]);
       })
     ),
@@ -888,7 +888,33 @@ function ProfilePage(props) {
             )
           );
         })()
-      )
+      ),
+
+      // ===== SETTINGS TAB =====
+      activeTab === 'settings' && h('div', { style: { paddingBottom: 24 } },
+        h('div', { style: { fontSize: 16, fontWeight: 800, color: '#f0fdf4', marginBottom: 16 } }, 'Training Settings'),
+        A.MinimalistToggle ? h(A.MinimalistToggle, null) : null,
+        h('div', { style: { height: 16 } }),
+        // ELO ratings display
+        (function() {
+          var elo = A.DB && A.DB.getELORatings ? A.DB.getELORatings() : {};
+          var cats = ['batting','bowling','fielding','wicketkeeping','fitness','mental'];
+          return h('div', { style: { background: 'rgba(16,22,36,0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14 } },
+            h('div', { style: { fontSize: 13, fontWeight: 800, color: '#f0fdf4', marginBottom: 12 } }, 'Skill ELO Ratings'),
+            cats.map(function(cat) {
+              var eloVal = elo[cat] || 1000;
+              var tier = A.ELOSystem ? A.ELOSystem.getTier(eloVal) : {label:'Developing',color:'#cd7f32'};
+              return h('div', { key: cat, style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } },
+                h('span', { style: { fontSize: 12, color: '#94a3b8', textTransform: 'capitalize' } }, cat),
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+                  h('span', { style: { fontSize: 11, color: tier.color, fontWeight: 700 } }, tier.label),
+                  h('span', { style: { fontSize: 13, fontWeight: 800, color: '#f0fdf4' } }, eloVal)
+                )
+              );
+            })
+          );
+        })()
+      ),
 
         ); // end tabContent Fragment
         if (!FM) return tabContent;
