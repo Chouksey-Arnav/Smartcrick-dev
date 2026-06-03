@@ -247,6 +247,7 @@ function DrillDetailPage(props) {
     prog.drill_completions[drill.id] = (prog.drill_completions[drill.id] || 0) + 1;
     if (DB.saveProgress) DB.saveProgress(prog);
     if (awardXP) awardXP(drill.xp, 0, 'drill:' + drill.id);
+    if (A.trackDrillForCardPack) try { A.trackDrillForCardPack(); } catch(e) {}
     if (A.BrainEngine && A.BrainEngine.isModelTrained && A.BrainEngine.isModelTrained('DrillAdaptor')) {
       try {
         var sig = A.BrainEngine.buildDrillSignals(drill.id);
