@@ -321,12 +321,24 @@ function FocusCard(){
               if(drill&&drill.id){nav('DrillDetail',{id:drill.id});return;}
               nav(cfg.page);
             },
-            style:{padding:'8px 18px',border:'none',borderRadius:8,fontFamily:'inherit',
-              background:cfg.color,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}
-          },rec==='mental'?'→ Browse Mental':rec==='fitness'?'→ Go to Fitness':'→ Start Drill'),
-          h('button',{onClick:function(){nav(cfg.page);},
-            style:{padding:'8px 12px',border:'1px solid '+cfg.color+'35',borderRadius:8,
-              background:'transparent',color:cfg.color,fontSize:12,cursor:'pointer',fontFamily:'inherit'}
+            onMouseEnter:function(e){e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 4px 18px '+cfg.color+'55';},
+            onMouseLeave:function(e){e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 2px 12px '+cfg.color+'40';},
+            onPointerDown:function(e){e.currentTarget.style.transform='scale(0.96)';},
+            onPointerUp:function(e){e.currentTarget.style.transform='';},
+            onPointerCancel:function(e){e.currentTarget.style.transform='';},
+            style:{padding:'9px 20px',border:'none',borderRadius:9,fontFamily:'inherit',
+              background:cfg.color,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',
+              transition:'transform 0.15s ease, box-shadow 0.15s ease',
+              boxShadow:'0 2px 12px '+cfg.color+'40'}
+          },rec==='mental'?'Open Mental Training':rec==='fitness'?'Open Fitness':'Start Drill'),
+          h('button',{
+            onClick:function(){nav(cfg.page);},
+            onPointerDown:function(e){e.currentTarget.style.transform='scale(0.96)';},
+            onPointerUp:function(e){e.currentTarget.style.transform='';},
+            onPointerCancel:function(e){e.currentTarget.style.transform='';},
+            style:{padding:'9px 14px',border:'1px solid '+cfg.color+'35',borderRadius:9,
+              background:'transparent',color:cfg.color,fontSize:13,cursor:'pointer',
+              fontFamily:'inherit',transition:'transform 0.15s ease'}
           },'Browse all')
         )
       )
@@ -375,7 +387,10 @@ function StreakShieldWidget(props) {
         h('circle',{cx:20,cy:20,r:16,fill:'none',stroke:goalState.goalMet?'#10b981':'#f59e0b',strokeWidth:5,
           strokeLinecap:'round',strokeDasharray:String(2*Math.PI*16),
           strokeDashoffset:String(2*Math.PI*16*(1-pct)),transform:'rotate(-90 20 20)',
-          style:{transition:'stroke-dashoffset 0.5s ease'}})
+          style:{transition:'stroke-dashoffset 0.5s ease',
+            filter:goalState.goalMet
+              ?'drop-shadow(0 0 6px rgba(16,185,129,0.85))'
+              :pct>=0.8?'drop-shadow(0 0 5px rgba(245,158,11,0.75))':'none'}})
       ),
       h('div',{style:{flex:1}},
         h('div',{style:{display:'flex',alignItems:'center',gap:6}},
@@ -801,7 +816,7 @@ function HomePage(){
     h('style',null,'@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}'),
 
     // ── Hero ───────────────────────────────────────────────────────
-    h('div',{style:{padding:'16px 16px 12px',
+    h('div',{className:'sc-home-card-enter',style:{animationDelay:'0ms',padding:'16px 16px 12px',
       background:'linear-gradient(180deg,rgba(22,163,74,.07) 0%,transparent 100%)'}},
       h('div',{style:{marginBottom:12}},
         h('div',{style:{fontSize:13,color:'#94a3b8'}},greet+', '+(user.name||'Cricketer')+' 👋'),
@@ -826,12 +841,16 @@ function HomePage(){
           h('div',{style:{fontSize:10,color:'#475569',marginTop:6}},
             (levelInfo.xpToNext||0).toLocaleString()+' XP to '+nextLevelName)
         ),
-        h('div',{style:{background:'rgba(16,22,36,0.9)',border:'1px solid rgba(255,255,255,0.08)',
-          borderRadius:12,padding:'16px',minWidth:95,textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},
+        h('div',{
+          className:streak>=30?'streak-legendary':streak>=14?'streak-fire':streak>=7?'streak-hot':'',
+          style:{background:'rgba(16,22,36,0.9)',border:'1px solid rgba(255,255,255,0.08)',
+            borderRadius:12,padding:'16px',minWidth:95,textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},
           role:'region','aria-label':streak+' day streak'},
           h('div',{style:{fontSize:26,fontWeight:800,color:'#f8fafc',lineHeight:1.1}},streak),
           h('div',{style:{fontSize:11,fontWeight:600,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',marginTop:2}},'Streak'),
-          h('div',{style:{fontSize:18,marginTop:6},'aria-hidden':'true'},streak>0?'🔥':'💤')
+          h('div',{style:{fontSize:18,marginTop:6,display:'inline-block',
+            animation:streak>=7?'scStreakPop 0.7s cubic-bezier(0.34,1.56,0.64,1) both':'none'},
+            'aria-hidden':'true'},streak>0?'🔥':'💤')
         )
       ),
       // ✅ DNA mini-badge (only if app-cricket-dna.js is loaded)
@@ -849,13 +868,18 @@ function HomePage(){
     ),
 
     // ── Streak Shield (always visible) ────────────────────────────
-    A.StreakShieldWidget ? h(A.StreakShieldWidget, {streak:streak}) : null,
+    A.StreakShieldWidget
+      ? h('div',{className:'sc-home-card-enter',style:{animationDelay:'80ms'}},
+          h(A.StreakShieldWidget, {streak:streak}))
+      : null,
 
     !isMinimalist&&h(MultiplierBanner,{streak:streak,multiplier:mult}),
     !isMinimalist&&(A.IntelligenceDigestCard?h(A.IntelligenceDigestCard,{}):null),
-    !isMinimalist&&h(StreakCalendarSection,{}),
+    !isMinimalist&&h('div',{className:'sc-home-card-enter',style:{animationDelay:'160ms'}},
+      h(StreakCalendarSection,{})),
     !isMinimalist&&(A.DailyChallengeCard?h(A.DailyChallengeCard,{}):null),
-    h(FocusCard,{}),
+    h('div',{className:'sc-home-card-enter',style:{animationDelay:'240ms'}},
+      h(FocusCard,{})),
     !isMinimalist&&(A.IntelligenceHomeCard?h(A.IntelligenceHomeCard,{}):null),
 
     !isMinimalist&&(A.DailyRewardMiniWidget?h(A.DailyRewardMiniWidget,{
