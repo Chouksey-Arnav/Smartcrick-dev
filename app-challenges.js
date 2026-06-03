@@ -417,10 +417,10 @@ function ThirtyDayPage() {
     awardXP(task.xp, 15, '30day');
     var newCount=Object.keys(p.thirtyDay_completed).length;
     // Milestone badges + XP bonus
-    if(newCount===7)  awardXP(50,  0, 'milestone');
-    if(newCount===14) awardXP(75,  0, 'milestone');
-    if(newCount===21) awardXP(100, 0, 'milestone');
-    if(newCount===30) awardXP(200, 0, 'milestone');
+    if(newCount===7)  { awardXP(50,  0, 'milestone'); if(A.CardPackService) try{A.CardPackService.triggerPack('week_done');}catch(e){} }
+    if(newCount===14) { awardXP(75,  0, 'milestone'); if(A.CardPackService) try{A.CardPackService.triggerPack('week_done');}catch(e){} }
+    if(newCount===21) { awardXP(100, 0, 'milestone'); if(A.CardPackService) try{A.CardPackService.triggerPack('week_done');}catch(e){} }
+    if(newCount===30) { awardXP(200, 0, 'milestone'); if(A.CardPackService) try{A.CardPackService.triggerPack('challenge_30');}catch(e){} }
     // Show weekly summary THEN milestone
     if(newCount===7||newCount===14||newCount===21||newCount===28) {
       var wk=Math.ceil(newCount/7);
