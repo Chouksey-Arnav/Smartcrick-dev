@@ -26,7 +26,7 @@ function LevelBar({totalXP,compact=false}){
   if(compact) return h('div',{style:{display:'flex',alignItems:'center',gap:8}},
     h('span',{style:{fontSize:11,fontWeight:800,color:'#4ade80',whiteSpace:'nowrap'}},`Lv.${info.level}`),
     h('div',{style:{flex:1,height:5,borderRadius:99,background:'rgba(48,54,61,0.9)',overflow:'hidden'}},
-      h('div',{style:{height:'100%',background:'linear-gradient(to right,#16a34a,#34d399)',width:`${info.pct}%`,borderRadius:99,transition:'width 0.7s'}}))
+      h('div',{className:info.pct>80?'progress-close-to-win':'',style:{height:'100%',background:'linear-gradient(to right,#16a34a,#34d399)',width:`${info.pct}%`,borderRadius:99,transition:'width 0.7s'}}))
   );
   return h('div',{style:{display:'flex',flexDirection:'column',gap:6}},
     h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
@@ -34,7 +34,7 @@ function LevelBar({totalXP,compact=false}){
       h('span',{style:{fontSize:11,color:'#4b5563'}},info.next?`${info.xpToNext.toLocaleString()} XP to next`:'MAX LEVEL')
     ),
     h('div',{style:{height:6,borderRadius:99,background:'rgba(48,54,61,0.9)',overflow:'hidden',position:'relative'}},
-      h('div',{style:{height:'100%',background:'linear-gradient(to right,#16a34a,#34d399)',width:`${info.pct}%`,borderRadius:99,transition:'width 0.7s'}})
+      h('div',{className:info.pct>80?'progress-close-to-win':'',style:{height:'100%',background:'linear-gradient(to right,#16a34a,#34d399)',width:`${info.pct}%`,borderRadius:99,transition:'width 0.7s'}})
     )
   );
 }
@@ -42,8 +42,11 @@ A.LevelBar = LevelBar;
 
 function StreakBadge({streak=0}){
   if(!streak) return null;
-  return h('div',{style:{display:'inline-flex',alignItems:'center',gap:5,color:'#fb923c',fontSize:13,fontWeight:700,padding:'5px 10px',borderRadius:6,border:'1px solid rgba(251,146,60,0.25)',background:'rgba(251,146,60,0.08)',flexShrink:0,whiteSpace:'nowrap'}},
-    h(Icon,{n:'flame',cls:'w-3.5 h-3.5'}),streak, streak===1?' day':' days');
+  var hot = streak >= 7;
+  return h('div',{style:{display:'inline-flex',alignItems:'center',gap:5,color:'#fb923c',fontSize:13,fontWeight:700,padding:'5px 10px',borderRadius:6,border:'1px solid rgba(251,146,60,0.25)',background:hot?'rgba(251,146,60,0.13)':'rgba(251,146,60,0.08)',flexShrink:0,whiteSpace:'nowrap'}},
+    h('span',{style:{display:'inline-block',animation:hot?'scStreakPop 0.7s cubic-bezier(0.34,1.56,0.64,1) both':'none'},'aria-hidden':'true'},
+      h(Icon,{n:'flame',cls:'w-3.5 h-3.5'})),
+    streak, streak===1?' day':' days');
 }
 A.StreakBadge = StreakBadge;
 
@@ -89,6 +92,18 @@ function XPChart({days}){
   );
 }
 A.XPChart = XPChart;
+
+function SkeletonCard({rows=3,cls=''}){
+  var heights=[14,10,12];
+  return h('div',{className:'sc-card '+cls,style:{padding:16}},
+    Array.from({length:rows},function(_,i){
+      return h('div',{key:i,className:'sc-skeleton',
+        style:{height:heights[i%heights.length],marginBottom:i<rows-1?10:0,
+          width:i===rows-1?'65%':'100%',borderRadius:6}});
+    })
+  );
+}
+A.SkeletonCard = SkeletonCard;
 
 function Heatmap({days}){
   return h('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:6}},
@@ -529,14 +544,15 @@ function BottomNav(props) {
       position: 'fixed',
       bottom: 0, left: 0, right: 0,
       zIndex: 40,
-      background: 'rgba(8,11,15,0.97)',
-      backdropFilter: 'blur(24px) saturate(1.8)',
-      WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
-      borderTop: '1px solid rgba(36,42,50,0.9)',
+      background: 'rgba(10,13,20,0.96)',
+      backdropFilter: 'blur(20px) saturate(1.6)',
+      WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
+      borderTop: '1px solid rgba(255,255,255,0.07)',
       paddingBottom: 'env(safe-area-inset-bottom,0px)',
+      boxShadow: '0 -1px 0 rgba(255,255,255,0.04), 0 -8px 32px rgba(0,0,0,0.45)',
     }
   },
-    h('div', { style: { display: 'flex', alignItems: 'center', height: 58 } },
+    h('div', { style: { display: 'flex', alignItems: 'center', height: 62 } },
       items.map(function(item) {
         var active = activePage === item.pg;
         return h('button', {
@@ -547,40 +563,47 @@ function BottomNav(props) {
           style: {
             flex: 1,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 3, height: '100%', position: 'relative',
+            height: '100%', position: 'relative',
             background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
             outline: 'none',
           }
         },
-          // Top accent bar for active
+          // Top accent bar for active — wider, rounder, gradient
           active && h('div', {
             'aria-hidden': 'true',
             style: {
               position: 'absolute', top: 0, left: '50%',
               transform: 'translateX(-50%)',
-              width: 20, height: 2.5,
-              background: '#16a34a',
-              borderRadius: '0 0 3px 3px',
+              width: 32, height: 3,
+              background: 'linear-gradient(to right, #16a34a, #22c55e)',
+              borderRadius: '0 0 99px 99px',
             }
           }),
-          h(Icon, {
-            n: item.n,
-            cls: 'w-5 h-5',
-            style: {
-              color: active ? '#4ade80' : '#374151',
-              transition: 'color 0.15s',
-              transform: active ? 'scale(1.05)' : 'scale(1)',
-            }
-          }),
-          h('span', {
-            style: {
-              fontSize: 10,
-              fontWeight: active ? 700 : 500,
-              color: active ? '#4ade80' : '#374151',
-              transition: 'color 0.15s',
-              letterSpacing: '-0.01em',
-            }
-          }, item.label)
+          // Active pill background behind icon+label
+          active && h('div', { className: 'sc-nav-pill', 'aria-hidden': 'true' }),
+          // Icon + label wrapper — z-index above pill
+          h('div', {
+            style: { position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }
+          },
+            h(Icon, {
+              n: item.n,
+              cls: 'w-5 h-5',
+              style: {
+                color: active ? '#4ade80' : '#5a6374',
+                transition: 'color 0.2s cubic-bezier(0.34,1.56,0.64,1), transform 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                transform: active ? 'scale(1.15)' : 'scale(1)',
+              }
+            }),
+            h('span', {
+              style: {
+                fontSize: 10,
+                fontWeight: active ? 700 : 500,
+                color: active ? '#4ade80' : '#5a6374',
+                transition: 'color 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                letterSpacing: '-0.01em',
+              }
+            }, item.label)
+          )
         );
       })
     )
@@ -666,13 +689,19 @@ function MomentumBar(props) {
     if (cancelRef.current) cancelRef.current();
     var E = window.SC_APP && window.SC_APP.Emotion;
     if (!E || E.prefersReducedMotion()) {
-      if (fillRef.current) fillRef.current.style.width = to + '%';
+      if (fillRef.current) {
+        fillRef.current.style.width = to + '%';
+        fillRef.current.classList.toggle('progress-close-to-win', to > 80);
+      }
       return;
     }
     var springFn = Math.abs(to - from) > 20
       ? E.createSpring(120, 12, 1) : E.springBar;
     cancelRef.current = E.runSpring(from, to, springFn, function (p) {
-      if (fillRef.current) fillRef.current.style.width = Math.max(0, p) + '%';
+      if (fillRef.current) {
+        fillRef.current.style.width = Math.max(0, p) + '%';
+        fillRef.current.classList.toggle('progress-close-to-win', p > 80);
+      }
     }, null);
     return function () { if (cancelRef.current) cancelRef.current(); };
   }, [pct]);
