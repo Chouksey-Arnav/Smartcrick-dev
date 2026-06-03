@@ -290,6 +290,12 @@ function AppShell() {
           })
         : null,
 
+      // ── Kudos Overlay — fires on drill/level/ring-complete events ─
+      A.KudosOverlay ? h(A.KudosOverlay, null) : null,
+
+      // ── Card Pack Reveal Overlay ─────────────────────────────────
+      A.CardPackRevealOverlay ? h(A.CardPackRevealOverlay, null) : null,
+
       // ── Mascot Controller singleton (renders null, drives GSAP) ──
       A.MascotController ? h(A.MascotController, null) : null,
 
