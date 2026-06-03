@@ -153,6 +153,23 @@ const DB = {
     prog[drillId].targetType=targetType; prog[drillId].targetScore=targetScore;
     prog[drillId].tier=this._calcDrillTier(prog[drillId].attempts);
     this.saveDrillProgress(prog);
+    // ELO update hook
+    if (window.SC_APP && window.SC_APP.ELOSystem) {
+      try { window.SC_APP.ELOSystem.updateELO(drillId, rawScore, targetScore); } catch(e) {}
+    }
+    // KudosService hook
+    if (window.SC_APP && window.SC_APP.KudosService) {
+      try {
+        var _kDrill = (window.SC_APP.DRILLS || []).find(function(d){ return d.id===drillId; });
+        var _kCat = _kDrill ? _kDrill.category : '';
+        var _kPrevBest = prog[drillId].attempts.length > 1 ? Math.max.apply(null, prog[drillId].attempts.slice(0,-1).map(function(a){return a.score||0;})) : 0;
+        if (pct >= 100) {
+          window.SC_APP.KudosService.enqueue('drill_100pct', { category: _kCat, drillId: drillId });
+        } else if (rawScore > _kPrevBest && _kPrevBest > 0) {
+          window.SC_APP.KudosService.enqueue('drill_pb', { category: _kCat, drillId: drillId });
+        }
+      } catch(e) {}
+    }
     window.dispatchEvent(new CustomEvent('sc_update'));
     // Intelligence aggregator hook
     if (window.SC_INTEL) {
@@ -309,6 +326,50 @@ const DB = {
   getVideoSessionsByMode: function(mode) {
     return this.getVideoSessions().filter(function(s){return s.mode===mode;});
   },
+
+  // ── ELO Rating System (ELO-1) ─────────────────────────────────
+  getELORatings: function() {
+    return Object.assign({ batting:1000, bowling:1000, fielding:1000, wicketkeeping:1000, fitness:1000, mental:1000 }, this.get('elo_ratings')||{});
+  },
+  saveELORatings: function(v) { this.set('elo_ratings', v); },
+  getELOHistory: function(cat) {
+    var h = this.get('elo_history') || {};
+    return h[cat] || [];
+  },
+  saveELOHistoryEntry: function(cat, entry) {
+    var h = this.get('elo_history') || {};
+    h[cat] = (h[cat] || []).concat([entry]).slice(-20);
+    this.set('elo_history', h);
+  },
+
+  // ── Agile Streak System (AGS-1) ───────────────────────────────
+  getStreakPause: function() { return this.get('streak_pause') || { pausedUntil: null, pausedOn: null, pauseDays: 0 }; },
+  saveStreakPause: function(v) { this.set('streak_pause', v); },
+  getDailyGoalLevel: function() { return this.get('daily_goal_level') || 'standard'; },
+  setDailyGoalLevel: function(v) { this.set('daily_goal_level', v); },
+  getDailyGoalState: function() {
+    var today = new Date().toISOString().slice(0, 10);
+    var s = this.get('daily_goal_state') || {};
+    if (s.date !== today) {
+      s = { date: today, activitiesCount: 0, goalMet: false };
+      this.set('daily_goal_state', s);
+    }
+    return s;
+  },
+  incrementDailyActivity: function() {
+    var s = this.getDailyGoalState();
+    s.activitiesCount = (s.activitiesCount || 0) + 1;
+    var thresholds = { minimal: 1, standard: 2, elite: 3 };
+    var required = thresholds[this.getDailyGoalLevel()] || 2;
+    var wasNotMet = !s.goalMet;
+    if (s.activitiesCount >= required) s.goalMet = true;
+    this.set('daily_goal_state', s);
+    return { state: s, justMet: wasNotMet && s.goalMet };
+  },
+  getDailyTargets: function() {
+    return Object.assign({ drills: 3, xp: 150, streakGoal: 7 }, this.get('daily_targets') || {});
+  },
+  saveDailyTargets: function(v) { this.set('daily_targets', v); },
 };
 A.DB = DB;
 
@@ -377,6 +438,13 @@ const BADGE_DEFS = {
   drillStreak7:{icon:'flame',label:'Drill Streak 7',desc:'7-day streak — drilled like a pro!'},
   // Mental consistency
   mentalStreak3:{icon:'brain',label:'Focus Streak',desc:'3 consecutive days of mental training'},
+  // ELO Mastery milestones
+  batting_elo_1100: {icon:'bat',  label:'Batting Rising',       desc:'Batting ELO reached 1100'},
+  batting_elo_1200: {icon:'bat',  label:'Batting Master',       desc:'Batting ELO reached 1200'},
+  bowling_elo_1100: {icon:'ball', label:'Bowling Rising',       desc:'Bowling ELO reached 1100'},
+  bowling_elo_1200: {icon:'ball', label:'Bowling Master',       desc:'Bowling ELO reached 1200'},
+  allround_elo:     {icon:'star', label:'All-Round Excellence', desc:'Two skill categories above ELO 1100'},
+  elo_streak:       {icon:'zap',  label:'Rising Star',          desc:'ELO improved in 3 sessions in a row'},
 };
 
 function checkBadges(p) {
@@ -445,6 +513,14 @@ function checkBadges(p) {
   var last3=[];
   for(var mi=0;mi<3;mi++){var mdate=new Date();mdate.setDate(mdate.getDate()-mi);last3.push(mdate.toISOString().slice(0,10));}
   if(last3.every(function(date){return xpLog.some(function(e){return e.date===date&&e.source==='mental';});})) add('mentalStreak3');
+  // ELO Mastery milestones
+  var _elo=DB.getELORatings();
+  if((_elo.batting||1000)>=1100) add('batting_elo_1100');
+  if((_elo.batting||1000)>=1200) add('batting_elo_1200');
+  if((_elo.bowling||1000)>=1100) add('bowling_elo_1100');
+  if((_elo.bowling||1000)>=1200) add('bowling_elo_1200');
+  var _aboveCats=Object.keys(_elo).filter(function(c){return(_elo[c]||1000)>=1100;});
+  if(_aboveCats.length>=2) add('allround_elo');
   return b;
 }
 A.BADGE_DEFS=BADGE_DEFS; A.checkBadges=checkBadges;
@@ -533,7 +609,12 @@ function generateTodaysMission() {
   var done=p.completed_drills||[], doneMental=p.completed_mental||[];
   var drills=window.SC_APP.DRILLS||[];
   var mental=window.SC_APP.MENTAL_SESSIONS||[];
-  var drillPick=drills.find(function(d){return !done.includes(d.id)&&d.category==='batting';})
+  // Prefer lowest-ELO category drill as today's recommendation
+  var _eloR=DB.getELORatings();
+  var _cats=['batting','bowling','fielding','wicketkeeping','fitness'];
+  var _lowestCat=_cats.reduce(function(a,b){return (_eloR[a]||1000)<=(_eloR[b]||1000)?a:b;},'batting');
+  var drillPick=drills.find(function(d){return !done.includes(d.id)&&d.category===_lowestCat;})
+    ||drills.find(function(d){return !done.includes(d.id)&&d.category==='batting';})
     ||drills.find(function(d){return !done.includes(d.id);})
     ||(drills[0]||null);
   var mentalPick=mental.find(function(m){return !doneMental.includes(m.id)&&!m.is_premium;})
@@ -552,10 +633,22 @@ function awardXP(xp,minutes,source,completedKey,itemId) {
     if(src==='checkin'){if(p.last_checkin_date===today){console.log('SC:checkin dup');return p;} p.last_checkin_date=today;}
     // Track if this is the first award of the day
     var wasNewDay=(p.last_active_date!==today);
-    if(p.last_active_date===today){}
-    else if(p.last_active_date===yesterday){p.current_streak=(p.current_streak||0)+1;p.longest_streak=Math.max(p.longest_streak||0,p.current_streak);}
-    else{p.current_streak=1;p.longest_streak=Math.max(p.longest_streak||0,1);}
-    p.last_active_date=today;
+    // Agile Streak: check pause window and auto-consume token
+    var _pause=DB.getStreakPause();
+    var _isPaused=_pause.pausedUntil&&today<=_pause.pausedUntil;
+    if(!_isPaused){
+      if(p.last_active_date===today){}
+      else if(p.last_active_date===yesterday){p.current_streak=(p.current_streak||0)+1;p.longest_streak=Math.max(p.longest_streak||0,p.current_streak);}
+      else{
+        var _tokens=DB.getStreakTokens();
+        if(_tokens>0&&p.last_active_date&&p.last_active_date!==today){
+          DB.setStreakTokens(_tokens-1);
+          p.current_streak=(p.current_streak||0)+1;p.longest_streak=Math.max(p.longest_streak||0,p.current_streak);
+          window.dispatchEvent(new CustomEvent('sc_streak_token_used',{detail:{remaining:_tokens-1}}));
+        } else {p.current_streak=1;p.longest_streak=Math.max(p.longest_streak||0,1);}
+      }
+      p.last_active_date=today;
+    }
     // Award streak token every 7-day milestone (once per day)
     if(wasNewDay&&p.current_streak>0&&p.current_streak%7===0){
       DB.setStreakTokens(DB.getStreakTokens()+1);
@@ -569,9 +662,20 @@ function awardXP(xp,minutes,source,completedKey,itemId) {
     if(ck==='drill'&&iid){p.completed_drills=p.completed_drills||[];if(p.completed_drills.indexOf(iid)===-1)p.completed_drills.push(iid);p.drills_done=(p.drills_done||0)+1;}
     if(ck==='mental'&&iid){p.completed_mental=p.completed_mental||[];if(p.completed_mental.indexOf(iid)===-1)p.completed_mental.push(iid);p.mental_done=(p.mental_done||0)+1;}
     if(ck==='workout'&&iid){p.completed_workouts=p.completed_workouts||[];if(p.completed_workouts.indexOf(iid)===-1)p.completed_workouts.push(iid);p.workouts_done=(p.workouts_done||0)+1;}
+    var _beforeLevel=A.getLevelInfo((p.total_xp||0)-finalXP).level;
+    var _afterLevel=A.getLevelInfo(p.total_xp||0).level;
     p.badges=checkBadges(p);
     DB.saveProgress(p); DB.addXPEntry(finalXP,src);
+    // Daily goal tracking
+    var _goalResult=DB.incrementDailyActivity();
+    if(_goalResult.justMet) window.dispatchEvent(new CustomEvent('sc_daily_goal_met',{detail:{level:DB.getDailyGoalLevel()}}));
     window.dispatchEvent(new CustomEvent('sc_update'));
+    // Level-up hooks
+    if(_afterLevel>_beforeLevel){
+      window.dispatchEvent(new CustomEvent('sc_level_up',{detail:{level:_afterLevel}}));
+      if(window.SC_APP&&window.SC_APP.KudosService){try{window.SC_APP.KudosService.enqueue('level_up',{level:_afterLevel});}catch(e){}}
+      if(window.SC_APP&&window.SC_APP.CardPackService){try{window.SC_APP.CardPackService.triggerPack('level_up');}catch(e){}}
+    }
     var flashText = multiplier>1
       ? '+'+xp+' ×'+multiplier.toFixed(1)+' = +'+finalXP+' XP 🔥'
       : '+'+finalXP+' XP';
@@ -612,5 +716,122 @@ const SCHED_TYPES = {
 };
 A.SCHED_TYPES=SCHED_TYPES;
 
-console.log('[SC] app-core v3.2 ready');
+// ── ELO Rating System (ELO-1) ────────────────────────────────────────
+A.ELOSystem = (function() {
+  var ELO_TIERS = [
+    {min:0,    label:'Learning',   color:'#6b7280'},
+    {min:900,  label:'Developing', color:'#cd7f32'},
+    {min:1100, label:'Competent',  color:'#9ca3af'},
+    {min:1300, label:'Advanced',   color:'#f59e0b'},
+    {min:1500, label:'Elite',      color:'#10b981'},
+  ];
+
+  function computeELODelta(drillPct, currentELO) {
+    var K = currentELO < 1000 ? 48 : (currentELO < 1400 ? 32 : 16);
+    var expected = 1 / (1 + Math.pow(10, (1200 - currentELO) / 400));
+    var actual = Math.min(1, drillPct / 100);
+    return Math.round(K * (actual - expected));
+  }
+
+  function updateELO(drillId, rawScore, targetScore) {
+    try {
+      var drills = (window.SC_APP && window.SC_APP.DRILLS) || [];
+      var drill = drills.find(function(d){ return d.id === drillId; });
+      if (!drill) return null;
+      var cat = (drill.category || '').toLowerCase();
+      var validCats = ['batting','bowling','fielding','wicketkeeping','fitness','mental'];
+      if (validCats.indexOf(cat) === -1) return null;
+      var pct = targetScore > 0 ? Math.min(100, (rawScore / targetScore) * 100) : 0;
+      var ratings = A.DB.getELORatings();
+      var currentELO = ratings[cat] || 1000;
+      var delta = computeELODelta(pct, currentELO);
+      var newELO = Math.max(600, Math.min(2000, currentELO + delta));
+      ratings[cat] = newELO;
+      A.DB.saveELORatings(ratings);
+      var today = new Date().toISOString().slice(0, 10);
+      A.DB.saveELOHistoryEntry(cat, {date:today, elo:newELO, delta:delta, drillId:drillId});
+      var hist = A.DB.getELOHistory(cat);
+      var prevMax = hist.length > 1 ? Math.max.apply(null, hist.slice(0,-1).map(function(e){return e.elo||0;})) : 0;
+      if (newELO > prevMax && prevMax > 0) {
+        window.dispatchEvent(new CustomEvent('sc_elo_pr', {detail:{category:cat, elo:newELO, delta:delta}}));
+      }
+      return {newELO:newELO, delta:delta, category:cat};
+    } catch(e) { return null; }
+  }
+
+  function getPersonalRecord(cat) {
+    var hist = A.DB.getELOHistory(cat);
+    if (!hist.length) return 1000;
+    return Math.max.apply(null, hist.map(function(e){return e.elo||1000;}));
+  }
+
+  function getTier(elo) {
+    var tier = ELO_TIERS[0];
+    for (var i = ELO_TIERS.length-1; i >= 0; i--) {
+      if (elo >= ELO_TIERS[i].min) { tier = ELO_TIERS[i]; break; }
+    }
+    return tier;
+  }
+
+  function getCategoryDisplayName(cat) {
+    var map = {batting:'Batting',bowling:'Bowling',fielding:'Fielding',wicketkeeping:'Keeping',fitness:'Fitness',mental:'Mental'};
+    return (map[cat]||cat)+' ELO';
+  }
+
+  return {updateELO:updateELO, getPersonalRecord:getPersonalRecord, getTier:getTier, getCategoryDisplayName:getCategoryDisplayName, ELO_TIERS:ELO_TIERS};
+})();
+
+// ── Kudos Service (KDO-1) ────────────────────────────────────────────
+A.KudosService = (function() {
+  var _queue = [];
+  var _timer = null;
+  var _listeners = [];
+  var KUDOS_TEMPLATES = [
+    '{name} just drilled the same technique — you\'re keeping good company.',
+    'Strong session. {name} trains like this every morning.',
+    'Personal best! {name} would approve of that score.',
+    'You\'re improving faster than {name} did at this stage.',
+    'That\'s the consistency {name} is known for.',
+  ];
+  var LEVEL_TEMPLATES = [
+    'Level up! {name} reached this milestone too — and went on to greatness.',
+    'Brilliant progression. {name} trained like this before making it big.',
+    'New level unlocked! {name} credits consistent training like yours.',
+  ];
+  var ROLE_MAP = {batting:'batsman',bowling:'bowler',fielding:'fielder',wicketkeeping:'wicketkeeper'};
+
+  function _getCricketer(category) {
+    var db = (window.SC_APP && window.SC_APP.CRICKETERS_DB) || [];
+    var role = ROLE_MAP[category];
+    var pool = role ? db.filter(function(c){ return c.role===role||(c.role&&c.role.indexOf&&c.role.indexOf(role)!==-1); }) : [];
+    if (!pool.length) pool = db;
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function enqueue(type, context) {
+    var ctx = context || {};
+    var templates = (type==='level_up') ? LEVEL_TEMPLATES : KUDOS_TEMPLATES;
+    var cricketer = _getCricketer(ctx.category||'');
+    if (!cricketer) return;
+    var msg = templates[Math.floor(Math.random()*templates.length)].replace(/\{name\}/g, cricketer.name);
+    var tip = (type==='drill_pb'||type==='drill_100pct') ? (cricketer.tip||null) : null;
+    _queue.push({id:Date.now()+Math.random(), message:msg, tip:tip, cricketerName:cricketer.name, type:type});
+    if (!_timer) _timer = setTimeout(function(){ _flush(); }, 3000);
+  }
+
+  function _flush() {
+    _timer = null;
+    var item = _queue.shift();
+    if (!item) return;
+    _listeners.forEach(function(fn){ try{fn(item);}catch(e){} });
+    if (_queue.length) _timer = setTimeout(function(){ _flush(); }, 2500);
+  }
+
+  function onKudos(fn) { _listeners.push(fn); }
+  function offKudos(fn) { _listeners = _listeners.filter(function(f){return f!==fn;}); }
+  return {enqueue:enqueue, onKudos:onKudos, offKudos:offKudos};
+})();
+
+console.log('[SC] app-core v3.3 ready — ELO, AgileStreak, KudosService');
 })();
