@@ -86,7 +86,7 @@ main,
 .sc-bottomnav,
 nav[aria-label="Main navigation"] {
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
-  height: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+  height: calc(62px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 /* ─── Input fields — phone-friendly ────────────────────────────── */
