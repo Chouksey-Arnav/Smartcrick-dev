@@ -910,7 +910,7 @@ function ProgressRings(props) {
       }
       prevPcts.current[ring.key] = pct;
     });
-  });
+  }, [content.done, contribution.xp, consistency.streak]);
 
   var glowMap = {'#3b82f6':'sc-ring-glow-blue','#f59e0b':'sc-ring-glow-gold','#ef4444':'sc-ring-glow-red'};
 
