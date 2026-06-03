@@ -870,6 +870,161 @@ function Badge3D(props) {
 }
 A.Badge3D = Badge3D;
 
+// ── Progress Rings — Triple Concentric SVG (PR-1) ────────────────
+function ProgressRings(props) {
+  var content      = props.content      || {done:0, target:3};
+  var contribution = props.contribution || {xp:0, target:150};
+  var consistency  = props.consistency  || {streak:0, target:7};
+  var onRingClick  = props.onRingClick  || function(){};
+  var size = 140, cx = 70, cy = 70;
+  var rings = [
+    {key:'content',      r:54, color:'#3b82f6', value:content.done,       max:Math.max(content.target,1),      label:'Drills'},
+    {key:'contribution', r:42, color:'#f59e0b', value:contribution.xp,    max:Math.max(contribution.target,1), label:'XP'},
+    {key:'consistency',  r:30, color:'#ef4444', value:consistency.streak, max:Math.max(consistency.target,1),  label:'Streak'},
+  ];
+  var prevPcts = useRef({content:0, contribution:0, consistency:0});
+
+  useEffect(function() {
+    var sid = 'sc-ring-glow-style';
+    if (!document.getElementById(sid)) {
+      var el = document.createElement('style'); el.id = sid;
+      el.textContent = [
+        '@keyframes sc_glow_blue{0%,100%{filter:drop-shadow(0 0 6px #3b82f688)}50%{filter:drop-shadow(0 0 14px #3b82f6)}}',
+        '@keyframes sc_glow_gold{0%,100%{filter:drop-shadow(0 0 6px #f59e0b88)}50%{filter:drop-shadow(0 0 14px #f59e0b)}}',
+        '@keyframes sc_glow_red {0%,100%{filter:drop-shadow(0 0 6px #ef444488)}50%{filter:drop-shadow(0 0 14px #ef4444)}}',
+        '.sc-ring-glow-blue{animation:sc_glow_blue 1.4s ease-in-out infinite}',
+        '.sc-ring-glow-gold{animation:sc_glow_gold 1.4s ease-in-out infinite}',
+        '.sc-ring-glow-red {animation:sc_glow_red  1.4s ease-in-out infinite}',
+      ].join('\n');
+      document.head.appendChild(el);
+    }
+  }, []);
+
+  useEffect(function() {
+    rings.forEach(function(ring) {
+      var pct = Math.min(1, ring.value / ring.max);
+      var prev = prevPcts.current[ring.key] || 0;
+      if (pct >= 1 && prev < 1) {
+        if (navigator.vibrate) navigator.vibrate([100,50,100]);
+        if (A.Emotion) try { A.Emotion.emit('sc_ring_complete', {ring:ring.key}); } catch(e) {}
+      }
+      prevPcts.current[ring.key] = pct;
+    });
+  });
+
+  var glowMap = {'#3b82f6':'sc-ring-glow-blue','#f59e0b':'sc-ring-glow-gold','#ef4444':'sc-ring-glow-red'};
+
+  return h('div', {style:{display:'flex',flexDirection:'column',alignItems:'center',gap:10}, onClick:onRingClick},
+    h('svg', {width:size, height:size, viewBox:'0 0 140 140', style:{cursor:'pointer',overflow:'visible'}},
+      rings.map(function(ring) {
+        var pct = Math.min(1, ring.value / ring.max);
+        var circ = 2 * Math.PI * ring.r;
+        var offset = circ * (1 - pct);
+        var glowCls = pct >= 0.9 ? glowMap[ring.color] : '';
+        return h(Fragment, {key:ring.key},
+          h('circle', {cx:cx,cy:cy,r:ring.r,fill:'none',stroke:'rgba(255,255,255,0.07)',strokeWidth:8}),
+          h('circle', {cx:cx,cy:cy,r:ring.r,fill:'none',stroke:ring.color,strokeWidth:8,strokeLinecap:'round',
+            strokeDasharray:circ, strokeDashoffset:offset,
+            transform:'rotate(-90 70 70)',
+            style:{transition:'stroke-dashoffset 0.8s ease', filter:pct>=1?('drop-shadow(0 0 6px '+ring.color+')'):'none'},
+            className:glowCls})
+        );
+      }),
+      h('text',{x:70,y:64,textAnchor:'middle',style:{fontSize:11,fill:'#94a3b8',fontWeight:600,fontFamily:'system-ui'}},'TODAY'),
+      h('text',{x:70,y:80,textAnchor:'middle',style:{fontSize:20,fill:'#f0fdf4',fontWeight:800,fontFamily:'system-ui'}},String(contribution.xp||0)),
+      h('text',{x:70,y:94,textAnchor:'middle',style:{fontSize:9,fill:'#6b7280',fontWeight:500,fontFamily:'system-ui'}},'XP')
+    ),
+    h('div',{style:{display:'flex',gap:12,alignItems:'center'}},
+      rings.map(function(ring) {
+        var pct = Math.min(1, ring.value / ring.max);
+        return h('div',{key:ring.key,style:{display:'flex',alignItems:'center',gap:4}},
+          h('div',{style:{width:8,height:8,borderRadius:'50%',background:ring.color,opacity:pct>0?1:0.3}}),
+          h('span',{style:{fontSize:10,color:'#94a3b8',fontWeight:600}}, ring.label+': '+ring.value+'/'+ring.max)
+        );
+      })
+    )
+  );
+}
+A.ProgressRings = ProgressRings;
+
+// ── Minimalist Mode (MIN-1) ───────────────────────────────────────
+function useMinimalistMode() {
+  var [isMin, setIsMin] = useState(function(){ return !!(A.DB && A.DB.get('minimalist_mode')); });
+  useEffect(function(){
+    function onUpdate(){ setIsMin(!!(A.DB && A.DB.get('minimalist_mode'))); }
+    window.addEventListener('sc_update', onUpdate);
+    return function(){ window.removeEventListener('sc_update', onUpdate); };
+  }, []);
+  return isMin;
+}
+A.useMinimalistMode = useMinimalistMode;
+
+function MinimalistToggle() {
+  var isMin = useMinimalistMode();
+  function toggle() {
+    if (A.DB) { A.DB.set('minimalist_mode', !isMin); window.dispatchEvent(new CustomEvent('sc_update')); }
+  }
+  return h('div', {style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 0',borderBottom:'1px solid rgba(255,255,255,0.06)'}},
+    h('div',null,
+      h('div',{style:{fontSize:14,fontWeight:700,color:'#f0fdf4',marginBottom:2}},'Focus Mode'),
+      h('div',{style:{fontSize:12,color:'#6b7280'}},'Show only drills, rings, and mission')
+    ),
+    h('button',{
+      onClick:toggle,
+      style:{width:44,height:24,borderRadius:12,border:'none',cursor:'pointer',
+        background:isMin?'#10b981':'rgba(255,255,255,0.1)',position:'relative',transition:'background 0.2s',flexShrink:0}
+    },
+      h('div',{style:{position:'absolute',top:2,width:20,height:20,borderRadius:'50%',background:'#fff',transition:'left 0.2s ease',left:isMin?22:2}})
+    )
+  );
+}
+A.MinimalistToggle = MinimalistToggle;
+
+// ── Kudos Overlay (KDO-UI) ────────────────────────────────────────
+function KudosOverlay() {
+  var [item, setItem] = useState(null);
+  var [visible, setVisible] = useState(false);
+  var timerRef = useRef(null);
+
+  useEffect(function() {
+    if (!A.KudosService) return;
+    function onKudos(k) {
+      setItem(k); setVisible(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(function(){ setVisible(false); }, 4200);
+    }
+    A.KudosService.onKudos(onKudos);
+    return function(){ A.KudosService.offKudos(onKudos); };
+  }, []);
+
+  useEffect(function() {
+    var sid = 'sc-kudos-anim';
+    if (!document.getElementById(sid)) {
+      var el = document.createElement('style'); el.id = sid;
+      el.textContent = '@keyframes kudosSlide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}} .sc-kudos-enter{animation:kudosSlide 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards}';
+      document.head.appendChild(el);
+    }
+  }, []);
+
+  if (!visible || !item) return null;
+  return h('div',{
+    className:'sc-kudos-enter',
+    style:{position:'fixed',top:72,right:12,zIndex:9990,maxWidth:280,
+      background:'rgba(16,24,32,0.97)',border:'1px solid rgba(16,185,129,0.35)',
+      borderRadius:14,padding:'12px 14px',boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
+      backdropFilter:'blur(12px)',display:'flex',flexDirection:'column',gap:6}
+  },
+    h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+      h('div',{style:{fontSize:18}},'🏏'),
+      h('div',{style:{fontSize:12,fontWeight:800,color:'#10b981'}}, item.cricketerName||'The Dressing Room')
+    ),
+    h('div',{style:{fontSize:12,color:'#e2e8f0',lineHeight:1.4}}, item.message),
+    item.tip && h('div',{style:{fontSize:11,color:'#6b7280',borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:6,marginTop:2,fontStyle:'italic'}},
+      '"'+item.tip+'"')
+  );
+}
+A.KudosOverlay = KudosOverlay;
+
 // (End of app-ui additions — the existing console.log('[SC] app-ui...') line follows below)
-console.log('[SC] app-ui v3.2 ready — emotional design components added');
+console.log('[SC] app-ui v3.3 ready — ProgressRings, KudosOverlay, MinimalistToggle');
 })();
