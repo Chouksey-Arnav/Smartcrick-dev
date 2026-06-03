@@ -334,6 +334,89 @@ function FocusCard(){
   );
 }
 
+// ── Streak Shield Widget (AGS-UI) ────────────────────────────────
+function StreakShieldWidget(props) {
+  var streak = props.streak || 0;
+  var tokens = DB.getStreakTokens ? DB.getStreakTokens() : 0;
+  var goalLevel = DB.getDailyGoalLevel ? DB.getDailyGoalLevel() : 'standard';
+  var goalState = DB.getDailyGoalState ? DB.getDailyGoalState() : {activitiesCount:0,goalMet:false};
+  var pause = DB.getStreakPause ? DB.getStreakPause() : {pausedUntil:null};
+  var isPaused = pause.pausedUntil && (new Date().toISOString().slice(0,10) <= pause.pausedUntil);
+  var [showPause, setShowPause] = useState(false);
+  var [pauseDays, setPauseDays] = useState(2);
+  var GOAL_LEVELS = [{k:'minimal',label:'Minimal',n:1},{k:'standard',label:'Standard',n:2},{k:'elite',label:'Elite',n:3}];
+  var thresholds = {minimal:1,standard:2,elite:3};
+  var required = thresholds[goalLevel] || 2;
+  var done = goalState.activitiesCount || 0;
+  var pct = Math.min(1, done / required);
+
+  function handleGoalChange(k) {
+    if (DB.setDailyGoalLevel) { DB.setDailyGoalLevel(k); window.dispatchEvent(new CustomEvent('sc_update')); }
+  }
+  function handlePause() {
+    var until = new Date(); until.setDate(until.getDate() + pauseDays);
+    if (DB.saveStreakPause) {
+      DB.saveStreakPause({pausedUntil:until.toISOString().slice(0,10), pausedOn:new Date().toISOString().slice(0,10), pauseDays:pauseDays});
+      window.dispatchEvent(new CustomEvent('sc_update'));
+    }
+    setShowPause(false);
+  }
+  function handleResume() {
+    if (DB.saveStreakPause) { DB.saveStreakPause({pausedUntil:null,pausedOn:null,pauseDays:0}); window.dispatchEvent(new CustomEvent('sc_update')); }
+  }
+
+  return h('div',{style:{margin:'8px 16px',padding:'12px 14px',borderRadius:12,
+    background:isPaused?'rgba(245,158,11,0.06)':'rgba(16,22,36,0.9)',
+    border:'1px solid '+(isPaused?'rgba(245,158,11,0.3)':'rgba(255,255,255,0.08)')}},
+    h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},
+      // Goal ring
+      h('svg',{width:40,height:40,viewBox:'0 0 40 40',style:{flexShrink:0}},
+        h('circle',{cx:20,cy:20,r:16,fill:'none',stroke:'rgba(255,255,255,0.07)',strokeWidth:5}),
+        h('circle',{cx:20,cy:20,r:16,fill:'none',stroke:goalState.goalMet?'#10b981':'#f59e0b',strokeWidth:5,
+          strokeLinecap:'round',strokeDasharray:String(2*Math.PI*16),
+          strokeDashoffset:String(2*Math.PI*16*(1-pct)),transform:'rotate(-90 20 20)',
+          style:{transition:'stroke-dashoffset 0.5s ease'}})
+      ),
+      h('div',{style:{flex:1}},
+        h('div',{style:{display:'flex',alignItems:'center',gap:6}},
+          h('span',{style:{fontSize:14,fontWeight:800,color:goalState.goalMet?'#10b981':'#f0fdf4'}},(isPaused?'⏸':streak>0?'🔥':'💤')+' '+streak+' days'),
+          tokens>0&&h('span',{style:{fontSize:10,fontWeight:800,color:'#fbbf24',background:'rgba(251,191,36,0.1)',borderRadius:6,padding:'1px 6px'}},
+            tokens+'🛡️')
+        ),
+        h('div',{style:{fontSize:11,color:'#6b7280'}},goalState.goalMet?'Goal met ✓':(done+'/'+required+' activities'))
+      ),
+      !isPaused&&h('button',{onClick:function(){setShowPause(function(v){return !v;});},
+        style:{fontSize:11,color:'#6b7280',background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'4px 8px',cursor:'pointer'}
+      },'Pause'),
+      isPaused&&h('button',{onClick:handleResume,
+        style:{fontSize:11,color:'#f59e0b',background:'rgba(245,158,11,0.1)',border:'none',borderRadius:8,padding:'4px 8px',cursor:'pointer'}
+      },'Resume')
+    ),
+    // Goal level picker
+    h('div',{style:{display:'flex',gap:6}},
+      GOAL_LEVELS.map(function(gl){
+        return h('button',{key:gl.k,onClick:function(){handleGoalChange(gl.k);},
+          style:{flex:1,padding:'5px 0',borderRadius:8,border:'none',cursor:'pointer',fontSize:11,fontWeight:700,
+            background:goalLevel===gl.k?'rgba(16,185,129,0.2)':'rgba(255,255,255,0.05)',
+            color:goalLevel===gl.k?'#10b981':'#6b7280',borderBottom:goalLevel===gl.k?'2px solid #10b981':'2px solid transparent'}
+        }, gl.label);
+      })
+    ),
+    // Pause panel
+    showPause&&h('div',{style:{marginTop:10,paddingTop:10,borderTop:'1px solid rgba(255,255,255,0.06)'}},
+      h('div',{style:{fontSize:12,color:'#94a3b8',marginBottom:8}},'Pause for how many days?'),
+      h('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},
+        h('input',{type:'range',min:1,max:7,value:pauseDays,onChange:function(e){setPauseDays(+e.target.value);},style:{flex:1}}),
+        h('span',{style:{fontSize:14,fontWeight:800,color:'#f59e0b',minWidth:20}},pauseDays)
+      ),
+      h('button',{onClick:handlePause,
+        style:{width:'100%',padding:'8px',background:'#f59e0b',color:'#000',border:'none',borderRadius:8,fontWeight:700,cursor:'pointer',fontSize:13}
+      },'Confirm Pause')
+    )
+  );
+}
+A.StreakShieldWidget = StreakShieldWidget;
+
 // ── MultiplierBanner ──────────────────────────────────────────────
 function MultiplierBanner(props){
   var streak=props.streak||0, mult=props.multiplier||1.0;
@@ -702,7 +785,12 @@ function HomePage(){
   var mult=streak>=30?1.5:streak>=14?1.3:streak>=7?1.2:streak>=3?1.1:1.0;
   var weekXP=xpLog.reduce(function(s,d){return s+(d.xp||0);},0);
   var todayDate=getToday();
-  var todayXP=(xpLog.find(function(d){return d.date===todayDate;})||{xp:0}).xp;
+  var allXPLog=DB.getXPLog?DB.getXPLog():[];
+  var todayEntries=allXPLog.filter(function(e){return e.date===todayDate;});
+  var todayXP=todayEntries.reduce(function(s,e){return s+(e.xp||0);},0);
+  var todayDrills=todayEntries.filter(function(e){return e.source&&e.source.indexOf('drill:')===0;}).length;
+  var dailyTargets=DB.getDailyTargets?DB.getDailyTargets():{drills:3,xp:150,streakGoal:7};
+  var isMinimalist=A.useMinimalistMode?A.useMinimalistMode():false;
   var greet=(function(){var hr=new Date().getHours();return hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';})();
   var nextLevelName=levelInfo.next?levelInfo.next.name:'max level'; // ✅ fixed [object Object]
 
@@ -745,22 +833,35 @@ function HomePage(){
         )
       ),
       // ✅ DNA mini-badge (only if app-cricket-dna.js is loaded)
-      A.DNAOverview?h(A.DNAOverview,{}):null
+      A.DNAOverview?h(A.DNAOverview,{}):null,
+
+      // ── Triple Progress Rings ──────────────────────────────────
+      A.ProgressRings?h('div',{style:{display:'flex',justifyContent:'center',padding:'16px 0 4px'}},
+        h(A.ProgressRings,{
+          content:{done:todayDrills,target:dailyTargets.drills},
+          contribution:{xp:todayXP,target:dailyTargets.xp},
+          consistency:{streak:streak,target:dailyTargets.streakGoal},
+          onRingClick:function(){A.nav('Progress');}
+        })
+      ):null
     ),
 
-    h(MultiplierBanner,{streak:streak,multiplier:mult}),
-    A.IntelligenceDigestCard?h(A.IntelligenceDigestCard,{}):null,
-    h(StreakCalendarSection,{}),
-    A.DailyChallengeCard?h(A.DailyChallengeCard,{}):null,
+    // ── Streak Shield (always visible) ────────────────────────────
+    A.StreakShieldWidget ? h(A.StreakShieldWidget, {streak:streak}) : null,
+
+    !isMinimalist&&h(MultiplierBanner,{streak:streak,multiplier:mult}),
+    !isMinimalist&&(A.IntelligenceDigestCard?h(A.IntelligenceDigestCard,{}):null),
+    !isMinimalist&&h(StreakCalendarSection,{}),
+    !isMinimalist&&(A.DailyChallengeCard?h(A.DailyChallengeCard,{}):null),
     h(FocusCard,{}),
-    A.IntelligenceHomeCard?h(A.IntelligenceHomeCard,{}):null,
+    !isMinimalist&&(A.IntelligenceHomeCard?h(A.IntelligenceHomeCard,{}):null),
 
-    A.DailyRewardMiniWidget?h(A.DailyRewardMiniWidget,{
+    !isMinimalist&&(A.DailyRewardMiniWidget?h(A.DailyRewardMiniWidget,{
       onOpen:function(){window.dispatchEvent(new CustomEvent('sc_open_reward_modal'));}
-    }):null,
+    }):null),
 
-    h(SpinWheelWidget,{}),
-    A.DailyNetHomeWidget?h(A.DailyNetHomeWidget,{}):null,
+    !isMinimalist&&h(SpinWheelWidget,{}),
+    !isMinimalist&&(A.DailyNetHomeWidget?h(A.DailyNetHomeWidget,{}):null),
 
     // ── Mission ────────────────────────────────────────────────────
     mission&&h('div',{style:{margin:'0 16px 12px'}},
