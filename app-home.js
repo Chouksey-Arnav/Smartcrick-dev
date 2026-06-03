@@ -768,6 +768,9 @@ function HomePage(){
     };
   },[]);
 
+  // ⚠️ Must be called before any early return — Rules of Hooks
+  var isMinimalist=A.useMinimalistMode?A.useMinimalistMode():false;
+
   if(!progress){
     return h('div',{style:{background:'#0d1117',minHeight:'100dvh',
       display:'flex',alignItems:'center',justifyContent:'center'}},
@@ -790,7 +793,6 @@ function HomePage(){
   var todayXP=todayEntries.reduce(function(s,e){return s+(e.xp||0);},0);
   var todayDrills=todayEntries.filter(function(e){return e.source&&e.source.indexOf('drill:')===0;}).length;
   var dailyTargets=DB.getDailyTargets?DB.getDailyTargets():{drills:3,xp:150,streakGoal:7};
-  var isMinimalist=A.useMinimalistMode?A.useMinimalistMode():false;
   var greet=(function(){var hr=new Date().getHours();return hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';})();
   var nextLevelName=levelInfo.next?levelInfo.next.name:'max level'; // ✅ fixed [object Object]
 
