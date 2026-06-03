@@ -1434,3 +1434,98 @@ body {
     animation: none !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   v5 Polish Layer — Psychological retention + Apple-tier feel
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ─────────────────────────────────────────────────── */
+
+/* Zeigarnik close-to-win breathing glow on progress bar fill */
+@keyframes scGlowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(74,222,128,0.30), 0 0 0px rgba(74,222,128,0); }
+  50%       { box-shadow: 0 0 18px rgba(74,222,128,0.72), 0 0 30px rgba(74,222,128,0.22); }
+}
+
+/* Streak card glow — orange pulse for 7-13 day streaks */
+@keyframes scStreakCardGlow {
+  0%,100% { box-shadow: 0 0 0 1px rgba(239,68,68,0.22), 0 4px 18px rgba(239,68,68,0.14); }
+  50%     { box-shadow: 0 0 0 1.5px rgba(239,68,68,0.42), 0 6px 28px rgba(239,68,68,0.28); }
+}
+
+/* Streak card glow — gold pulse for 30d+ legendary */
+@keyframes scStreakLegendaryGlow {
+  0%,100% { box-shadow: 0 0 0 1.5px rgba(217,119,6,0.35), 0 6px 24px rgba(217,119,6,0.22); }
+  50%     { box-shadow: 0 0 0 2px rgba(245,158,11,0.55), 0 8px 36px rgba(245,158,11,0.38); }
+}
+
+/* Flame bounce — runs once on mount when streak >= 7 */
+@keyframes scStreakPop {
+  0%   { transform: scale(1) rotate(0deg); }
+  20%  { transform: scale(1.25) rotate(-10deg); }
+  45%  { transform: scale(0.90) rotate(6deg); }
+  65%  { transform: scale(1.12) rotate(-4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Staggered home card entry — used with animationDelay inline */
+@keyframes scCardFadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Utility classes ───────────────────────────────────────────── */
+
+/* Zeigarnik glow — applied to progress FILL div when pct > 80 */
+.progress-close-to-win {
+  animation: scGlowPulse 2.4s ease-in-out infinite;
+}
+
+/* Staggered home card entry */
+.sc-home-card-enter {
+  animation: scCardFadeUp 0.38s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Streak emotional anchoring — box-shadow only, no border conflict */
+.streak-hot {
+  box-shadow: 0 0 0 1px rgba(251,146,60,0.28), 0 4px 20px rgba(251,146,60,0.18) !important;
+}
+.streak-fire {
+  animation: scStreakCardGlow 2.8s ease-in-out infinite;
+}
+.streak-legendary {
+  animation: scStreakLegendaryGlow 2.0s ease-in-out infinite;
+}
+
+/* Bottom nav active pill — sits behind icon+label */
+.sc-nav-pill {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -54%);
+  width: 52px; height: 36px;
+  border-radius: 12px;
+  background: rgba(34,197,94,0.13);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Bottom nav tap feedback */
+.sc-bottomnav button:active {
+  transform: scale(0.92) !important;
+  transition: transform 0.08s ease !important;
+}
+
+/* Stronger btn-primary press feel */
+.btn-primary:active {
+  transform: scale(0.96) !important;
+  box-shadow: 0 1px 4px rgba(34,197,94,0.20), inset 0 1px 3px rgba(0,0,0,0.18) !important;
+}
+
+/* ── Reduced motion additions ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .sc-home-card-enter,
+  .streak-fire,
+  .streak-legendary,
+  .progress-close-to-win,
+  .sc-nav-pill { animation: none !important; transition: none !important; }
+}
