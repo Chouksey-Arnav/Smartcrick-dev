@@ -56,13 +56,22 @@ function ProgressPage() {
 
       // Stats grid
       h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},
-        [{label:'Drills Done',val:progress.drills_done||0,color:'text-blue-400',icon:'target'},
-         {label:'Mental Sessions',val:progress.mental_done||0,color:'text-purple-400',icon:'brain'},
-         {label:'Workouts',val:progress.workouts_done||0,color:'text-orange-400',icon:'dumbbell'},
-         {label:'Practice Mins',val:progress.practice_minutes||0,color:'text-teal-400',icon:'clock'},
-         {label:'Best Streak',val:`${progress.longest_streak||0}d`,color:'text-red-400',icon:'flame'},
-         {label:'Scheduled Done',val:schedStats.done,color:'text-emerald-400',icon:'calendar'},
-        ].map(s=>h(StatCard,{key:s.label,...s}))
+        (function() {
+          var gs = DB.getDailyGoalState ? DB.getDailyGoalState() : {activitiesCount:0,goalMet:false};
+          var gl = DB.getDailyGoalLevel ? DB.getDailyGoalLevel() : 'standard';
+          var thresholds = {minimal:1,standard:2,elite:3};
+          var req = thresholds[gl]||2;
+          var goalVal = (gs.activitiesCount||0)+'/'+req+(gs.goalMet?' ✓':'');
+          return [
+            {label:'Drills Done',val:progress.drills_done||0,color:'text-blue-400',icon:'target'},
+            {label:'Mental Sessions',val:progress.mental_done||0,color:'text-purple-400',icon:'brain'},
+            {label:'Workouts',val:progress.workouts_done||0,color:'text-orange-400',icon:'dumbbell'},
+            {label:'Practice Mins',val:progress.practice_minutes||0,color:'text-teal-400',icon:'clock'},
+            {label:'Best Streak',val:`${progress.longest_streak||0}d`,color:'text-red-400',icon:'flame'},
+            {label:'Scheduled Done',val:schedStats.done,color:'text-emerald-400',icon:'calendar'},
+            {label:"Today's Goal",val:goalVal,color:gs.goalMet?'text-green-400':'text-yellow-400',icon:'star'},
+          ];
+        })().map(s=>h(StatCard,{key:s.label,...s}))
       ),
 
       // 7-day chart
