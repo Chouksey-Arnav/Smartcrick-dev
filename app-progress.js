@@ -55,7 +55,7 @@ function ProgressPage() {
       ),
 
       // Stats grid
-      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},
+      h('div',{className:'sc-stagger',style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},
         (function() {
           var gs = DB.getDailyGoalState ? DB.getDailyGoalState() : {activitiesCount:0,goalMet:false};
           var gl = DB.getDailyGoalLevel ? DB.getDailyGoalLevel() : 'standard';
@@ -75,7 +75,7 @@ function ProgressPage() {
       ),
 
       // 7-day chart
-      h('div',{style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
+      h('div',{className:'sc-reveal',style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
           h('span',{style:{fontSize:14,fontWeight:700,color:'#e2e8f0'}},'7-Day XP'),
           h('span',{style:{fontSize:12,fontWeight:700,color:'#4ade80'}},`${xpDays.reduce((s,d)=>s+d.xp,0)} total`)
@@ -86,7 +86,7 @@ function ProgressPage() {
       ),
 
       // 30-day heatmap
-      h('div',{style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
+      h('div',{className:'sc-reveal',style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
           h('span',{style:{fontSize:14,fontWeight:700,color:'#e2e8f0'}},'30-Day Activity'),
           h('div',{className:'flex items-center gap-1.5'},[0,1,2,3,4].map(l=>h('div',{key:l,className:`heatmap-cell heatmap-${l}`,style:{width:12,height:12}})))
@@ -95,7 +95,7 @@ function ProgressPage() {
       ),
 
       // Badges
-      h('div',{style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
+      h('div',{className:'sc-reveal',style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
         h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},
           h('div',{style:{display:'flex',alignItems:'center',gap:8}},
             h(Icon,{n:'award',cls:'w-4 h-4',style:{color:'#8b949e'}}),
@@ -124,7 +124,7 @@ function ProgressPage() {
       ),
 
       // Skill path progress
-      h('div',{style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
+      h('div',{className:'sc-reveal',style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
         h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:16}},
           h(Icon,{n:'layers',cls:'w-4 h-4',style:{color:'#8b949e'}}),
           h('span',{style:{fontSize:14,fontWeight:700,color:'#e6edf3'}},'Skill Paths')
