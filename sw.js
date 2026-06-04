@@ -1,57 +1,90 @@
-// sw.js — SmartCrick Service Worker v1.0
-// Strategy: cache-first for CDN + app files, network-first for API
+// sw.js — SmartCrick Service Worker v2.0
+// Strategy: cache-first for app shell + CDN (offline-first),
+//           network-first for backend APIs (with offline JSON fallback).
+// Every same-origin asset the app loads is precached so the WHOLE app
+// works fully offline after the first visit.
 // ================================================================
-const CACHE_V       = 'sc-v4';
-const CDN_CACHE     = 'sc-cdn-v4';
-const CACHE_VERSION = '4.0.0';
+const CACHE_V       = 'sc-v5';
+const CDN_CACHE     = 'sc-cdn-v5';
+const RUNTIME_CACHE = 'sc-runtime-v5';
+const CACHE_VERSION = '5.0.0';
 
-// All same-origin app files to cache on install
+// ── All same-origin app files (mirrors index.html script order) ──
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/manifest.json',
+  '/icon.svg',
+  // Styles
   '/styles.css',
+  '/styles-patch.css',
   '/styles-vibe.css',
-  '/vercel.json',
+  // Core + data
   '/sc_opensource.js',
   '/app-core.js',
   '/app-data.js',
   '/app-ui.js',
   '/app-ui-patch.js',
+  '/app-emotion-engine.js',
+  '/app-mascot.js',
   '/app-onboard.js',
   '/app-assessment.js',
+  '/app-cricketer-db.js',
+  '/app-card-pack.js',
+  '/app-leaderboard.js',
   '/app-home.js',
+  '/app-personalization.js',
+  '/app-brain-engine.js',
+  // Intelligence system
+  '/app-intelligence.js',
+  '/app-preference-ranker.js',
+  '/app-intelligence-hub.js',
+  '/app-intelligence-digest.js',
+  // Drills
+  '/app-drills-data.js',
+  '/app-drill-video-map.js',
   '/app-drills.js',
+  // Mental
+  '/app-ui-audio.js',
+  '/app-mental-audio.js',
+  '/app-mental-routine-creator.js',
   '/app-mental.js',
+  '/app-mental-player-v4.js',
+  '/app-mental-integration.js',
+  '/app-mental-content-extended.js',
+  // Fitness
   '/app-exercise-db.js',
   '/app-fitness-engine.js',
   '/app-fitness.js',
   '/app-workout-player.js',
-  '/app-ui-audio.js',
   '/app-timer.js',
   '/app-schedule.js',
   '/app-skillpaths.js',
   '/app-progress.js',
   '/app-challenges.js',
   '/app-profile.js',
+  // Video
   '/app-video-data.js',
   '/app-video-engine.js',
   '/app-video-results.js',
   '/app-video-analysis.js',
+  // Remaining feature modules
   '/app-stubs.js',
   '/app-aicoach.js',
   '/app-daily-net.js',
   '/app-viral.js',
+  '/app-cricket-dna.js',
   '/app-matchlogger.js',
   '/app-performance.js',
   '/app-quizzes.js',
+  '/app-daily-reward.js',
   '/app-root.js',
   '/app-vibe.js',
-  '/manifest.json',
-  '/icon.svg',
 ];
 
 // External CDN libraries to cache (versioned = immutable)
 const CDN_ASSETS = [
+  'https://cdn.tailwindcss.com',
   'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
   'https://cdn.jsdelivr.net/npm/i18next@23.11.5/dist/umd/i18next.min.js',
@@ -61,8 +94,10 @@ const CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdn.jsdelivr.net/npm/mousetrap@1.6.5/mousetrap.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js',
   'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js',
   'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js',
+  'https://unpkg.com/framer-motion@10.18.0/dist/framer-motion.js',
 ];
 
 // Hosts that are backend APIs — use network-first, fallback JSON
@@ -76,7 +111,6 @@ self.addEventListener('install', function(event) {
   self.skipWaiting();
   event.waitUntil(
     Promise.allSettled([
-      // Cache app shell files
       caches.open(CACHE_V).then(function(cache) {
         return Promise.allSettled(
           APP_SHELL.map(function(url) {
@@ -86,7 +120,6 @@ self.addEventListener('install', function(event) {
           })
         );
       }),
-      // Cache CDN assets
       caches.open(CDN_CACHE).then(function(cache) {
         return Promise.allSettled(
           CDN_ASSETS.map(function(url) {
@@ -97,14 +130,14 @@ self.addEventListener('install', function(event) {
         );
       }),
     ]).then(function() {
-      console.log('[SW] Install complete — SmartCrick v' + CACHE_VERSION + ' cached');
+      console.log('[SW] Install complete — SmartCrick v' + CACHE_VERSION + ' cached for offline');
     })
   );
 });
 
 // ── ACTIVATE: clean old caches ───────────────────────────────────
 self.addEventListener('activate', function(event) {
-  var valid = [CACHE_V, CDN_CACHE];
+  var valid = [CACHE_V, CDN_CACHE, RUNTIME_CACHE];
   event.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(
@@ -118,40 +151,56 @@ self.addEventListener('activate', function(event) {
   );
 });
 
+// Allow the page to trigger an immediate update
+self.addEventListener('message', function(event) {
+  if (event.data === 'SKIP_WAITING' || (event.data && event.data.type === 'SKIP_WAITING')) {
+    self.skipWaiting();
+  }
+});
+
 // ── FETCH: smart routing ─────────────────────────────────────────
 self.addEventListener('fetch', function(event) {
   var req = event.request;
   var url = new URL(req.url);
 
-  // Skip non-GET and chrome-extension requests
-  if(req.method !== 'GET') return;
-  if(url.protocol === 'chrome-extension:') return;
+  if (req.method !== 'GET') return;
+  if (url.protocol === 'chrome-extension:') return;
 
-  // Skip YouTube embeds (no offline support possible)
-  if(url.hostname.includes('youtube.com') || url.hostname.includes('ytimg.com')) return;
+  // YouTube embeds — no offline support possible
+  if (url.hostname.includes('youtube.com') || url.hostname.includes('ytimg.com') || url.hostname.includes('youtube-nocookie.com')) return;
 
   // ── BACKEND APIS: network-first, offline JSON fallback ──────
-  if(API_HOSTS.some(function(h) { return url.hostname === h; })) {
+  if (API_HOSTS.some(function(h) { return url.hostname === h; })) {
     event.respondWith(
       fetch(req.clone(), { signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined })
+        .then(function(res) {
+          // Cache successful GET API responses for offline reads
+          if (res.ok) {
+            var clone = res.clone();
+            caches.open(RUNTIME_CACHE).then(function(c) { c.put(req, clone); });
+          }
+          return res;
+        })
         .catch(function() {
-          return new Response(
-            JSON.stringify({ error: 'offline', message: 'SmartCrick is offline. Your progress is saved locally.' }),
-            { status: 503, headers: { 'Content-Type': 'application/json', 'X-SC-Offline': '1' } }
-          );
+          return caches.match(req).then(function(cached) {
+            return cached || new Response(
+              JSON.stringify({ error: 'offline', message: 'SmartCrick is offline. Your progress is saved locally.' }),
+              { status: 503, headers: { 'Content-Type': 'application/json', 'X-SC-Offline': '1' } }
+            );
+          });
         })
     );
     return;
   }
 
   // ── GOOGLE FONTS: cache-first ────────────────────────────────
-  if(url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith(
       caches.open(CDN_CACHE).then(function(cache) {
         return cache.match(req).then(function(cached) {
-          if(cached) return cached;
+          if (cached) return cached;
           return fetch(req).then(function(res) {
-            if(res.ok) cache.put(req, res.clone());
+            if (res.ok) cache.put(req, res.clone());
             return res;
           }).catch(function() { return new Response('', { status: 503 }); });
         });
@@ -160,18 +209,33 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // ── CDN ASSETS (unpkg, jsdelivr, cdnjs): cache-first ────────
+  // ── YouTube thumbnails: cache-first (works offline once seen) ─
+  if (url.hostname === 'img.youtube.com' || url.hostname === 'i.ytimg.com' || url.hostname === 'fav.farm') {
+    event.respondWith(
+      caches.open(RUNTIME_CACHE).then(function(cache) {
+        return cache.match(req).then(function(cached) {
+          return cached || fetch(req).then(function(res) {
+            if (res.ok) cache.put(req, res.clone());
+            return res;
+          }).catch(function() { return cached || new Response('', { status: 503 }); });
+        });
+      })
+    );
+    return;
+  }
+
+  // ── CDN ASSETS (unpkg, jsdelivr, cdnjs, tailwind): cache-first ─
   var isCDN = url.hostname.includes('unpkg.com') ||
               url.hostname.includes('jsdelivr.net') ||
               url.hostname.includes('cdnjs.cloudflare.com') ||
               url.hostname === 'cdn.tailwindcss.com';
-  if(isCDN) {
+  if (isCDN) {
     event.respondWith(
       caches.open(CDN_CACHE).then(function(cache) {
         return cache.match(req).then(function(cached) {
-          if(cached) return cached;
+          if (cached) return cached;
           return fetch(req).then(function(res) {
-            if(res.ok) cache.put(req, res.clone());
+            if (res.ok) cache.put(req, res.clone());
             return res;
           }).catch(function() { return caches.match(req); });
         });
@@ -181,17 +245,24 @@ self.addEventListener('fetch', function(event) {
   }
 
   // ── SAME-ORIGIN APP FILES: stale-while-revalidate ───────────
-  if(url.hostname === self.location.hostname) {
+  if (url.hostname === self.location.hostname) {
     event.respondWith(
       caches.open(CACHE_V).then(function(cache) {
         return cache.match(req).then(function(cached) {
           var fetchPromise = fetch(req).then(function(res) {
-            if(res.ok) cache.put(req, res.clone());
+            if (res.ok) cache.put(req, res.clone());
             return res;
           }).catch(function() { return null; });
 
           return cached || fetchPromise.then(function(res) {
-            return res || new Response('SmartCrick offline — cached content unavailable', { status: 503 });
+            if (res) return res;
+            // Navigation requests fall back to the cached app shell
+            if (req.mode === 'navigate') {
+              return cache.match('/index.html').then(function(shell) {
+                return shell || new Response('SmartCrick offline — cached content unavailable', { status: 503 });
+              });
+            }
+            return new Response('SmartCrick offline — cached content unavailable', { status: 503 });
           });
         });
       })
@@ -205,7 +276,7 @@ self.addEventListener('push', function(event) {
   var data = event.data ? event.data.json() : {};
   event.waitUntil(
     self.registration.showNotification(data.title || 'SmartCrick', {
-      body: data.body || "Time to train! Today's session is ready. 🏏",
+      body: data.body || "Time to train! Today's session is ready.",
       icon: '/icon.svg',
       badge: '/icon.svg',
       tag: 'sc-training',
@@ -219,8 +290,8 @@ self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
-      for(var i = 0; i < list.length; i++) {
-        if(list[i].url.includes(self.location.origin) && 'focus' in list[i]) return list[i].focus();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].url.includes(self.location.origin) && 'focus' in list[i]) return list[i].focus();
       }
       return clients.openWindow(event.notification.data.url || '/');
     })
