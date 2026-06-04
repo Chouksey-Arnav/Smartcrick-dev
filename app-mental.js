@@ -314,13 +314,15 @@ function MentalPage(){
         ),
 
         // Session list
-        h('div',{style:{padding:'4px 16px 0'}},
+        h('div',{className:'sc-stagger',style:{padding:'4px 16px 0'}},
           filtered.length===0
             ?h(EmptyState,{icon:'brain',title:'No sessions found',desc:'Try a different category or search term'})
             :filtered.map(s=>{
               const mins=Math.floor(s.duration_seconds/60),isDone=done.includes(s.id);
               const sc=MENT_CATS.find(c=>c.id===s.category)||MENT_CATS[1];
-              return h('button',{key:s.id,onClick:()=>{window.SC_APP._mentalSession=s;nav('MentalPlayer',{id:s.id});},style:{
+              return h('button',{key:s.id,onClick:()=>{window.SC_APP._mentalSession=s;nav('MentalPlayer',{id:s.id});},
+                className:'sc-spring sc-ripple',
+                style:{
                 display:'flex',alignItems:'center',gap:12,padding:'16px',borderRadius:14,
                 background:'rgba(16,22,36,0.9)',border:`1px solid ${isDone?'rgba(22,163,74,0.3)':'rgba(255,255,255,0.07)'}`,
                 cursor:'pointer',textAlign:'left',width:'100%',fontFamily:'inherit',marginBottom:8,
