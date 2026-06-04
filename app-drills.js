@@ -14,6 +14,21 @@ var DB   = A.DB;
 var nav  = A.nav;
 var awardXP = A.awardXP;
 
+// ── PROFESSIONAL ICON HELPER ─────────────────────────────────────
+// Renders a crisp line icon from the shared A.IC registry (Lucide-style),
+// replacing emojis everywhere for a clean, training-platform aesthetic.
+function Ic(name, size, color, extra) {
+  if (!A.Icon) return null;
+  return h(A.Icon, {
+    n: name,
+    cls: '',
+    style: Object.assign({
+      width: size || 16, height: size || 16,
+      color: color || '#9ca3af', flexShrink: 0,
+    }, extra || {}),
+  });
+}
+
 // ── DRILL NORMALISER ─────────────────────────────────────────────
 function normDrill(d) {
   var dur = d.duration;
@@ -63,34 +78,34 @@ function normDrill(d) {
 
 // ── MECHANIC INFO ────────────────────────────────────────────────
 var MECHANIC_INFO = {
-  'shadow-trigger':       { label: 'Shadow Drill',    emoji: '🪞', desc: 'Mirror & video technique feedback' },
-  'phase-timer':          { label: 'Phase Timer',     emoji: '⏱️', desc: 'Timed phases with targets' },
-  'audio-cue-randomizer': { label: 'Audio React',     emoji: '🔊', desc: 'React to random audio cues' },
-  'lives-game':           { label: 'Lives Game',      emoji: '❤️', desc: 'Limited attempts per session' },
-  'adaptive-difficulty':  { label: 'Adaptive',        emoji: '📈', desc: 'Auto-adjusts to your level' },
-  'decision-tracker':     { label: 'Decision Track',  emoji: '🧠', desc: 'Track decisions per ball' },
-  'form-video-upload':    { label: 'Video Review',    emoji: '🎥', desc: 'Record & review your form' },
-  'score-vs-feeder':      { label: 'Score Attack',    emoji: '🏆', desc: 'Score points vs. feeder' },
-  'streak-multiplier':    { label: 'Streak Bonus',    emoji: '🔥', desc: 'Multiplier for consecutive hits' },
-  'simulation-script':    { label: 'Match Sim',       emoji: '🎮', desc: 'Scripted match scenario' },
-  'breathwork-overlay':   { label: 'Breathwork',      emoji: '🌬️', desc: 'Guided breathing with activity' },
-  'biomech-overlay':      { label: 'Biomechanics',    emoji: '🦴', desc: 'Biomechanical checkpoints' },
-  'bowler-tracker':       { label: 'Bowl Track',      emoji: '🎯', desc: 'Track bowling metrics per ball' },
-  'partner-call-mode':    { label: 'Partner Calls',   emoji: '📣', desc: 'Partner calls random cues' },
-  'trigger-word-loop':    { label: 'Trigger Word',    emoji: '💬', desc: 'Loop a focus cue while practising' },
-  'field-set-overlay':    { label: 'Field Overlay',   emoji: '🗺️', desc: 'Field placement visualisation' },
-  'dna-mirror':           { label: 'DNA Mirror',      emoji: '🧬', desc: 'Match your DNA archetype' },
+  'shadow-trigger':       { label: 'Shadow Drill',    icon: 'user',      desc: 'Mirror & video technique feedback' },
+  'phase-timer':          { label: 'Phase Timer',     icon: 'timer',     desc: 'Timed phases with targets' },
+  'audio-cue-randomizer': { label: 'Audio React',     icon: 'mic',       desc: 'React to random audio cues' },
+  'lives-game':           { label: 'Lives Game',      icon: 'heart',     desc: 'Limited attempts per session' },
+  'adaptive-difficulty':  { label: 'Adaptive',        icon: 'chartLine', desc: 'Auto-adjusts to your level' },
+  'decision-tracker':     { label: 'Decision Track',  icon: 'brain',     desc: 'Track decisions per ball' },
+  'form-video-upload':    { label: 'Video Review',    icon: 'video',     desc: 'Record & review your form' },
+  'score-vs-feeder':      { label: 'Score Attack',    icon: 'trophy',    desc: 'Score points vs. feeder' },
+  'streak-multiplier':    { label: 'Streak Bonus',    icon: 'flame',     desc: 'Multiplier for consecutive hits' },
+  'simulation-script':    { label: 'Match Sim',       icon: 'target',    desc: 'Scripted match scenario' },
+  'breathwork-overlay':   { label: 'Breathwork',      icon: 'wind',      desc: 'Guided breathing with activity' },
+  'biomech-overlay':      { label: 'Biomechanics',    icon: 'activity',  desc: 'Biomechanical checkpoints' },
+  'bowler-tracker':       { label: 'Bowl Track',      icon: 'crosshair', desc: 'Track bowling metrics per ball' },
+  'partner-call-mode':    { label: 'Partner Calls',   icon: 'mic',       desc: 'Partner calls random cues' },
+  'trigger-word-loop':    { label: 'Trigger Word',    icon: 'repeat',    desc: 'Loop a focus cue while practising' },
+  'field-set-overlay':    { label: 'Field Overlay',   icon: 'navigation',desc: 'Field placement visualisation' },
+  'dna-mirror':           { label: 'DNA Mirror',      icon: 'sparkles',  desc: 'Match your DNA archetype' },
 };
 
 // ── CATEGORIES ────────────────────────────────────────────────────
 var CATS = {
-  all:           { label: 'All',      emoji: '🏏', color: '#9ca3af', bg: 'rgba(75,85,99,0.15)' },
-  batting:       { label: 'Batting',  emoji: '🏏', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  bowling:       { label: 'Bowling',  emoji: '⚾',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
-  fielding:      { label: 'Fielding', emoji: '🏃', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
-  wicketkeeping: { label: 'Keeping',  emoji: '🧤', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  fitness:       { label: 'Fitness',  emoji: '💪', color: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
-  mental:        { label: 'Mental',   emoji: '🧠', color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+  all:           { label: 'All',      icon: 'grid',       color: '#9ca3af', bg: 'rgba(75,85,99,0.15)' },
+  batting:       { label: 'Batting',  icon: 'bat',        color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
+  bowling:       { label: 'Bowling',  icon: 'ball',       color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  fielding:      { label: 'Fielding', icon: 'field',      color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+  wicketkeeping: { label: 'Keeping',  icon: 'glove',      color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  fitness:       { label: 'Fitness',  icon: 'dumbbell',   color: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
+  mental:        { label: 'Mental',   icon: 'brain',      color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
 };
 
 var LEVEL_COLORS = {
@@ -153,13 +168,29 @@ function formatTime(seconds) {
 
 // ── MECHANIC BADGE ────────────────────────────────────────────────
 function MechanicBadge(props) {
-  var info = MECHANIC_INFO[props.mechanic] || { label: props.mechanic, emoji: '⚙️' };
+  var info = MECHANIC_INFO[props.mechanic] || { label: props.mechanic, icon: 'settings' };
   return h('span', { style: {
-    fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+    fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99,
     background: 'rgba(139,92,246,0.12)', color: '#a78bfa',
     border: '1px solid rgba(139,92,246,0.25)', whiteSpace: 'nowrap',
-    display: 'inline-flex', alignItems: 'center', gap: 3,
-  }}, info.emoji + ' ' + info.label);
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+  }}, Ic(info.icon || 'settings', 11, '#a78bfa'), info.label);
+}
+
+// ── CATEGORY ICON TILE ───────────────────────────────────────────
+// A premium gradient tile that carries the category's line icon —
+// the visual signature used across cards, hero and commit screens.
+function CatTile(props) {
+  var cat  = CATS[props.category] || CATS.all;
+  var size = props.size || 44;
+  var icon = props.iconSize || Math.round(size * 0.5);
+  return h('div', { style: {
+    width: size, height: size, borderRadius: Math.round(size * 0.28),
+    flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'linear-gradient(140deg, ' + cat.color + '2e, ' + cat.color + '12)',
+    border: '1px solid ' + cat.color + '44',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+  }}, Ic(cat.icon, icon, cat.color));
 }
 
 // ── VIDEO PLAYER (inline, click to embed) ────────────────────────
@@ -167,8 +198,8 @@ function VideoPlayer(props) {
   var drill = props.drill;
   var [show, setShow] = useState(false);
   if (!drill.videoId || drill.videoId === 'PLACEHOLDER') {
-    return h('div', { style: { padding: '12px 0', color: '#6b7280', fontSize: 13, textAlign: 'center' } },
-      '📹 Video coming soon'
+    return h('div', { style: { padding: '14px 0', color: '#6b7280', fontSize: 13, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 } },
+      Ic('video', 16, '#6b7280'), 'Technique video coming soon'
     );
   }
   if (!show) {
@@ -184,7 +215,7 @@ function VideoPlayer(props) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: '0 0 24px rgba(220,38,38,0.6)',
       }},
-        h('span', { style: { color: '#fff', fontSize: 24, marginLeft: 4 } }, '▶')
+        Ic('play', 24, '#fff', { marginLeft: 3 })
       ),
       drill.videoTitle && h('div', { style: {
         position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 14px',
@@ -247,10 +278,10 @@ function BackgroundAmbientVideo(props) {
         background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)',
         borderRadius: 8, color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600,
         padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit',
-        pointerEvents: 'auto',
+        pointerEvents: 'auto', display: 'inline-flex', alignItems: 'center', gap: 5,
         backdropFilter: 'blur(4px)',
       },
-    }, '✕ Hide Video')
+    }, Ic('x', 12, 'rgba(255,255,255,0.5)'), 'Hide Video')
   );
 }
 
@@ -269,20 +300,22 @@ function DrillCommitScreen(props) {
     padding: '24px', textAlign: 'center',
     fontFamily: 'system-ui,sans-serif',
   }},
-    h('div', { style: { fontSize: 64, marginBottom: 16 } }, drill.emoji),
+    h('div', { style: { marginBottom: 18, display: 'flex', justifyContent: 'center' } },
+      h(CatTile, { category: drill.category, size: 76, iconSize: 38 })
+    ),
     h('div', { style: {
-      fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-      color: cat.color, marginBottom: 10,
-    }}, cat.emoji + ' ' + cat.label + ' Drill'),
+      fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em',
+      color: cat.color, marginBottom: 10, display: 'inline-flex', alignItems: 'center', gap: 6,
+    }}, Ic(cat.icon, 13, cat.color), cat.label + ' Drill'),
     h('div', { style: {
       fontSize: 26, fontWeight: 900, color: '#f0fdf4', marginBottom: 10, lineHeight: 1.25, maxWidth: 420,
     }}, drill.name),
     h('div', { style: {
       fontSize: 14, color: '#94a3b8', lineHeight: 1.6, maxWidth: 380, marginBottom: 8,
     }}, drill.problem),
-    h('div', { style: { display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 28 } },
-      h('span', { style: { fontSize: 12, color: '#64748b' } }, '⏱ ' + drill.duration),
-      h('span', { style: { fontSize: 12, color: '#64748b' } }, '⚡ ' + drill.xp + ' XP on completion')
+    h('div', { style: { display: 'flex', gap: 18, justifyContent: 'center', marginBottom: 28 } },
+      h('span', { style: { fontSize: 12, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 5 } }, Ic('clock', 13, '#64748b'), drill.duration),
+      h('span', { style: { fontSize: 12, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 5 } }, Ic('zap', 13, '#fbbf24'), drill.xp + ' XP on completion')
     ),
     // Commitment CTA
     h('button', {
@@ -293,10 +326,10 @@ function DrillCommitScreen(props) {
         color: '#fff', fontSize: 17, fontWeight: 800, cursor: 'pointer',
         boxShadow: '0 0 32px ' + cat.color + '44',
         fontFamily: 'inherit', letterSpacing: '0.01em',
-        marginBottom: 14,
+        marginBottom: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
         width: '100%', maxWidth: 360,
       },
-    }, '🏏  Start Drill — I\'m Committed'),
+    }, Ic('play', 17, '#fff'), 'Start Drill — I\'m Committed'),
     h('button', {
       onClick: onBack,
       style: {
@@ -311,11 +344,11 @@ function DrillCommitScreen(props) {
 // ── REFLECTION MODAL ─────────────────────────────────────────────
 // Phase 3: Collect meaningful reflection before awarding XP
 var FEELINGS = [
-  { id: 'strong',    label: '💪 Strong',    bg: 'rgba(34,197,94,0.15)',   color: '#4ade80' },
-  { id: 'focused',   label: '🎯 Focused',   bg: 'rgba(59,130,246,0.15)',  color: '#60a5fa' },
-  { id: 'challenged',label: '😤 Challenged',bg: 'rgba(251,191,36,0.15)', color: '#fbbf24' },
-  { id: 'confident', label: '😊 Confident', bg: 'rgba(139,92,246,0.15)', color: '#a78bfa' },
-  { id: 'pumped',    label: '🔥 Pumped',    bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  { id: 'strong',    label: 'Strong',     icon: 'dumbbell', bg: 'rgba(34,197,94,0.15)',   color: '#4ade80' },
+  { id: 'focused',   label: 'Focused',    icon: 'target',   bg: 'rgba(59,130,246,0.15)',  color: '#60a5fa' },
+  { id: 'challenged',label: 'Challenged', icon: 'flame',    bg: 'rgba(251,191,36,0.15)',  color: '#fbbf24' },
+  { id: 'confident', label: 'Confident',  icon: 'check',    bg: 'rgba(139,92,246,0.15)',  color: '#a78bfa' },
+  { id: 'pumped',    label: 'Pumped',     icon: 'zap',      bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
 ];
 
 function ReflectionModal(props) {
@@ -336,7 +369,13 @@ function ReflectionModal(props) {
   }},
     h('div', { style: { width: '100%', maxWidth: 440 } },
       h('div', { style: { textAlign: 'center', marginBottom: 24 } },
-        h('div', { style: { fontSize: 48, marginBottom: 10 } }, '🏏'),
+        h('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 12 } },
+          h('div', { style: {
+            width: 56, height: 56, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'linear-gradient(140deg, rgba(34,197,94,0.25), rgba(34,197,94,0.08))',
+            border: '1px solid rgba(34,197,94,0.4)',
+          }}, Ic('circleCheck', 30, '#4ade80'))
+        ),
         h('div', { style: { fontSize: 22, fontWeight: 900, color: '#f0fdf4', marginBottom: 6 } },
           'Drill Done — Great Work!'
         ),
@@ -359,13 +398,13 @@ function ReflectionModal(props) {
               onMouseEnter: function() { setHovered(n); },
               onMouseLeave: function() { setHovered(0); },
               style: {
-                fontSize: 32, background: 'none', border: 'none',
-                cursor: 'pointer', opacity: active ? 1 : 0.3,
+                background: 'none', border: 'none', padding: 0, lineHeight: 0,
+                cursor: 'pointer', opacity: active ? 1 : 0.35,
                 transform: active ? 'scale(1.15)' : 'scale(1)',
                 transition: 'all 0.12s',
                 filter: active ? 'drop-shadow(0 0 8px rgba(251,191,36,0.6))' : 'none',
               },
-            }, '⭐');
+            }, Ic('star', 32, active ? '#fbbf24' : '#475569'));
           })
         )
       ),
@@ -387,10 +426,10 @@ function ReflectionModal(props) {
                 border: active ? ('1px solid ' + f.color + '55') : '1px solid rgba(255,255,255,0.07)',
                 color: active ? f.color : '#6b7280',
                 fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                transition: 'all 0.15s',
+                transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6,
                 transform: active ? 'scale(1.04)' : 'scale(1)',
               },
-            }, f.label);
+            }, Ic(f.icon, 14, active ? f.color : '#6b7280'), f.label);
           })
         )
       ),
@@ -427,8 +466,9 @@ function ReflectionModal(props) {
           fontFamily: 'inherit', letterSpacing: '0.02em',
           transition: 'all 0.2s',
           boxShadow: canClaim ? '0 0 24px rgba(22,163,74,0.4)' : 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         },
-      }, canClaim ? 'Claim Your XP →' : 'Rate your session & select a feeling')
+      }, canClaim ? [h('span', { key: 't' }, 'Claim Your XP'), Ic('chevR', 16, '#fff')] : 'Rate your session & select a feeling')
     )
   );
 }
@@ -452,14 +492,14 @@ function CelebrationScreen(props) {
   var coachMsg = getCoachMessage(drill.category);
 
   function handleShare() {
-    var text = '🏏 Just completed "' + drill.name + '" on SmartCrick and earned ' + xpEarned + ' XP! Getting better every day.';
+    var text = 'Just completed "' + drill.name + '" on SmartCrick and earned ' + xpEarned + ' XP. Getting better every day.';
     if (navigator.share) {
       navigator.share({ text: text }).catch(function(){});
     } else {
       try { navigator.clipboard.writeText(text); } catch(e){}
       // Subtle feedback
       var btn = document.getElementById('sc-share-btn');
-      if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = '🔗 Share Your Win'; }, 2000); }
+      if (btn) { btn.textContent = 'Copied to clipboard'; setTimeout(function(){ btn.textContent = 'Share Your Win'; }, 2000); }
     }
   }
 
@@ -483,8 +523,9 @@ function CelebrationScreen(props) {
 
       multiplier > 1.0 && h('div', { style: {
         fontSize: 13, color: '#fbbf24', fontWeight: 700, marginBottom: 12,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
         opacity: popped ? 1 : 0, transition: 'opacity 0.4s 0.3s',
-      }}, '🔥 ' + (multiplier * 100 - 100).toFixed(0) + '% Streak Bonus Applied'),
+      }}, Ic('flame', 14, '#fbbf24'), (multiplier * 100 - 100).toFixed(0) + '% Streak Bonus Applied'),
 
       h('div', { style: {
         fontSize: 28, fontWeight: 900, color: '#f0fdf4', marginBottom: 6,
@@ -499,7 +540,7 @@ function CelebrationScreen(props) {
         color: '#fbbf24', fontSize: 13, fontWeight: 700,
         opacity: popped ? 1 : 0, transition: 'opacity 0.4s 0.35s',
       }},
-        '🔥 ' + streak + '-day streak — Keep it alive!'
+        Ic('flame', 14, '#fbbf24'), streak + '-day streak — Keep it alive!'
       ),
 
       // Coach message
@@ -508,7 +549,7 @@ function CelebrationScreen(props) {
         borderRadius: 14, padding: '16px 18px', marginBottom: 16, textAlign: 'left',
         opacity: popped ? 1 : 0, transition: 'opacity 0.4s 0.4s',
       }},
-        h('div', { style: { fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 } }, '🎙️ Coach Says'),
+        h('div', { style: { fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 } }, Ic('mic', 12, '#6b7280'), 'Coach Says'),
         h('div', { style: { fontSize: 14, color: '#d1fae5', lineHeight: 1.6, fontStyle: 'italic' } }, '"' + coachMsg + '"')
       ),
 
@@ -518,8 +559,8 @@ function CelebrationScreen(props) {
         borderRadius: 14, padding: '14px 16px', marginBottom: 20, textAlign: 'left',
         opacity: popped ? 1 : 0, transition: 'opacity 0.4s 0.5s',
       }},
-        h('div', { style: { fontSize: 10, color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 } }, '⬆️ Up Next — Come Back Tomorrow'),
-        h('div', { style: { fontSize: 14, color: '#bfdbfe', fontWeight: 700 } }, nextDrill.emoji + ' ' + nextDrill.name),
+        h('div', { style: { fontSize: 10, color: '#60a5fa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 } }, Ic('chevronsRight', 12, '#60a5fa'), 'Up Next — Come Back Tomorrow'),
+        h('div', { style: { fontSize: 14, color: '#bfdbfe', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 } }, Ic((CATS[nextDrill.category] || CATS.all).icon, 15, '#bfdbfe'), nextDrill.name),
         h('div', { style: { fontSize: 12, color: '#6b7280', marginTop: 3 } }, nextDrill.problem)
       ),
 
@@ -532,8 +573,9 @@ function CelebrationScreen(props) {
             padding: '13px', borderRadius: 12, border: '1px solid rgba(59,130,246,0.3)',
             background: 'rgba(59,130,246,0.1)', color: '#60a5fa',
             fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           },
-        }, '🔗 Share Your Win'),
+        }, Ic('extLink', 15, '#60a5fa'), 'Share Your Win'),
         h('button', {
           onClick: onDone,
           style: {
@@ -583,57 +625,63 @@ function DrillCard(props) {
       background: 'linear-gradient(90deg, ' + cat.color + ', ' + cat.color + '66)',
     } }),
     h('div', { style: { padding: '14px' } },
-      // Top row
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9, flexWrap: 'wrap' } },
-        h('span', { style: { fontSize: 20, lineHeight: 1 } }, drill.emoji),
-        h('span', { style: { fontSize: 10, padding: '2px 8px', borderRadius: 99, background: lvl.bg, color: lvl.text, fontWeight: 700 } }, drill.level),
-        isPick && pickReason && h('span', { style: {
-          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-          background: 'rgba(16,185,129,0.15)', color: '#34d399',
-          border: '1px solid rgba(16,185,129,0.3)',
-        }}, '⭐ ' + pickReason),
-        h('span', { style: {
-          marginLeft: 'auto', fontSize: 10, padding: '2px 8px', borderRadius: 99,
-          background: 'rgba(34,197,94,0.12)', color: '#4ade80', fontWeight: 700,
-          border: '1px solid rgba(34,197,94,0.2)',
-        }}, '⚡ ' + drill.xp + ' XP')
+      // Top row — category tile + meta
+      h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 11, marginBottom: 10 } },
+        h(CatTile, { category: drill.category, size: 42, iconSize: 21 }),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 } },
+            h('span', { style: { fontSize: 10, padding: '2px 8px', borderRadius: 99, background: lvl.bg, color: lvl.text, fontWeight: 700, textTransform: 'capitalize' } }, drill.level),
+            h('span', { style: {
+              fontSize: 10, padding: '2px 8px', borderRadius: 99,
+              background: 'rgba(34,197,94,0.12)', color: '#4ade80', fontWeight: 700,
+              border: '1px solid rgba(34,197,94,0.2)', display: 'inline-flex', alignItems: 'center', gap: 3,
+            }}, Ic('zap', 11, '#4ade80'), drill.xp + ' XP')
+          ),
+          // Name
+          h('div', { style: { fontSize: 15, fontWeight: 700, color: '#f8fafc', lineHeight: 1.3 } }, drill.name)
+        )
       ),
-      // Name
-      h('div', { style: { fontSize: 15, fontWeight: 700, color: '#f8fafc', marginTop: 6, lineHeight: 1.3 } }, drill.name),
+      isPick && pickReason && h('div', { style: {
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 99, marginBottom: 8,
+        background: 'rgba(16,185,129,0.15)', color: '#34d399',
+        border: '1px solid rgba(16,185,129,0.3)',
+      }}, Ic('sparkles', 11, '#34d399'), pickReason),
       // Problem / description
       drill.problem && h('div', { style: {
-        fontSize: 12, color: '#64748b', lineHeight: 1.5, marginTop: 5,
+        fontSize: 12.5, color: '#94a3b8', lineHeight: 1.55, marginTop: 2,
         overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
       }}, drill.problem),
       // Bottom badges
-      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 10 } },
+      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 11, alignItems: 'center' } },
         h(MechanicBadge, { mechanic: drill.appMechanic }),
-        h('span', { style: { fontSize: 11, color: '#64748b' } }, '⏱ ' + drill.duration),
-        h('span', { style: { fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99, background: cat.bg, color: cat.color } }, cat.emoji + ' ' + cat.label),
+        h('span', { style: { fontSize: 11, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 3 } }, Ic('clock', 12, '#64748b'), drill.duration),
+        h('span', { style: { fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 99, background: cat.bg, color: cat.color, display: 'inline-flex', alignItems: 'center', gap: 4 } }, Ic(cat.icon, 11, cat.color), cat.label),
         count > 0 && h('span', { style: {
-          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99,
           background: 'rgba(59,130,246,0.15)', color: '#60a5fa',
-          border: '1px solid rgba(59,130,246,0.3)',
-        }}, '✓ ' + count + 'x'),
+          border: '1px solid rgba(59,130,246,0.3)', display: 'inline-flex', alignItems: 'center', gap: 3,
+        }}, Ic('check', 11, '#60a5fa'), count + 'x'),
         hasVideo && h('span', { style: {
-          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99,
+          fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99,
           background: 'rgba(220,38,38,0.12)', color: '#f87171',
-          border: '1px solid rgba(220,38,38,0.25)',
-        }}, '▶ Video')
+          border: '1px solid rgba(220,38,38,0.25)', display: 'inline-flex', alignItems: 'center', gap: 3,
+        }}, Ic('play', 10, '#f87171'), 'Video')
       ),
       // CTA
       h('button', {
         onClick: function(e) { e.stopPropagation(); onSelect(drill); },
         style: {
-          width: '100%', padding: '11px', marginTop: 12,
+          width: '100%', padding: '11px', marginTop: 13,
           border: 'none', borderRadius: 10,
           background: cat.bg || 'rgba(34,197,94,0.12)',
           color: cat.color || '#22c55e',
           fontSize: 13, fontWeight: 700, cursor: 'pointer',
           letterSpacing: '0.02em', fontFamily: 'inherit',
           transition: 'background 0.15s',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         }
-      }, 'Start Drill →')
+      }, 'Start Drill', Ic('chevR', 14, cat.color || '#22c55e'))
     )
   );
 }
@@ -658,7 +706,7 @@ function DrillDetailPage(props) {
 
   var cat = CATS[drill.category] || CATS.all;
   var lvl = LEVEL_COLORS[drill.level] || LEVEL_COLORS.beginner;
-  var mechInfo = MECHANIC_INFO[drill.appMechanic] || { label: drill.appMechanic, emoji: '⚙️', desc: '' };
+  var mechInfo = MECHANIC_INFO[drill.appMechanic] || { label: drill.appMechanic, icon: 'settings', desc: '' };
 
   // Timer: starts when phase === 'active'
   useEffect(function() {
@@ -796,24 +844,25 @@ function DrillDetailPage(props) {
       boxShadow: '0 0 28px rgba(22,163,74,0.45)',
       fontFamily: 'inherit', transition: 'all 0.2s',
       animation: 'sc-pulse 2s infinite',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
     };
-    btnText = '✅ Mark as Complete (+' + drill.xp + ' XP)';
+    btnText = ['complete', 'Mark as Complete (+' + drill.xp + ' XP)'];
   } else if (earlyAmber) {
     btnStyle = {
       width: '100%', padding: '18px', borderRadius: 14, border: '1px solid rgba(251,191,36,0.3)',
       background: 'rgba(251,191,36,0.08)',
       color: '#fbbf24', fontSize: 15, fontWeight: 700, cursor: 'default',
-      fontFamily: 'inherit',
+      fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
     };
-    btnText = '⏳ Almost there… ' + formatTime(remaining) + ' to unlock';
+    btnText = ['clock', 'Almost there — ' + formatTime(remaining) + ' to unlock'];
   } else {
     btnStyle = {
       width: '100%', padding: '18px', borderRadius: 14, border: '1px solid rgba(100,116,139,0.2)',
       background: 'rgba(100,116,139,0.06)',
       color: '#475569', fontSize: 15, fontWeight: 700, cursor: 'default',
-      fontFamily: 'inherit',
+      fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
     };
-    btnText = '🔒 Locked — ' + formatTime(remaining) + ' remaining';
+    btnText = ['lock', 'Locked — ' + formatTime(remaining) + ' remaining'];
   }
 
   return h('div', { style: s.page },
@@ -822,10 +871,10 @@ function DrillDetailPage(props) {
 
     // Header (zIndex 10)
     h('div', { style: s.header },
-      h('button', { style: s.backBtn, onClick: onBack }, '← Back'),
+      h('button', { style: Object.assign({}, s.backBtn, { display: 'inline-flex', alignItems: 'center', gap: 5 }), onClick: onBack }, Ic('arrowL', 13, '#9ca3af'), 'Back'),
       h('div', { style: { flex: 1 } },
         h('div', { style: { fontSize: 14, fontWeight: 700, color: '#f0fdf4' } }, drill.name),
-        h('div', { style: { fontSize: 11, color: cat.color, marginTop: 1 } }, cat.emoji + ' ' + cat.label)
+        h('div', { style: { fontSize: 11, color: cat.color, marginTop: 2, display: 'flex', alignItems: 'center', gap: 5 } }, Ic(cat.icon, 12, cat.color), cat.label)
       ),
       // Live timer
       h('div', { style: {
@@ -843,8 +892,8 @@ function DrillDetailPage(props) {
       h('div', { style: { marginBottom: 18 } },
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 } },
           h('span', { style: { fontSize: 11, color: '#6b7280', fontWeight: 600 } }, 'Session Progress'),
-          h('span', { style: { fontSize: 11, fontWeight: 700, color: unlocked ? '#4ade80' : earlyAmber ? '#fbbf24' : '#64748b' } },
-            unlocked ? '✅ Ready to complete' : Math.round(pct) + '% — 70% needed to unlock'
+          h('span', { style: { fontSize: 11, fontWeight: 700, color: unlocked ? '#4ade80' : earlyAmber ? '#fbbf24' : '#64748b', display: 'flex', alignItems: 'center', gap: 5 } },
+            unlocked ? [Ic('check', 12, '#4ade80'), 'Ready to complete'] : Math.round(pct) + '% — 70% needed to unlock'
           )
         ),
         h('div', { style: { height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' } },
@@ -864,14 +913,14 @@ function DrillDetailPage(props) {
 
       // Hero row
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 } },
-        h('span', { style: { fontSize: 52, lineHeight: 1 } }, drill.emoji),
+        h(CatTile, { category: drill.category, size: 60, iconSize: 30 }),
         h('div', { style: { flex: 1 } },
           h('div', { style: { fontSize: 22, fontWeight: 800, color: '#f0fdf4', marginBottom: 6, lineHeight: 1.2 } }, drill.name),
-          h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
-            h('span', { style: { fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: lvl.bg, color: lvl.text } }, drill.level),
-            h('span', { style: { fontSize: 11, color: '#9ca3af', padding: '3px 0' } }, '⏱ ' + drill.duration),
-            h('span', { style: { fontSize: 11, color: '#fbbf24', padding: '3px 0' } }, '⚡ ' + drill.xp + ' XP'),
-            count > 0 && h('span', { style: { fontSize: 11, color: '#34d399', padding: '3px 0' } }, '✓ Completed ' + count + 'x')
+          h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' } },
+            h('span', { style: { fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: lvl.bg, color: lvl.text, textTransform: 'capitalize' } }, drill.level),
+            h('span', { style: { fontSize: 11, color: '#9ca3af', padding: '3px 0', display: 'inline-flex', alignItems: 'center', gap: 4 } }, Ic('clock', 12, '#9ca3af'), drill.duration),
+            h('span', { style: { fontSize: 11, color: '#fbbf24', padding: '3px 0', display: 'inline-flex', alignItems: 'center', gap: 4 } }, Ic('zap', 12, '#fbbf24'), drill.xp + ' XP'),
+            count > 0 && h('span', { style: { fontSize: 11, color: '#34d399', padding: '3px 0', display: 'inline-flex', alignItems: 'center', gap: 4 } }, Ic('check', 12, '#34d399'), 'Completed ' + count + 'x')
           )
         )
       ),
@@ -892,8 +941,12 @@ function DrillDetailPage(props) {
         backdropFilter: 'blur(8px)',
       }) },
         h('div', { style: Object.assign({}, s.sectionTitle, { color: '#a78bfa' }) }, 'Drill Format'),
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-          h('span', { style: { fontSize: 28 } }, mechInfo.emoji),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+          h('div', { style: {
+            width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(139,92,246,0.14)', border: '1px solid rgba(139,92,246,0.3)',
+          }}, Ic(mechInfo.icon || 'settings', 20, '#c4b5fd')),
           h('div', null,
             h('div', { style: { fontWeight: 700, color: '#c4b5fd', fontSize: 14 } }, mechInfo.label),
             h('div', { style: { fontSize: 12, color: '#9ca3af', marginTop: 2 } }, mechInfo.desc)
@@ -917,7 +970,7 @@ function DrillDetailPage(props) {
         ),
         drill.masteryThreshold && h('div', null,
           h('div', { style: { fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', marginBottom: 3 } }, 'Mastery Criterion'),
-          h('div', { style: { fontSize: 13, color: '#93c5fd', fontWeight: 600, lineHeight: 1.55 } }, '🎯 ' + drill.masteryThreshold)
+          h('div', { style: { fontSize: 13, color: '#93c5fd', fontWeight: 600, lineHeight: 1.55, display: 'flex', alignItems: 'flex-start', gap: 6 } }, Ic('target', 14, '#93c5fd', { marginTop: 2 }), h('span', null, drill.masteryThreshold))
         )
       ),
 
@@ -972,7 +1025,7 @@ function DrillDetailPage(props) {
         backdropFilter: 'blur(8px)',
       }) },
         h('div', { style: Object.assign({}, s.sectionTitle, { color: '#f87171' }) }, 'Most Common Mistake'),
-        h('div', { style: { fontSize: 14, color: '#fca5a5', lineHeight: 1.6 } }, '⚠️ ' + drill.commonError)
+        h('div', { style: { fontSize: 14, color: '#fca5a5', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: 8 } }, Ic('alertTriangle', 16, '#f87171', { marginTop: 2 }), h('span', null, drill.commonError))
       ),
 
       // Outcome / After Mastery
@@ -981,7 +1034,7 @@ function DrillDetailPage(props) {
         backdropFilter: 'blur(8px)',
       }) },
         h('div', { style: Object.assign({}, s.sectionTitle, { color: '#34d399' }) }, 'After Mastery'),
-        h('div', { style: { fontSize: 14, color: '#a7f3d0', lineHeight: 1.6 } }, '✅ ' + drill.outcome)
+        h('div', { style: { fontSize: 14, color: '#a7f3d0', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: 8 } }, Ic('circleCheck', 16, '#34d399', { marginTop: 2 }), h('span', null, drill.outcome))
       ),
 
       // Fit Tags
@@ -1006,7 +1059,7 @@ function DrillDetailPage(props) {
           onClick: handleMarkComplete,
           disabled: !unlocked,
           style: btnStyle,
-        }, btnText)
+        }, Ic(btnText[0], 18, btnStyle.color), h('span', null, btnText[1]))
       )
     )
   );
@@ -1039,14 +1092,14 @@ function ForYouSection(props) {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6,
     }},
       h('div', null,
-        h('div', { style: { fontSize: 15, fontWeight: 800, color: '#34d399' } }, '⭐ For You'),
+        h('div', { style: { fontSize: 15, fontWeight: 800, color: '#34d399', display: 'flex', alignItems: 'center', gap: 7 } }, Ic('sparkles', 16, '#34d399'), 'For You'),
         roleLabel && h('div', { style: { fontSize: 11, color: '#6b7280', marginTop: 2, textTransform: 'capitalize' } }, roleLabel)
       ),
       smartLabel && h('div', { style: {
         fontSize: 10, color: '#6b7280', background: 'rgba(255,255,255,0.04)',
         border: '1px solid rgba(255,255,255,0.07)', borderRadius: 99,
-        padding: '3px 9px', fontWeight: 600,
-      }}, '🤖 ' + smartLabel)
+        padding: '3px 9px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5,
+      }}, Ic('cpu', 11, '#6b7280'), smartLabel)
     ),
 
     // Horizontal scroll of pick cards
@@ -1068,9 +1121,9 @@ function ForYouSection(props) {
           onMouseEnter: function(e) { e.currentTarget.style.transform = 'translateY(-2px)'; },
           onMouseLeave: function(e) { e.currentTarget.style.transform = ''; },
         },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 } },
-            h('span', { style: { fontSize: 20 } }, drill.emoji),
-            h('span', { style: { fontSize: 10, padding: '2px 7px', borderRadius: 99, background: lvl.bg, color: lvl.text, fontWeight: 700 } }, drill.level),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 } },
+            h(CatTile, { category: drill.category, size: 34, iconSize: 17 }),
+            h('span', { style: { fontSize: 10, padding: '2px 7px', borderRadius: 99, background: lvl.bg, color: lvl.text, fontWeight: 700, textTransform: 'capitalize' } }, drill.level),
             drill._pickReason && h('span', { style: {
               fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 99,
               background: 'rgba(16,185,129,0.15)', color: '#34d399',
@@ -1080,8 +1133,8 @@ function ForYouSection(props) {
           h('div', { style: { fontSize: 13, fontWeight: 700, color: '#f8fafc', marginBottom: 5, lineHeight: 1.3 } }, drill.name),
           h('div', { style: { fontSize: 11, color: '#64748b', lineHeight: 1.4, marginBottom: 8, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } }, drill.problem),
           h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-            h('span', { style: { fontSize: 10, color: '#64748b' } }, '⏱ ' + drill.duration),
-            h('span', { style: { fontSize: 10, fontWeight: 700, color: '#4ade80' } }, '⚡ ' + drill.xp + ' XP')
+            h('span', { style: { fontSize: 10, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 4 } }, Ic('clock', 11, '#64748b'), drill.duration),
+            h('span', { style: { fontSize: 10, fontWeight: 700, color: '#4ade80', display: 'inline-flex', alignItems: 'center', gap: 4 } }, Ic('zap', 11, '#4ade80'), drill.xp + ' XP')
           )
         );
       })
@@ -1119,20 +1172,55 @@ function DrillsPage() {
     ? A.PersonalisationEngine.getSmartLabel()
     : null;
 
-  // Filter logic
-  var filtered = DRILLS.filter(function(d) {
+  // ── SMART SEARCH ────────────────────────────────────────────────
+  // Fuzzy, typo-tolerant matching across the drill name AND its full
+  // description (problem), plus coaching cues, outcomes, steps and tags —
+  // so you can find a drill by what it does, not just its title.
+  var fuseRef = useRef(null);
+  if (window.Fuse && (!fuseRef.current || fuseRef.current._scCount !== DRILLS.length)) {
+    fuseRef.current = new window.Fuse(DRILLS, {
+      includeScore: true, threshold: 0.4, ignoreLocation: true, minMatchCharLength: 2,
+      keys: [
+        { name: 'name',         weight: 0.34 },
+        { name: 'problem',      weight: 0.30 }, // the description
+        { name: 'tagline',      weight: 0.14 },
+        { name: 'whyItMatters', weight: 0.10 },
+        { name: 'keyFocus',     weight: 0.08 },
+        { name: 'outcome',      weight: 0.06 },
+        { name: 'steps',        weight: 0.06 },
+        { name: 'equipment',    weight: 0.04 },
+        { name: 'category',     weight: 0.05 },
+        { name: 'subCategory',  weight: 0.05 },
+        { name: 'level',        weight: 0.03 },
+      ],
+    });
+    fuseRef.current._scCount = DRILLS.length;
+  }
+
+  var q = search.trim();
+  var searchBase;
+  if (!q) {
+    searchBase = DRILLS;
+  } else if (fuseRef.current) {
+    searchBase = fuseRef.current.search(q).map(function(r) { return r.item; });
+  } else {
+    // Fallback: case-insensitive substring across name + description
+    var ql = q.toLowerCase();
+    searchBase = DRILLS.filter(function(d) {
+      return d.name.toLowerCase().indexOf(ql) > -1
+        || (d.problem && d.problem.toLowerCase().indexOf(ql) > -1)
+        || (d.tagline && d.tagline.toLowerCase().indexOf(ql) > -1)
+        || (d.keyFocus && d.keyFocus.toLowerCase().indexOf(ql) > -1)
+        || d.category.toLowerCase().indexOf(ql) > -1;
+    });
+  }
+
+  // Apply category / level / picks filters on top of the search results
+  var filtered = searchBase.filter(function(d) {
     if (showPicks) return !!pickIds[d.id];
     var catMatch = activeCat === 'all' || d.category === activeCat;
     var lvlMatch = levelFilter === 'all' || d.level === levelFilter;
-    var q = search.toLowerCase().trim();
-    var searchMatch = !q
-      || d.name.toLowerCase().indexOf(q) > -1
-      || (d.problem && d.problem.toLowerCase().indexOf(q) > -1)
-      || (d.keyFocus && d.keyFocus.toLowerCase().indexOf(q) > -1)
-      || d.category.toLowerCase().indexOf(q) > -1
-      || (d.subCategory && d.subCategory.toLowerCase().indexOf(q) > -1)
-      || (d.tagline && d.tagline.toLowerCase().indexOf(q) > -1);
-    return catMatch && lvlMatch && searchMatch;
+    return catMatch && lvlMatch;
   });
 
   if (selectedDrill) {
@@ -1184,17 +1272,40 @@ function DrillsPage() {
     emptyMsg: { textAlign: 'center', padding: '80px 20px', color: '#6b7280' },
   };
 
+  var donePct = totalDrills > 0 ? Math.round((totalDone / totalDrills) * 100) : 0;
+
   return h('div', { style: s.page },
     h('div', { style: s.header },
-      h('div', { style: s.title }, '🏏 Drills'),
-      h('div', { style: s.subtitle }, totalDrills + ' drills · ' + totalDone + ' completed'),
+      // Title block — professional training-platform header
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 13, marginBottom: 14 } },
+        h('div', { style: {
+          width: 46, height: 46, borderRadius: 13, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(140deg, #16a34a, #0d9488)',
+          boxShadow: '0 6px 20px rgba(22,163,74,0.35)',
+        }}, Ic('bat', 24, '#ffffff')),
+        h('div', { style: { flex: 1, minWidth: 0 } },
+          h('div', { style: { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#16a34a', marginBottom: 2 } }, 'Training Library'),
+          h('div', { style: { fontSize: 24, fontWeight: 900, color: '#f0fdf4', lineHeight: 1 } }, 'Drills')
+        ),
+        h('div', { style: { textAlign: 'right', flexShrink: 0 } },
+          h('div', { style: { fontSize: 20, fontWeight: 900, color: '#4ade80', lineHeight: 1 } }, donePct + '%'),
+          h('div', { style: { fontSize: 10, color: '#6b7280', fontWeight: 600, marginTop: 3, textTransform: 'uppercase', letterSpacing: '0.06em' } }, 'Mastery')
+        )
+      ),
+
+      // Stat line
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, fontSize: 12, color: '#6b7280' } },
+        h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 5 } }, Ic('layers', 13, '#6b7280'), totalDrills + ' drills'),
+        h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: 5 } }, Ic('circleCheck', 13, '#4ade80'), totalDone + ' completed')
+      ),
 
       // Progress bar
       totalDrills > 0 && h('div', { style: { marginBottom: 14 } },
         h('div', { style: { height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 99, overflow: 'hidden' } },
           h('div', { style: {
             height: '100%', borderRadius: 99,
-            width: Math.round((totalDone / totalDrills) * 100) + '%',
+            width: donePct + '%',
             background: 'linear-gradient(90deg,#22c55e,#4ade80)',
             transition: 'width 0.5s',
             boxShadow: '0 0 10px rgba(74,222,128,0.45)',
@@ -1204,19 +1315,29 @@ function DrillsPage() {
 
       // Search + level filter
       h('div', { style: s.searchRow },
-        h('div', { style: { flex: 1, position: 'relative' } },
+        h('div', { style: { flex: 1, position: 'relative', display: 'flex', alignItems: 'center' } },
           h('span', { style: {
             position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)',
-            fontSize: 15, pointerEvents: 'none', color: '#475569',
-          } }, '🔍'),
+            pointerEvents: 'none', display: 'flex',
+          } }, Ic('search', 16, '#475569')),
           h('input', {
             style: s.searchInput,
-            placeholder: 'Search by drill name or description…',
+            placeholder: 'Search by name or description…',
             value: search,
             onChange: function(e) { setSearch(e.target.value); setShowPicks(false); },
             onFocus: function(e) { e.target.style.borderColor = '#22c55e'; },
             onBlur: function(e) { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; },
-          })
+          }),
+          search && h('button', {
+            onClick: function() { setSearch(''); },
+            'aria-label': 'Clear search',
+            style: {
+              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+              background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 99,
+              width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', padding: 0,
+            },
+          }, Ic('x', 13, '#94a3b8'))
         ),
         h('select', {
           style: s.select,
@@ -1237,9 +1358,9 @@ function DrillsPage() {
           var active = !showPicks && activeCat === key;
           return h('button', {
             key: key,
-            style: s.catBtn(active, cat),
+            style: Object.assign(s.catBtn(active, cat), { display: 'inline-flex', alignItems: 'center', gap: 6 }),
             onClick: function() { setActiveCat(key); setShowPicks(false); },
-          }, cat.emoji + ' ' + cat.label);
+          }, Ic(cat.icon, 14, active ? cat.color : '#64748b'), cat.label);
         })
       )
     ),
@@ -1267,7 +1388,7 @@ function DrillsPage() {
     // Grid
     filtered.length === 0
       ? h('div', { style: s.emptyMsg },
-          h('div', { style: { fontSize: 40, marginBottom: 16 } }, '🔍'),
+          h('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: 16 } }, Ic('search', 40, '#475569')),
           h('div', { style: { fontSize: 18, fontWeight: 700, color: '#f8fafc', marginBottom: 8 } }, 'No drills found'),
           h('div', { style: { fontSize: 13, color: '#64748b', marginBottom: 20 } }, 'Try a different category or clear the search'),
           h('button', {
