@@ -245,10 +245,10 @@ function AppShell() {
               ? h(_AP, { mode:'wait' },
                   h(_mDiv, {
                     key: page,
-                    initial:    { opacity:0, x:18 },
-                    animate:    { opacity:1, x:0  },
-                    exit:       { opacity:0, x:-18 },
-                    transition: { type:'tween', ease:'easeInOut', duration:0.22 },
+                    initial:    { opacity:0, scale:0.97, y:8  },
+                    animate:    { opacity:1, scale:1,    y:0   },
+                    exit:       { opacity:0, scale:0.98, y:-6  },
+                    transition: { type:'spring', stiffness:320, damping:28, mass:0.9 },
                     style:      { width:'100%' },
                   },
                     PageComp
