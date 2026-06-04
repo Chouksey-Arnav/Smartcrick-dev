@@ -830,7 +830,8 @@ function HomePage(){
           h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:6}},
             h('span',{style:{fontSize:11,fontWeight:600,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em'}},'Level '+levelInfo.level),
             h('span',{style:{fontSize:11,color:'#4ade80',fontWeight:700}},
-              (progress.total_xp||0).toLocaleString()+' XP')
+              h('span',{'data-count-to':progress.total_xp||0,'data-hero-num':'1'},(progress.total_xp||0).toLocaleString()),
+              ' XP')
           ),
           h('div',{style:{fontSize:16,fontWeight:800,color:'#f8fafc',marginBottom:8}},levelInfo.name),
           A.MomentumBar
@@ -846,7 +847,8 @@ function HomePage(){
           style:{background:'rgba(16,22,36,0.9)',border:'1px solid rgba(255,255,255,0.08)',
             borderRadius:12,padding:'16px',minWidth:95,textAlign:'center',boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},
           role:'region','aria-label':streak+' day streak'},
-          h('div',{style:{fontSize:26,fontWeight:800,color:'#f8fafc',lineHeight:1.1}},streak),
+          h('div',{style:{fontSize:26,fontWeight:800,color:'#f8fafc',lineHeight:1.1}},
+            h('span',{'data-count-to':streak,'data-hero-num':'1'},String(streak))),
           h('div',{style:{fontSize:11,fontWeight:600,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.06em',marginTop:2}},'Streak'),
           h('div',{style:{fontSize:18,marginTop:6,display:'inline-block',
             animation:streak>=7?'scStreakPop 0.7s cubic-bezier(0.34,1.56,0.64,1) both':'none'},
@@ -886,8 +888,8 @@ function HomePage(){
       onOpen:function(){window.dispatchEvent(new CustomEvent('sc_open_reward_modal'));}
     }):null),
 
-    !isMinimalist&&h(SpinWheelWidget,{}),
-    !isMinimalist&&(A.DailyNetHomeWidget?h(A.DailyNetHomeWidget,{}):null),
+    !isMinimalist&&h('div',{className:'sc-reveal'},h(SpinWheelWidget,{})),
+    !isMinimalist&&(A.DailyNetHomeWidget?h('div',{className:'sc-reveal'},h(A.DailyNetHomeWidget,{})):null),
 
     // ── Mission ────────────────────────────────────────────────────
     mission&&h('div',{style:{margin:'0 16px 12px'}},
@@ -947,12 +949,12 @@ function HomePage(){
       )
     ),
 
-    h(WeeklyGoalSection,{weekXP:weekXP,goal:weeklyGoal,setGoal:setWeeklyGoal}),
+    h('div',{className:'sc-reveal'},h(WeeklyGoalSection,{weekXP:weekXP,goal:weeklyGoal,setGoal:setWeeklyGoal})),
 
     // ── Quick Start (AI Coach removed → Badges added) ──────────────
     h('div',{style:{margin:'0 16px 12px'}},
       h('div',{style:{fontSize:13,fontWeight:700,color:'#f8fafc',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.06em'}},'Quick Start'),
-      h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
+      h('div',{className:'sc-stagger',style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
         [
           {label:'Drills',      emoji:'🎯', page:'Drills',     color:'#3b82f6'},
           {label:'Daily Net',   emoji:'🏏', page:'DailyNet',   color:'#4f46e5'},
@@ -971,6 +973,7 @@ function HomePage(){
           var rgb=hexToRgb(item.color);
           return h('button',{key:item.page,onClick:function(){nav(item.page);},
             'aria-label':'Go to '+item.label,
+            className:'sc-spring sc-ripple',
             style:{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',cursor:'pointer',
               background:'rgba('+rgb+',0.12)',
               border:'1px solid rgba('+rgb+',0.25)',
