@@ -138,20 +138,6 @@ function getRoutine(focusArea, sessionLength) {
   }) || null;
 }
 
-var CREATOR_VIDEO_MAP = {
-  match_anxiety:        'n4YghVcjbpw',
-  confidence:           'MTg-gZy9oLM',
-  pressure:             'Z8ANihFXlgU',
-  focus:                'KxW37t--26M',
-  recovery:             'Z2dK_m2LfrY',
-  visualization:        'MTg-gZy9oLM',
-  concentration:        'jfKfPfyJRdk',
-  motivation:           'sqbzuV3a5LA',
-  dealing_with_failure: 'Z2dK_m2LfrY',
-  staying_calm:         'n4YghVcjbpw',
-  positive_mindset:     'KxW37t--26M',
-};
-
 // ── Creator Player (fullscreen fixed overlay) ──────────────────────
 function MentalRoutineCreatorPlayer(props) {
   var routine = props.routine;
@@ -257,129 +243,66 @@ function MentalRoutineCreatorPlayer(props) {
   var isLastStep = step === routine.steps.length - 1;
 
   if (done) {
-    var doneVid = CREATOR_VIDEO_MAP[focusDef.id] || 'n4YghVcjbpw';
-    return h('div', { style: { position: 'fixed', inset: 0, zIndex: 100, background: '#0a0f1e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center', overflow: 'hidden' } },
-      h('iframe', {
-        key: 'vbg-done',
-        src: 'https://www.youtube-nocookie.com/embed/' + doneVid + '?autoplay=1&mute=1&controls=0&loop=1&playlist=' + doneVid + '&rel=0&showinfo=0&modestbranding=1&playsinline=1&iv_load_policy=3',
-        allow: 'autoplay; encrypted-media',
-        allowFullScreen: false,
-        style: {
-          position: 'absolute',
-          top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%) scale(1.15)',
-          width: '100%',
-          height: '100%',
-          minWidth: '177.78vh',
-          minHeight: '56.25vw',
-          border: 'none',
-          pointerEvents: 'none',
-          opacity: 0.35,
-          zIndex: 0,
-        }
-      }),
-      h('div', {
-        key: 'voverlay-done',
-        style: {
-          position: 'absolute', inset: 0, zIndex: 1,
-          background: 'radial-gradient(ellipse at center, rgba(6,8,20,0.65) 0%, rgba(6,8,20,0.85) 100%)',
-          pointerEvents: 'none',
-        }
-      }),
-      h('div', { style: { position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 500, textAlign: 'center' } },
-        h('div', { style: { fontSize: 64, marginBottom: 16 } }, '✨'),
-        h('h2', { style: { fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginBottom: 8 } }, 'Routine Complete!'),
-        h('p', { style: { color: focusDef.color, marginBottom: 4, fontSize: 15, fontWeight: 600 } }, routine.title),
-        h('p', { style: { color: '#a78bfa', marginBottom: 16, fontSize: 13 } }, focusDef.emoji + ' ' + focusDef.label),
-        XPBadge ? h(XPBadge, { xp: xpValue }) : h('span', { style: { color: '#4ade80', fontWeight: 700 } }, '+' + xpValue + ' XP'),
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 280, marginTop: 24 } },
-          h('button', { onClick: onDone, style: { background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 14 } }, 'Back to Creator'),
-          h('button', { onClick: onExit, style: { background: 'transparent', color: '#9ca3af', border: '1px solid rgba(48,54,61,0.9)', borderRadius: 10, padding: '12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: 13 } }, 'Mental Training Home')
-        )
+    return h('div', { style: { position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(135deg,#0f0824,#1e1040,#0f172a)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.5rem', textAlign: 'center' } },
+      h('div', { style: { fontSize: 64, marginBottom: 16 } }, '✨'),
+      h('h2', { style: { fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginBottom: 8 } }, 'Routine Complete!'),
+      h('p', { style: { color: focusDef.color, marginBottom: 4, fontSize: 15, fontWeight: 600 } }, routine.title),
+      h('p', { style: { color: '#a78bfa', marginBottom: 16, fontSize: 13 } }, focusDef.emoji + ' ' + focusDef.label),
+      XPBadge ? h(XPBadge, { xp: xpValue }) : h('span', { style: { color: '#4ade80', fontWeight: 700 } }, '+' + xpValue + ' XP'),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 280, marginTop: 24 } },
+        h('button', { onClick: onDone, style: { background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 14 } }, 'Back to Creator'),
+        h('button', { onClick: onExit, style: { background: 'transparent', color: '#9ca3af', border: '1px solid rgba(48,54,61,0.9)', borderRadius: 10, padding: '12px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: 13 } }, 'Mental Training Home')
       )
     );
   }
 
-  var playerVid = CREATOR_VIDEO_MAP[focusDef.id] || 'n4YghVcjbpw';
-  return h('div', { style: { position: 'fixed', inset: 0, zIndex: 100, background: '#0a0f1e', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'max(1.25rem,env(safe-area-inset-top)) 1.25rem max(1.5rem,env(safe-area-inset-bottom))', overflow: 'hidden' } },
-    // Video background iframe
-    h('iframe', {
-      key: 'vbg',
-      src: 'https://www.youtube-nocookie.com/embed/' + playerVid + '?autoplay=1&mute=1&controls=0&loop=1&playlist=' + playerVid + '&rel=0&showinfo=0&modestbranding=1&playsinline=1&iv_load_policy=3',
-      allow: 'autoplay; encrypted-media',
-      allowFullScreen: false,
-      style: {
-        position: 'absolute',
-        top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%) scale(1.15)',
-        width: '100%',
-        height: '100%',
-        minWidth: '177.78vh',
-        minHeight: '56.25vw',
-        border: 'none',
-        pointerEvents: 'none',
-        opacity: 0.35,
-        zIndex: 0,
-      }
-    }),
-    // Dark overlay so content is readable
-    h('div', {
-      key: 'voverlay',
-      style: {
-        position: 'absolute', inset: 0, zIndex: 1,
-        background: 'radial-gradient(ellipse at center, rgba(6,8,20,0.65) 0%, rgba(6,8,20,0.85) 100%)',
-        pointerEvents: 'none',
-      }
-    }),
-    // Content wrapper (above video + overlay)
-    h('div', { style: { position: 'relative', zIndex: 2, width: '100%', maxWidth: 500, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' } },
-      // Header
-      h('div', { style: { width: '100%', maxWidth: 380, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' } },
-        h('button', { onClick: function() {
-          var MYT = window.SC_APP.MentalYouTube; var MTTS = window.SC_APP.MentalTTS;
-          if (MYT) MYT.stop(); if (MTTS) MTTS.stop();
-          onExit();
-        }, style: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#a78bfa', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' } }, '← Exit'),
-        h('div', { style: { textAlign: 'center', flex: 1, padding: '0 12px' } },
-          h('div', { style: { fontSize: 11, fontWeight: 700, color: focusDef.color, textTransform: 'uppercase', letterSpacing: '0.06em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, focusDef.emoji + ' ' + focusDef.label),
-          h('div', { style: { fontSize: 10, color: '#6d28d9', marginTop: 1 } }, 'Step ' + (step + 1) + ' of ' + routine.steps.length)
-        ),
-        h('div', { style: { fontSize: 11, fontWeight: 700, color: '#7c3aed', background: 'rgba(109,40,217,0.15)', border: '1px solid rgba(109,40,217,0.25)', borderRadius: 6, padding: '4px 8px' } }, stepProgress + '%')
+  return h('div', { style: { position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(160deg,#0f0824 0%,#170b35 45%,#0f172a 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 'max(1.25rem,env(safe-area-inset-top)) 1.25rem max(1.5rem,env(safe-area-inset-bottom))' } },
+    // Header
+    h('div', { style: { width: '100%', maxWidth: 380, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' } },
+      h('button', { onClick: function() {
+        var MYT = window.SC_APP.MentalYouTube; var MTTS = window.SC_APP.MentalTTS;
+        if (MYT) MYT.stop(); if (MTTS) MTTS.stop();
+        onExit();
+      }, style: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#a78bfa', fontSize: 12, fontWeight: 600, fontFamily: 'inherit' } }, '← Exit'),
+      h('div', { style: { textAlign: 'center', flex: 1, padding: '0 12px' } },
+        h('div', { style: { fontSize: 11, fontWeight: 700, color: focusDef.color, textTransform: 'uppercase', letterSpacing: '0.06em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, focusDef.emoji + ' ' + focusDef.label),
+        h('div', { style: { fontSize: 10, color: '#6d28d9', marginTop: 1 } }, 'Step ' + (step + 1) + ' of ' + routine.steps.length)
       ),
-      // Progress bar
-      h('div', { style: { width: '100%', maxWidth: 380, height: 3, background: 'rgba(109,40,217,0.18)', borderRadius: 2, marginBottom: '2rem' } },
-        h('div', { style: { height: '100%', borderRadius: 2, background: 'linear-gradient(to right,' + focusDef.color + ',#a855f7)', width: stepProgress + '%', transition: 'width 0.6s ease' } })
-      ),
-      // Breathing orb
-      (function() {
-        var BreathingOrb = window.SC_APP.BreathingOrb;
-        return BreathingOrb ? h(BreathingOrb, { isPlaying: !paused && !done }) : h('div', { style: { width: 72, height: 72, borderRadius: '50%', background: 'radial-gradient(circle at 35% 33%,rgba(220,150,255,0.95),rgba(109,40,217,0.75))', boxShadow: '0 0 24px rgba(168,85,247,0.4)', marginTop: 24 } });
-      })(),
-      // Timer
-      h('div', { style: { marginTop: 12, fontSize: 15, fontWeight: 700, color: 'rgba(168,85,247,0.55)', fontVariantNumeric: 'tabular-nums' } }, fmtTime ? fmtTime(timeLeft) : (Math.floor(timeLeft/60)+':'+(timeLeft%60<10?'0':'')+(timeLeft%60))),
-      // Instruction
-      h('div', { style: { textAlign: 'center', maxWidth: 340, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.25rem 0' } },
-        h('p', { style: { fontSize: '1.075rem', color: '#e2d9f3', lineHeight: 1.8, fontWeight: 500 } }, cur && cur.instruction)
-      ),
-      // Buttons
-      h('div', { style: { width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 9 } },
-        h('div', { style: { display: 'flex', gap: 9 } },
-          step > 0 && h('button', { onClick: function() { clearInterval(intRef.current); setStep(function(s) { return s - 1; }); }, style: { flex: '0 0 auto', padding: '13px 16px', background: 'rgba(255,255,255,0.07)', color: '#a78bfa', borderRadius: 10, fontWeight: 700, border: '1px solid rgba(168,85,247,0.20)', cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' } }, '←'),
-          h('button', { onClick: goNext, style: { flex: 1, padding: '14px', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, borderRadius: 10, color: '#fff', fontFamily: 'inherit', background: isLastStep ? '#16a34a' : 'linear-gradient(135deg,#5b21b6,#4338ca)' } },
-            isLastStep ? '✓ Complete Routine' : 'Next Step →'
-          )
-        ),
-        h('div', { style: { display: 'flex', gap: 9 } },
-          h('button', { onClick: skipStep, style: { flex: 1, padding: '11px', background: 'transparent', color: 'rgba(109,40,217,0.8)', borderRadius: 10, fontWeight: 600, border: '1px solid rgba(109,40,217,0.30)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' } }, isLastStep ? 'Skip & Complete' : 'Skip Step'),
-          h('button', { onClick: function() {
-            setPaused(function(p) {
-              var MYT = window.SC_APP.MentalYouTube; var MTTS = window.SC_APP.MentalTTS;
-              if (!p) { if (MYT) MYT.pause(); if (MTTS) MTTS.pause(); clearInterval(intRef.current); }
-              else    { if (MYT) MYT.resume(); if (MTTS) MTTS.resume(); }
-              return !p;
-            });
-          }, style: { flex: '0 0 auto', padding: '11px 16px', background: 'transparent', color: 'rgba(109,40,217,0.8)', borderRadius: 10, fontWeight: 600, border: '1px solid rgba(109,40,217,0.30)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' } }, paused ? '▶' : '⏸')
+      h('div', { style: { fontSize: 11, fontWeight: 700, color: '#7c3aed', background: 'rgba(109,40,217,0.15)', border: '1px solid rgba(109,40,217,0.25)', borderRadius: 6, padding: '4px 8px' } }, stepProgress + '%')
+    ),
+    // Progress bar
+    h('div', { style: { width: '100%', maxWidth: 380, height: 3, background: 'rgba(109,40,217,0.18)', borderRadius: 2, marginBottom: '2rem' } },
+      h('div', { style: { height: '100%', borderRadius: 2, background: 'linear-gradient(to right,' + focusDef.color + ',#a855f7)', width: stepProgress + '%', transition: 'width 0.6s ease' } })
+    ),
+    // Breathing orb
+    (function() {
+      var BreathingOrb = window.SC_APP.BreathingOrb;
+      return BreathingOrb ? h(BreathingOrb, { isPlaying: !paused && !done }) : h('div', { style: { width: 72, height: 72, borderRadius: '50%', background: 'radial-gradient(circle at 35% 33%,rgba(220,150,255,0.95),rgba(109,40,217,0.75))', boxShadow: '0 0 24px rgba(168,85,247,0.4)', marginTop: 24 } });
+    })(),
+    // Timer
+    h('div', { style: { marginTop: 12, fontSize: 15, fontWeight: 700, color: 'rgba(168,85,247,0.55)', fontVariantNumeric: 'tabular-nums' } }, fmtTime ? fmtTime(timeLeft) : (Math.floor(timeLeft/60)+':'+(timeLeft%60<10?'0':'')+(timeLeft%60))),
+    // Instruction
+    h('div', { style: { textAlign: 'center', maxWidth: 340, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '1.25rem 0' } },
+      h('p', { style: { fontSize: '1.075rem', color: '#e2d9f3', lineHeight: 1.8, fontWeight: 500 } }, cur && cur.instruction)
+    ),
+    // Buttons
+    h('div', { style: { width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: 9 } },
+      h('div', { style: { display: 'flex', gap: 9 } },
+        step > 0 && h('button', { onClick: function() { clearInterval(intRef.current); setStep(function(s) { return s - 1; }); }, style: { flex: '0 0 auto', padding: '13px 16px', background: 'rgba(255,255,255,0.07)', color: '#a78bfa', borderRadius: 10, fontWeight: 700, border: '1px solid rgba(168,85,247,0.20)', cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' } }, '←'),
+        h('button', { onClick: goNext, style: { flex: 1, padding: '14px', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, borderRadius: 10, color: '#fff', fontFamily: 'inherit', background: isLastStep ? '#16a34a' : 'linear-gradient(135deg,#5b21b6,#4338ca)' } },
+          isLastStep ? '✓ Complete Routine' : 'Next Step →'
         )
+      ),
+      h('div', { style: { display: 'flex', gap: 9 } },
+        h('button', { onClick: skipStep, style: { flex: 1, padding: '11px', background: 'transparent', color: 'rgba(109,40,217,0.8)', borderRadius: 10, fontWeight: 600, border: '1px solid rgba(109,40,217,0.30)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' } }, isLastStep ? 'Skip & Complete' : 'Skip Step'),
+        h('button', { onClick: function() {
+          setPaused(function(p) {
+            var MYT = window.SC_APP.MentalYouTube; var MTTS = window.SC_APP.MentalTTS;
+            if (!p) { if (MYT) MYT.pause(); if (MTTS) MTTS.pause(); clearInterval(intRef.current); }
+            else    { if (MYT) MYT.resume(); if (MTTS) MTTS.resume(); }
+            return !p;
+          });
+        }, style: { flex: '0 0 auto', padding: '11px 16px', background: 'transparent', color: 'rgba(109,40,217,0.8)', borderRadius: 10, fontWeight: 600, border: '1px solid rgba(109,40,217,0.30)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' } }, paused ? '▶' : '⏸')
       )
     )
   );
