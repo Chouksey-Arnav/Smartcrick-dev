@@ -162,7 +162,7 @@ function LeaderboardPage() {
     ),
 
     // Player list
-    h('div',{style:{padding:'0 12px'}},
+    h('div',{className:'sc-stagger',style:{padding:'0 12px'}},
       cohort.map(function(player) {
         var metric = category ? (player.elo||1000) : player.xp;
         var metricLabel = category ? ((player.elo||1000)+' ELO') : ((player.xp||0)+' XP');
