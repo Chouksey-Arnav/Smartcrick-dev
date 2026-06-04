@@ -137,6 +137,22 @@ function sessionTypeFromCategory(cat) {
   return CAT_TO_TYPE[(cat || '').toLowerCase()] || 'GROUND';
 }
 
+// ── Pick reason generator ─────────────────────────────────────────
+function pickReason(user, drill, base, levelBonus, neuralBoost, isCompleted) {
+  if (neuralBoost > 8)  return 'AI matched to your history';
+  if (levelBonus > 0)   return 'Matches your level';
+  var role = (user.role || '').toLowerCase();
+  var cat  = (drill.category || '').toLowerCase();
+  if (role === 'batsman'      && cat === 'batting')       return 'Perfect for your role';
+  if (role === 'bowler'       && cat === 'bowling')       return 'Perfect for your role';
+  if (role === 'allrounder')                              return 'Builds your all-round game';
+  if (role === 'wicketkeeper' && cat === 'wicketkeeping') return 'Perfect for your role';
+  if (isCompleted) return 'Build on your progress';
+  if (base >= 80)  return 'Highly relevant to you';
+  if (base >= 65)  return 'Recommended for your goal';
+  return 'Good fit for you';
+}
+
 // ── Drill picks ───────────────────────────────────────────────────
 function getPickDrills(allDrills, user, completedIds) {
   if (!allDrills || !allDrills.length || !user) return [];
@@ -153,9 +169,9 @@ function getPickDrills(allDrills, user, completedIds) {
     var drillLvl = (drill.level || '').toLowerCase();
     var userLvl  = (user.level || 'club').toLowerCase();
     var levelBonus = 0;
-    if (drillLvl === 'beginner' && (userLvl === 'school' || userLvl === 'club'))       levelBonus = 10;
-    if (drillLvl === 'intermediate' && (userLvl === 'club' || userLvl === 'district')) levelBonus = 12;
-    if (drillLvl === 'advanced' && (userLvl === 'district' || userLvl === 'state'))    levelBonus = 14;
+    if (drillLvl === 'beginner'     && (userLvl === 'school' || userLvl === 'club'))       levelBonus = 10;
+    if (drillLvl === 'intermediate' && (userLvl === 'club' || userLvl === 'district'))     levelBonus = 12;
+    if (drillLvl === 'advanced'     && (userLvl === 'district' || userLvl === 'state'))    levelBonus = 14;
     var neuralBoost = 0;
     if (useNeural) {
       try {
@@ -166,21 +182,31 @@ function getPickDrills(allDrills, user, completedIds) {
         }
       } catch(e) {}
     }
-    return { drill: drill, score: (base + levelBonus + neuralBoost) * recencyMult };
+    var reason = pickReason(user, drill, base, levelBonus, neuralBoost, !!completed[drill.id]);
+    return { drill: drill, score: (base + levelBonus + neuralBoost) * recencyMult, reason: reason };
   });
 
   scored.sort(function(a, b) { return b.score - a.score; });
 
+  // Build 5 picks: first pass prioritises diversity across categories
   var picks = [], usedCats = {};
-  for (var i = 0; i < scored.length && picks.length < 3; i++) {
+  for (var i = 0; i < scored.length && picks.length < 5; i++) {
     var cat2 = (scored[i].drill.category || '').toLowerCase();
-    if (!usedCats[cat2]) { picks.push(scored[i].drill); usedCats[cat2] = true; }
+    if (!usedCats[cat2]) { picks.push(scored[i]); usedCats[cat2] = true; }
   }
-  for (var j = 0; j < scored.length && picks.length < 3; j++) {
-    if (picks.indexOf(scored[j].drill) === -1) picks.push(scored[j].drill);
+  // Second pass: fill remaining slots from top scorers
+  for (var j = 0; j < scored.length && picks.length < 5; j++) {
+    var alreadyIn = false;
+    for (var k = 0; k < picks.length; k++) { if (picks[k].drill === scored[j].drill) { alreadyIn = true; break; } }
+    if (!alreadyIn) picks.push(scored[j]);
   }
 
-  return picks.slice(0, 3);
+  // Return array of { drill, reason } objects (backwards-compatible: drill is still accessible)
+  return picks.slice(0, 5).map(function(p) {
+    var d = p.drill;
+    d._pickReason = p.reason; // attach reason directly on drill object
+    return d;
+  });
 }
 
 function getSmartLabel() {
