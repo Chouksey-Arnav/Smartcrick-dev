@@ -349,8 +349,8 @@ function PressureViz(props) {
         h('circle',{cx:cx,cy:cy,r:9+pulse*6,fill:color,opacity:0.75+pulse*0.25})
       )
     ),
-    prog>0.45&&h('div',{style:{fontSize:11,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:color,opacity:0.7+prog*0.3}},
-      prog>0.82?'⚡ Peak pressure':prog>0.6?'Pressure building':'Rising')
+    prog>0.45&&h('div',{style:{fontSize:11,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:color,opacity:0.7+prog*0.3,display:'inline-flex',alignItems:'center',gap:5}},
+      prog>0.82?[A.Icon&&h(A.Icon,{key:'i',n:'zap',cls:'',style:{width:12,height:12,color:color}}),'Peak pressure']:prog>0.6?'Pressure building':'Rising')
   );
 }
 
@@ -473,7 +473,7 @@ function MentalPlayerPage(props) {
     ),
     h('h2',{style:{fontSize:24,fontWeight:800,color:'#f0fdf4',marginBottom:6}},'Session complete'),
     h('p',{style:{fontSize:13,color:'#6b7280',marginBottom:14}},session.name),
-    h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 18px',borderRadius:99,background:color+'1a',border:'1px solid '+color+'35',fontSize:13,fontWeight:700,color:color,marginBottom:32}},'⚡ +'+session.xp+' XP'),
+    h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 18px',borderRadius:99,background:color+'1a',border:'1px solid '+color+'35',fontSize:13,fontWeight:700,color:color,marginBottom:32}},A.Icon&&h(A.Icon,{n:'zap',cls:'',style:{width:14,height:14,color:color}}),'+'+session.xp+' XP'),
     h('div',{style:{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:270}},
       h('button',{onClick:function(){A.nav('Mental');},style:{padding:14,background:color,color:'#fff',border:'none',borderRadius:12,fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 20px rgba('+glow+',0.35)'}},'More Sessions'),
       h('button',{onClick:shareSession,style:{padding:12,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:'#6b7280',cursor:'pointer',fontSize:13,fontFamily:'inherit'}},'Share this session')
@@ -493,9 +493,9 @@ function MentalPlayerPage(props) {
       'Find a comfortable position. You won\'t need to watch the screen — just listen.'),
     h('button',{
       onClick:function(){setStarted(true);setRunning(true);},
-      style:{padding:'16px 56px',background:'linear-gradient(135deg,'+color+','+color+'cc)',color:'#fff',border:'none',borderRadius:14,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 8px 28px rgba('+glow+',0.38)'}
-    },'Begin Session ▶'),
-    h('button',{onClick:shareSession,style:{marginTop:14,background:'none',border:'none',color:'#374151',fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Share this session →')
+      style:{padding:'16px 56px',background:'linear-gradient(135deg,'+color+','+color+'cc)',color:'#fff',border:'none',borderRadius:14,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 8px 28px rgba('+glow+',0.38)',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:9}
+    },A.Icon&&h(A.Icon,{n:'play',cls:'',style:{width:17,height:17,color:'#fff'}}),'Begin Session'),
+    h('button',{onClick:shareSession,style:{marginTop:14,background:'none',border:'none',color:'#374151',fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Share this session')
   );
 
   // ACTIVE ───────────────────────────────────────────────────────
@@ -513,7 +513,7 @@ function MentalPlayerPage(props) {
         if(A.MentalTTS) A.MentalTTS.stop();
         if(A.MentalYouTube) A.MentalYouTube.stop();
         A.nav('Mental');
-      },style:{background:'none',border:'none',color:'#374151',fontSize:13,cursor:'pointer',fontFamily:'inherit'}},'← Exit'),
+      },style:{background:'none',border:'none',color:'#374151',fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:5}},A.Icon&&h(A.Icon,{n:'arrowL',cls:'',style:{width:13,height:13,color:'#374151'}}),'Exit'),
       h('div',{style:{fontSize:11,color:'#2d3748'}},fmt(te)+' / '+fmt(total))
     ),
     // Progress
@@ -545,8 +545,9 @@ function MentalPlayerPage(props) {
           border:running?'1px solid rgba(255,255,255,0.1)':'none',borderRadius:12,
           color:running?'#6b7280':'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
           fontFamily:'inherit',transition:'all 0.25s',
-          boxShadow:running?'none':'0 4px 18px rgba('+glow+',0.3)'}
-      }, running?'⏸ Pause':'▶ Resume')
+          boxShadow:running?'none':'0 4px 18px rgba('+glow+',0.3)',
+          display:'inline-flex',alignItems:'center',justifyContent:'center',gap:7}
+      }, A.Icon&&h(A.Icon,{n:running?'pause':'play',cls:'',style:{width:15,height:15,color:running?'#6b7280':'#fff'}}), running?'Pause':'Resume')
     )
   );
 }
