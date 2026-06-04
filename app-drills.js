@@ -563,6 +563,8 @@ function DrillCard(props) {
 
   return h('div', {
     onClick: function() { onSelect(drill); },
+    className: 'sc-spring sc-ripple sc-cat-' + (drill.category || 'batting'),
+    'data-category': drill.category || 'batting',
     style: {
       background: 'rgba(16,22,36,0.92)',
       border: '1px solid rgba(255,255,255,0.07)',
@@ -1277,7 +1279,7 @@ function DrillsPage() {
             }
           }, 'Clear Filters')
         )
-      : h('div', { style: s.grid },
+      : h('div', { className: 'sc-stagger-grid', style: s.grid },
           filtered.map(function(drill) {
             return h(DrillCard, {
               key: drill.id,
