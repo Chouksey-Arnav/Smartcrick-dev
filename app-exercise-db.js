@@ -77,7 +77,7 @@ var EXERCISES = [
   {id:'bk010',name:'T-Bar Row',sets:4,reps:10,duration_secs:null,rest_secs:60,muscle_primary:'back',muscle_secondary:['biceps'],equipment:'barbell',difficulty:'intermediate',category:'pull',cricket_benefit:'Thick back development for batting stability',tip:'Straddle the bar, keep hips hinged, row to lower chest'},
   {id:'bk011',name:'Face Pulls',sets:3,reps:15,duration_secs:null,rest_secs:30,muscle_primary:'back',muscle_secondary:['shoulders'],equipment:'cable',difficulty:'beginner',category:'pull',cricket_benefit:'Rear-deltoid health for throwing',tip:'Pull the rope toward your face with elbows high; externally rotate at end'},
   {id:'bk012',name:'Renegade Row',sets:3,reps:8,duration_secs:null,rest_secs:50,muscle_primary:'back',muscle_secondary:['core','biceps'],equipment:'dumbbells',difficulty:'advanced',category:'pull',cricket_benefit:'Core and back combo for all-round athleticism',tip:'Keep hips square to the floor as you row; avoid rotation'},
-  {id:'bk013',name:'Superman Hold',sets:3,reps:12,duration_secs:3,rest_secs:20,muscle_primary:'back',muscle_secondary:['glutes'],equipment:'none',difficulty:'beginner',category:'pull',cricket_benefit:'Lower-back strength for bowling',tip:'Lift arms and legs simultaneously off the floor; squeeze glutes at the top'},
+  {id:'bk013',name:'Superman Hold',sets:3,reps:1,duration_secs:25,rest_secs:30,muscle_primary:'back',muscle_secondary:['glutes'],equipment:'none',difficulty:'beginner',category:'pull',cricket_benefit:'Lower-back strength for bowling',tip:'Lie face-down, lift arms, chest and legs off the floor and hold — squeeze your glutes the whole time'},
   {id:'bk014',name:'Australian Pull-ups',sets:3,reps:12,duration_secs:null,rest_secs:40,muscle_primary:'back',muscle_secondary:['biceps'],equipment:'pull-up bar',difficulty:'beginner',category:'pull',cricket_benefit:'Accessible back strength builder',tip:'Position the bar at waist height; keep body straight throughout'},
   {id:'bk015',name:'Pendlay Row',sets:4,reps:8,duration_secs:null,rest_secs:60,muscle_primary:'back',muscle_secondary:['biceps'],equipment:'barbell',difficulty:'advanced',category:'pull',cricket_benefit:'Explosive back power',tip:'Reset the bar on the floor each rep; use a controlled explosive pull'},
   {id:'bk016',name:'Close-Grip Lat Pulldown',sets:3,reps:12,duration_secs:null,rest_secs:45,muscle_primary:'back',muscle_secondary:['biceps'],equipment:'cable',difficulty:'intermediate',category:'pull',cricket_benefit:'Lower lat strength for batting reach',tip:'Neutral grip; pull to chest and squeeze lats hard at the bottom'},
@@ -256,6 +256,30 @@ var EXERCISES = [
 
 A.EXERCISES = EXERCISES;
 
+// ─── Warm-up pool (dynamic, raise heart-rate & mobilise) ──────
+// Every session opens with a warm-up so the body is ready — exactly
+// how Nike Training Club / Freeletics structure their sessions.
+var WARMUPS = [
+  {id:'wu1',name:'Jumping Jacks',          kind:'cardio',duration_secs:40,muscle_primary:'full-body',cricket_benefit:'Raises heart-rate and warms the whole body',tip:'Full range — arms all the way overhead, feet wide'},
+  {id:'wu2',name:'Arm Circles',            kind:'reps',  reps:20,muscle_primary:'shoulders',cricket_benefit:'Opens the shoulders for throwing and bowling',tip:'Big slow circles forward, then reverse'},
+  {id:'wu3',name:'High Knees',             kind:'cardio',duration_secs:30,muscle_primary:'full-body',cricket_benefit:'Primes the legs for running between the wickets',tip:'Drive knees to waist height, stay light on your feet'},
+  {id:'wu4',name:'Leg Swings (each side)', kind:'reps',  reps:16,muscle_primary:'legs',cricket_benefit:'Loosens hips for batting footwork and bowling stride',tip:'Hold a wall; swing front-to-back, then side-to-side'},
+  {id:'wu5',name:'Bodyweight Squats',      kind:'reps',  reps:15,muscle_primary:'legs',cricket_benefit:'Wakes up the legs and glutes',tip:'Slow and controlled, full depth, chest tall'},
+  {id:'wu6',name:'Torso Twists',           kind:'reps',  reps:20,muscle_primary:'core',cricket_benefit:'Primes rotation for batting and bowling',tip:'Feet planted, rotate from the waist, arms relaxed'},
+  {id:'wu7',name:'Inchworm Walkout',       kind:'reps',  reps:8, muscle_primary:'full-body',cricket_benefit:'Full-body mobility before training',tip:'Hinge, walk hands out to a plank, walk back, stand tall'},
+];
+
+// ─── Cool-down pool (static stretch, return to rest) ──────────
+var COOLDOWNS = [
+  {id:'cd1',name:'Standing Forward Fold',         kind:'hold',duration_secs:30,muscle_primary:'legs',cricket_benefit:'Releases the hamstrings and lower back',tip:'Soft knees, let your head and arms hang heavy'},
+  {id:'cd2',name:'Chest & Shoulder Stretch',      kind:'hold',duration_secs:30,muscle_primary:'chest',cricket_benefit:'Opens the chest after pressing work',tip:'Clasp hands behind your back and lift gently'},
+  {id:'cd3',name:'Quad Stretch (each side)',      kind:'hold',duration_secs:30,muscle_primary:'legs',cricket_benefit:'Lengthens the quads after leg work',tip:'Hold one ankle, knees together, stand tall'},
+  {id:'cd4',name:"Child's Pose",                  kind:'hold',duration_secs:40,muscle_primary:'back',cricket_benefit:'Decompresses the spine and lower back',tip:'Knees wide, sit back onto heels, reach arms forward'},
+  {id:'cd5',name:'Seated Hamstring Stretch',      kind:'hold',duration_secs:30,muscle_primary:'legs',cricket_benefit:'Eases the hamstrings and improves stride length',tip:'Reach toward your toes, keep the back long, breathe'},
+  {id:'cd6',name:'Cross-Body Shoulder Stretch',   kind:'hold',duration_secs:30,muscle_primary:'shoulders',cricket_benefit:'Recovers the throwing/bowling shoulder',tip:'Pull one arm across your chest, switch sides halfway'},
+  {id:'cd7',name:'Kneeling Hip Flexor Stretch',   kind:'hold',duration_secs:30,muscle_primary:'legs',cricket_benefit:'Opens the hips for bowling and batting',tip:'Half-kneel, push hips gently forward, stay tall'},
+];
+
 // ─── Utility: seeded deterministic shuffle ────────────────────
 function strHash(s) {
   var h = 5381;
@@ -265,7 +289,6 @@ function strHash(s) {
   }
   return Math.abs(h);
 }
-
 function seededShuffle(arr, seed) {
   var a = arr.slice();
   var rng = seed | 0;
@@ -276,77 +299,162 @@ function seededShuffle(arr, seed) {
   }
   return a;
 }
+function pick(arr, seed) { return arr[Math.abs(seed) % arr.length]; }
+
+var LEVEL_ORDER = ['beginner', 'intermediate', 'advanced', 'pro'];
+
+// ─── Classify an exercise into a movement KIND ────────────────
+//   'reps'   → counted repetitions, athlete self-paces, manual "Done Set"
+//   'hold'   → isometric hold for time (plank, wall sit, Superman…)
+//   'cardio' → timed all-out / continuous work (sprints, rope, crawls…)
+function classifyKind(ex) {
+  if (ex.kind) return ex.kind; // warm-up/cool-down entries declare their own
+  var nm = (ex.name || '').toLowerCase();
+  if (/(hold|plank|wall sit|hollow|arch body|l-sit|handstand|barrier|carry|farmer|suitcase|wrist roller|dead hang|squat hold)/.test(nm)) return 'hold';
+  if (ex.duration_secs) {
+    if (ex.category === 'cardio' || /(sprint|run|rope|bike|shuttle|crawl|bound|battle)/.test(nm)) return 'cardio';
+    return 'hold';
+  }
+  return 'reps';
+}
+
+// ─── Prescription: turn a raw exercise into a real set/rep scheme ─
+// Sets, reps, hold-duration and rest all scale with LEVEL and GOAL,
+// so the numbers actually make sense for the athlete in front of us.
+// `adjust` (-1/0/+1) comes from the auto-regulation engine.
+function prescribe(ex, level, goal, block, adjust) {
+  var li = LEVEL_ORDER.indexOf(level); if (li < 0) li = 0;
+  adjust = adjust || 0;
+  var kind = classifyKind(ex);
+
+  var out = {
+    id: ex.id, name: ex.name, kind: kind, block: block || 'main',
+    tip: ex.tip, cricket_benefit: ex.cricket_benefit,
+    muscle_primary: ex.muscle_primary, difficulty: ex.difficulty, equipment: ex.equipment,
+  };
+
+  // Sets ----------------------------------------------------------
+  var sets = [3, 3, 4, 4][li];
+  if (block === 'warmup' || block === 'cooldown') sets = 1;
+  out.sets = sets;
+
+  // Rest between sets (seconds) -----------------------------------
+  var rest;
+  if (goal === 'build-muscle')           rest = [75, 60, 50, 45][li];
+  else if (goal === 'lose-weight')       rest = [40, 30, 25, 20][li];
+  else /* improve-endurance / default */ rest = [45, 35, 30, 25][li];
+  if (block === 'warmup')   rest = 15;
+  if (block === 'cooldown') rest = 10;
+  out.rest_secs = rest;
+
+  if (kind === 'reps') {
+    var base = ex.reps || 10;
+    var mult = [0.85, 1.0, 1.15, 1.30][li];
+    if (goal === 'lose-weight')        mult *= 1.20;
+    else if (goal === 'improve-endurance') mult *= 1.25;
+    var reps = Math.round(base * mult) + adjust * 2;
+    out.reps = Math.max(5, Math.min(40, reps));
+  } else {
+    // hold / cardio → work seconds
+    var baseWork = (ex.duration_secs && ex.duration_secs >= 8) ? ex.duration_secs
+                 : (kind === 'hold' ? 25 : 20);
+    var add = [0, 5, 10, 15][li];
+    var work = baseWork + add + adjust * 5;
+    if (kind === 'hold') {
+      if (goal === 'improve-endurance') work += 5;
+      work = Math.max(15, Math.min(75, work)); // never a pointless 3s hold again
+    } else {
+      if (goal === 'lose-weight' || goal === 'improve-endurance') work += 5;
+      work = Math.max(15, Math.min(60, work));
+    }
+    if (block === 'warmup')   work = (kind === 'cardio') ? 35 : 25;
+    if (block === 'cooldown') work = ex.duration_secs || 30;
+    out.work_secs = work;
+    out.duration_secs = work;                 // backward-compat for the player
+    out.prep_secs = (kind === 'cardio') ? 3 : 5; // GET-READY lead-in to get into position
+  }
+  return out;
+}
+
+// ─── Order main exercises like a real coach would ─────────────
+// Compound rep work first (fresh & strong) → isometric holds →
+// cardio/conditioning finishers last.  Fat-burn / endurance goals
+// keep a circuit feel, so we leave their order alone.
+function orderMains(list, goal) {
+  if (goal === 'lose-weight' || goal === 'improve-endurance') return list;
+  var rank = { reps: 0, hold: 1, cardio: 2 };
+  return list.slice().sort(function (a, b) {
+    return (rank[a.kind] || 0) - (rank[b.kind] || 0);
+  });
+}
 
 // ─── getWorkoutExercises(workout) ────────────────────────────
-// Returns an ordered array of exercise objects for a given workout.
-// Deterministic per workout ID.
+// Returns a fully-structured, prescribed session:
+//   [ warm-up , …ordered main work… , cool-down ]
+// Deterministic per workout id, adaptive to the athlete's last rating.
 A.getWorkoutExercises = function(workout) {
-  var LEVEL_ORDER = ['beginner', 'intermediate', 'advanced', 'pro'];
   var levelIdx = LEVEL_ORDER.indexOf(workout.level);
-  var seed = strHash(workout.id);
+  if (levelIdx < 0) levelIdx = 0;
+  var seed   = strHash(workout.id);
   var target = workout.target;
-  var goal = workout.goal;
-  var count = workout.exercises || 4;
+  var goal   = workout.goal;
+  var count  = workout.exercises || 4;
+  var adjust = (A.FitnessEngine && A.FitnessEngine.getAdjustment)
+             ? A.FitnessEngine.getAdjustment(workout.id) : 0;
 
-  // Category map for targeted workouts
   var catMap = {
     'chest': 'push', 'back': 'pull', 'shoulders': 'push',
     'arms': 'pull', 'legs': 'legs', 'core': 'core', 'glutes': 'legs',
   };
 
-  // Filter by level appropriateness
-  var agePool = EXERCISES.filter(function(ex) {
-    var exLvlIdx = LEVEL_ORDER.indexOf(ex.difficulty);
-    return exLvlIdx <= levelIdx;
+  // pool filtered to level-appropriate difficulty
+  var agePool = EXERCISES.filter(function (ex) {
+    return LEVEL_ORDER.indexOf(ex.difficulty) <= levelIdx;
   });
 
   var selected = [];
-
   if (target === 'full-body') {
-    // For full-body: mix from multiple categories
     var groups;
-    if (goal === 'improve-endurance') {
-      groups = ['cardio', 'legs', 'core', 'push', 'cricket'];
-    } else if (goal === 'lose-weight') {
-      groups = ['cardio', 'core', 'legs', 'push', 'pull'];
-    } else {
-      groups = ['push', 'pull', 'legs', 'core', 'cardio'];
-    }
+    if (goal === 'improve-endurance')   groups = ['cardio', 'legs', 'core', 'push', 'cricket'];
+    else if (goal === 'lose-weight')    groups = ['cardio', 'core', 'legs', 'push', 'pull'];
+    else                                groups = ['push', 'pull', 'legs', 'core', 'cardio'];
     var perGroup = Math.ceil(count / groups.length);
-    groups.forEach(function(g, gi) {
-      var gPool = agePool.filter(function(ex) { return ex.category === g; });
-      gPool = seededShuffle(gPool, seed + gi * 31);
+    groups.forEach(function (g, gi) {
+      var gPool = seededShuffle(agePool.filter(function (ex) { return ex.category === g; }), seed + gi * 31);
       selected = selected.concat(gPool.slice(0, perGroup));
     });
   } else {
     var cat = catMap[target] || target;
-    // Primary: exercises matching the muscle group or category
-    var primary = agePool.filter(function(ex) {
+    var primary = seededShuffle(agePool.filter(function (ex) {
       return ex.muscle_primary === target || ex.category === cat;
-    });
-    primary = seededShuffle(primary, seed);
+    }), seed);
     selected = primary.slice(0, count);
-
-    // Fill remaining with complementary exercises
     if (selected.length < count) {
-      var secondary = agePool.filter(function(ex) {
+      var secondary = seededShuffle(agePool.filter(function (ex) {
         return selected.indexOf(ex) === -1;
-      });
-      secondary = seededShuffle(secondary, seed + 7);
+      }), seed + 7);
       selected = selected.concat(secondary).slice(0, count);
     }
   }
-
-  // Trim to exact count needed
   selected = selected.slice(0, count);
+  if (!selected.length) selected = seededShuffle(agePool, seed).slice(0, count);
 
-  // If somehow still empty, return first N exercises of appropriate level
-  if (!selected.length) {
-    selected = seededShuffle(agePool, seed).slice(0, count);
-  }
+  // prescribe + order the main block
+  var mains = orderMains(
+    selected.map(function (ex) { return prescribe(ex, workout.level, goal, 'main', adjust); }),
+    goal
+  );
 
-  return selected;
+  // bookend with a warm-up and a cool-down
+  var warm = prescribe(pick(WARMUPS, seed), workout.level, goal, 'warmup', 0);
+  var cool = prescribe(pick(COOLDOWNS, seed + 13), workout.level, goal, 'cooldown', 0);
+
+  return [warm].concat(mains).concat([cool]);
 };
 
-console.log('[SC] app-exercise-db ready —', EXERCISES.length, 'exercises loaded');
+// expose the raw counts for UI ("main" exercises, excluding warm-up/cool-down)
+A.WARMUPS = WARMUPS;
+A.COOLDOWNS = COOLDOWNS;
+
+console.log('[SC] app-exercise-db ready —', EXERCISES.length, 'exercises + warm-up/cool-down, structured prescription');
 })();
