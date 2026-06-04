@@ -18,6 +18,7 @@
   <script>tailwind.config={theme:{extend:{}},corePlugins:{preflight:false}};</script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="styles-patch.css">
+  <link rel="stylesheet" href="styles-vibe.css">
 
   <!-- React 18.3.1 UMD — LOCKED. React 19 removed UMD builds. -->
   <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
@@ -61,32 +62,75 @@
       .pb-28 { padding-bottom: 2rem !important; }
     }
 
-    /* Splash loader */
+    /* Splash loader — Vibe Edition */
     #sc-loading {
-      position: fixed; inset: 0; background: #0d1117;
+      position: fixed; inset: 0; background: #060b14;
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; z-index: 9999;
     }
-    #sc-loading .sc-logo  { font-size: 3rem; margin-bottom: 1rem; }
-    #sc-loading .sc-name  { font-family: 'Inter', system-ui, sans-serif; font-size: 1.5rem; font-weight: 900; color: #f0fdf4; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
-    #sc-loading .sc-sub   { font-family: 'Inter', system-ui, sans-serif; font-size: 0.75rem; color: #484f58; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
-    #sc-loading .sc-dots  { display: flex; gap: 6px; margin-top: 2rem; }
-    #sc-loading .sc-dot   { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; animation: scDotPulse 1.2s ease-in-out infinite; }
-    #sc-loading .sc-dot:nth-child(2) { animation-delay: 0.2s; }
-    #sc-loading .sc-dot:nth-child(3) { animation-delay: 0.4s; }
+    #sc-loading .sc-logo-wrap {
+      position: relative; width: 72px; height: 72px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+    #sc-loading .sc-logo-bg {
+      width: 72px; height: 72px; border-radius: 20px;
+      background: linear-gradient(135deg, #16a34a, #0d9488);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 32px rgba(22,163,74,0.4), 0 8px 32px rgba(0,0,0,0.6);
+    }
+    #sc-loading .sc-logo-ring {
+      position: absolute; inset: -10px; border-radius: 30px;
+      border: 2px solid rgba(34,197,94,0.5);
+      animation: scSplashRing 1.6s ease-out infinite;
+    }
+    #sc-loading .sc-logo-ring:nth-child(2) { animation-delay: 0.55s; }
+    @keyframes scSplashRing {
+      0%   { transform: scale(1);   opacity: 0.6; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    #sc-loading .sc-name {
+      font-family: 'Rajdhani', 'Inter', system-ui, sans-serif;
+      font-size: 2rem; font-weight: 700; color: #f0fdf4;
+      letter-spacing: -0.03em; margin-bottom: 0.3rem; line-height: 1;
+    }
+    #sc-loading .sc-sub {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 0.7rem; color: #374151; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    #sc-loading .sc-progress-wrap {
+      margin-top: 2.5rem; width: 120px; height: 3px;
+      background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;
+    }
+    #sc-loading .sc-progress-bar {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, #16a34a, #34d399);
+      animation: scSplashProgress 1.8s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    @keyframes scSplashProgress { 0% { width: 0%; } 100% { width: 100%; } }
     @keyframes scDotPulse { 0%, 100% { opacity: 0.2; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1); } }
   </style>
 </head>
 <body>
 
   <div id="sc-loading" role="status" aria-label="Loading SmartCrick">
-    <div class="sc-logo" aria-hidden="true">🏏</div>
-    <div class="sc-name">SmartCrick</div>
+    <div class="sc-logo-wrap" aria-hidden="true">
+      <div class="sc-logo-ring"></div>
+      <div class="sc-logo-ring"></div>
+      <div class="sc-logo-bg">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21l3.5-3.5"/>
+          <path d="M5.5 19.5L16 9a2 2 0 0 0 0-2.83L14.83 5A2 2 0 0 0 12 5L2.5 16l-1 1 1 4z"/>
+          <path d="M19 4.5l.5.5"/>
+          <circle cx="20" cy="4" r="1"/>
+        </svg>
+      </div>
+    </div>
+    <div class="sc-name">SMARTCRICK</div>
     <div class="sc-sub">Elite Cricket Training</div>
-    <div class="sc-dots" aria-hidden="true">
-      <div class="sc-dot"></div>
-      <div class="sc-dot"></div>
-      <div class="sc-dot"></div>
+    <div class="sc-progress-wrap" aria-hidden="true">
+      <div class="sc-progress-bar"></div>
     </div>
   </div>
 
@@ -153,6 +197,7 @@
   <script src="app-quizzes.js"></script>
   <script src="app-daily-reward.js"></script>
   <script src="app-root.js"></script>
+  <script src="app-vibe.js"></script>
 
   <script>
     // Remove splash when React renders content into #root
