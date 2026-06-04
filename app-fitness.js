@@ -287,7 +287,7 @@ function FitnessPage() {
             h('div', { style:{ fontSize:40, marginBottom:12 } }, '💪'),
             h('div', { style:{ fontSize:14, color:'#6b7280' } }, 'No workouts match your filters'),
             h('button', { onClick:() => { setSearch(''); setLevelFilter('all'); setGoalFilter('all'); }, style:{ marginTop:14, padding:'8px 20px', background:'rgba(249,115,22,0.15)', border:'1px solid rgba(249,115,22,0.3)', borderRadius:8, color:'#f97316', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit' } }, 'Clear Filters'))
-        : h('div', { style:{ display:'flex', flexDirection:'column', gap:8 } }, filtered.map(w => h(WorkoutCard, { key:w.id, w:w })))
+        : h('div', { className:'sc-stagger', style:{ display:'flex', flexDirection:'column', gap:8 } }, filtered.map(w => h(WorkoutCard, { key:w.id, w:w })))
     ),
 
     // ── WIZARD ───────────────────────────────────────────────
@@ -328,6 +328,7 @@ function WorkoutCard({ w }) {
   const goalEmoji = { 'build-muscle':'💪', 'lose-weight':'🔥', 'improve-endurance':'🏃' };
   const targetEmoji = { 'full-body':'🏋️', 'chest':'💪', 'back':'🔙', 'shoulders':'🏔️', 'arms':'💪', 'legs':'🦵', 'core':'🎯', 'glutes':'🍑' };
   return h('button', { onClick: () => nav('WorkoutDetail', { id:w.id }),
+    className:'sc-spring sc-ripple',
     style:{ display:'flex', flexDirection:'column', borderRadius:14, background:'rgba(16,22,36,0.9)', border:'1px solid rgba(255,255,255,0.08)', cursor:'pointer', fontFamily:'inherit', textAlign:'left', width:'100%', overflow:'hidden', padding:0 } },
     h('div', { style:{ height:3, background:lvlColor, borderRadius:'14px 14px 0 0', flexShrink:0 } }),
     h('div', { style:{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px' } },
