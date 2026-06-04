@@ -1,0 +1,495 @@
+/* ================================================================
+   styles-vibe.css — SmartCrick Vibe Coding Blueprint
+   All new animation, interaction, and polish CSS
+   Loaded AFTER styles-patch.css — no conflicts with existing styles
+================================================================ */
+
+/* ── NOISE TEXTURE OVERLAY — depth signal, physical feel ───────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+/* ── SPRING MICRO-INTERACTION — every tap feels physical ─────────── */
+.sc-spring {
+  transition:
+    transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 120ms ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.sc-spring:active {
+  transform: scale(0.96) !important;
+}
+
+/* ── TAP RIPPLE — radial highlight on touch ──────────────────────── */
+.sc-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.sc-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.14) 0%, transparent 68%);
+  opacity: 0;
+  transform: scale(0.4);
+  pointer-events: none;
+  transition: transform 500ms ease, opacity 500ms ease;
+  border-radius: inherit;
+}
+.sc-ripple:active::after {
+  opacity: 1;
+  transform: scale(2.2);
+  transition: none;
+}
+
+/* ── STAGGERED ENTRANCE — cards fan in on every page load ────────── */
+@keyframes scStaggerIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.sc-stagger > * {
+  animation: scStaggerIn 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.sc-stagger > *:nth-child(1)  { animation-delay: 0ms;   }
+.sc-stagger > *:nth-child(2)  { animation-delay: 55ms;  }
+.sc-stagger > *:nth-child(3)  { animation-delay: 110ms; }
+.sc-stagger > *:nth-child(4)  { animation-delay: 160ms; }
+.sc-stagger > *:nth-child(5)  { animation-delay: 205ms; }
+.sc-stagger > *:nth-child(6)  { animation-delay: 245ms; }
+.sc-stagger > *:nth-child(7)  { animation-delay: 280ms; }
+.sc-stagger > *:nth-child(8)  { animation-delay: 310ms; }
+.sc-stagger > *:nth-child(n+9){ animation-delay: 335ms; }
+
+/* Grid variant — for card grids (uniform stagger) */
+.sc-stagger-grid > * {
+  animation: scStaggerIn 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.sc-stagger-grid > *:nth-child(1)  { animation-delay: 0ms;   }
+.sc-stagger-grid > *:nth-child(2)  { animation-delay: 45ms;  }
+.sc-stagger-grid > *:nth-child(3)  { animation-delay: 90ms;  }
+.sc-stagger-grid > *:nth-child(4)  { animation-delay: 130ms; }
+.sc-stagger-grid > *:nth-child(5)  { animation-delay: 165ms; }
+.sc-stagger-grid > *:nth-child(6)  { animation-delay: 195ms; }
+.sc-stagger-grid > *:nth-child(7)  { animation-delay: 220ms; }
+.sc-stagger-grid > *:nth-child(8)  { animation-delay: 240ms; }
+.sc-stagger-grid > *:nth-child(n+9){ animation-delay: 260ms; }
+
+/* ── SCROLL REVEAL — GSAP-powered, .sc-reveal class ─────────────── */
+.sc-reveal {
+  opacity: 0;
+  transform: translateY(24px);
+}
+.sc-reveal.sc-revealed {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 500ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── BOTTOM NAV SPRING BOUNCE ────────────────────────────────────── */
+@keyframes scNavBounce {
+  0%   { transform: scale(1)    translateY(0);   }
+  28%  { transform: scale(1.38) translateY(-4px); }
+  58%  { transform: scale(0.91) translateY(0);   }
+  78%  { transform: scale(1.10) translateY(-1px); }
+  100% { transform: scale(1)    translateY(0);   }
+}
+
+.sc-nav-icon-bounce {
+  animation: scNavBounce 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── CATEGORY CARD BORDERS — colored glow by cricket category ────── */
+.sc-cat-batting {
+  border-color: rgba(59, 130, 246, 0.40) !important;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.16), var(--shadow-sm);
+}
+.sc-cat-bowling {
+  border-color: rgba(239, 68, 68, 0.40) !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.16), var(--shadow-sm);
+}
+.sc-cat-fielding {
+  border-color: rgba(16, 185, 129, 0.40) !important;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.16), var(--shadow-sm);
+}
+.sc-cat-wicketkeeping {
+  border-color: rgba(245, 158, 11, 0.40) !important;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.16), var(--shadow-sm);
+}
+.sc-cat-fitness {
+  border-color: rgba(236, 72, 153, 0.40) !important;
+  box-shadow: 0 0 0 1px rgba(236, 72, 153, 0.16), var(--shadow-sm);
+}
+.sc-cat-mental {
+  border-color: rgba(139, 92, 246, 0.40) !important;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.16), var(--shadow-sm);
+}
+
+/* ── GLOW EFFECTS — achievement and active states ────────────────── */
+.sc-glow-green {
+  box-shadow: 0 0 22px rgba(34, 197, 94, 0.28), var(--shadow-md) !important;
+}
+.sc-glow-gold {
+  box-shadow: 0 0 22px rgba(255, 215, 0, 0.32), var(--shadow-md) !important;
+}
+.sc-glow-blue {
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.28), var(--shadow-sm) !important;
+}
+
+/* ── TYPOGRAPHY — hero numbers + hierarchy classes ───────────────── */
+.sc-hero-num {
+  font-family: 'Rajdhani', 'Inter', sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.sc-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+.sc-caption {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.sc-body-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.sc-title-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-hero);
+  line-height: 1.3;
+}
+.sc-section-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── 3D CARD TILT — desktop hover ────────────────────────────────── */
+.sc-tilt {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.sc-tilt:hover {
+  transform: perspective(600px) rotateY(var(--tilt-x, 0deg)) rotateX(var(--tilt-y, 0deg)) scale(1.018);
+}
+
+/* ── CARD HOVER LIFT ─────────────────────────────────────────────── */
+.sc-lift {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.sc-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg) !important;
+}
+.sc-lift:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* ── STREAK FIRE ANIMATION ───────────────────────────────────────── */
+@keyframes scStreakFirePulse {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(251,146,60,0.6)); }
+  50%       { filter: drop-shadow(0 0 9px rgba(251,146,60,0.9)); }
+}
+.sc-streak-fire {
+  animation: scStreakFirePulse 1.8s ease-in-out infinite;
+}
+
+/* ── XP BURST — number pops when XP is awarded ──────────────────── */
+@keyframes scXPBurst {
+  0%   { opacity: 0; transform: translateY(0)  scale(0.7); }
+  30%  { opacity: 1; transform: translateY(-8px) scale(1.15); }
+  70%  { opacity: 1; transform: translateY(-16px) scale(1); }
+  100% { opacity: 0; transform: translateY(-28px) scale(0.85); }
+}
+.sc-xp-burst {
+  animation: scXPBurst 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+  position: absolute;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  color: #4ade80;
+  font-size: 18px;
+  text-shadow: 0 2px 8px rgba(34,197,94,0.5);
+  white-space: nowrap;
+}
+
+/* ── MASCOT POSES — CSS fallback states ─────────────────────────── */
+@keyframes scMascotSleep {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%       { transform: translateY(4px) rotate(3deg); }
+}
+.sc-mascot-sleeping {
+  animation: scMascotSleep 3s ease-in-out infinite;
+  opacity: 0.75;
+}
+
+@keyframes scMascotWave {
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(-18deg); }
+  75%       { transform: rotate(14deg); }
+}
+.sc-mascot-wave {
+  animation: scMascotWave 0.6s ease-in-out 3;
+}
+
+/* ── CONTEXTUAL SPEECH BUBBLE ────────────────────────────────────── */
+@keyframes scSpeechBubbleIn {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.92); }
+  100% { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+@keyframes scSpeechBubbleOut {
+  0%   { opacity: 1; transform: translateY(0)    scale(1); }
+  100% { opacity: 0; transform: translateY(-8px) scale(0.9); }
+}
+.sc-speech-bubble {
+  animation: scSpeechBubbleIn 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+  background: rgba(22, 30, 48, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-hero);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,197,94,0.12);
+  max-width: 240px;
+  line-height: 1.4;
+}
+.sc-speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(22, 30, 48, 0.95);
+}
+.sc-speech-bubble.sc-fade-out {
+  animation: scSpeechBubbleOut 300ms ease forwards;
+}
+
+/* ── ENHANCED PAGE TRANSITION — subtler scale+fade ───────────────── */
+.sc-page-enter {
+  animation: scPageEnter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes scPageEnter {
+  from { opacity: 0; transform: scale(0.98) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+/* ── COUNT-UP NUMBER FLASH ───────────────────────────────────────── */
+@keyframes scNumFlash {
+  0%   { color: var(--green-bright); }
+  100% { color: inherit; }
+}
+.sc-counting {
+  animation: scNumFlash 600ms ease forwards;
+}
+
+/* ── EMPTY STATE MASCOT ─────────────────────────────────────────── */
+@keyframes scEmptyMascotFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+.sc-empty-mascot {
+  animation: scEmptyMascotFloat 3s ease-in-out infinite;
+}
+
+/* ── PROGRESS BAR PULSE — active goals ──────────────────────────── */
+@keyframes scBarShine {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.sc-bar-shine {
+  background: linear-gradient(
+    90deg,
+    #16a34a 0%,
+    #34d399 45%,
+    #4ade80 50%,
+    #34d399 55%,
+    #16a34a 100%
+  );
+  background-size: 200% auto;
+  animation: scBarShine 2.4s linear infinite;
+}
+
+/* ── GLASSMORPHISM CARDS — enhanced backdrop ─────────────────────── */
+.sc-glass {
+  background: rgba(16, 22, 36, 0.75) !important;
+  backdrop-filter: blur(16px) saturate(1.5) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+}
+
+/* ── ACTIVE NAV INDICATOR PULSE ──────────────────────────────────── */
+@keyframes scNavDot {
+  0%, 100% { transform: translateX(-50%) scaleX(1); }
+  50%       { transform: translateX(-50%) scaleX(1.4); }
+}
+.sc-nav-dot-pulse {
+  animation: scNavDot 2s ease-in-out infinite;
+}
+
+/* ── SPLASH SCREEN ENHANCEMENT ───────────────────────────────────── */
+@keyframes scPulseRing {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.sc-splash-ring {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid #16a34a;
+  animation: scPulseRing 1.8s ease-out infinite;
+}
+.sc-splash-ring:nth-child(2) {
+  animation-delay: 0.6s;
+}
+.sc-splash-ring:nth-child(3) {
+  animation-delay: 1.2s;
+}
+
+/* Progress line replaces dots on enhanced splash */
+@keyframes scSplashProgress {
+  0%   { width: 0%; }
+  100% { width: 100%; }
+}
+.sc-splash-progress {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(to right, #16a34a, #34d399);
+  animation: scSplashProgress 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── ICON ACTIVE STATE FILL TRANSITION ───────────────────────────── */
+.sc-nav-icon {
+  transition: color 180ms ease, transform 180ms ease;
+}
+.sc-nav-icon.sc-active {
+  color: #4ade80;
+}
+.sc-nav-icon.sc-inactive {
+  color: #374151;
+}
+
+/* ── DRILL CARD TIER BADGES ─────────────────────────────────────── */
+.sc-tier-bronze { color: #cd7f32; border-color: rgba(205,127,50,0.35); }
+.sc-tier-silver { color: #c0c0c0; border-color: rgba(192,192,192,0.35); }
+.sc-tier-gold   { color: #ffd700; border-color: rgba(255,215,0,0.4); }
+
+/* ── FOCUS CARD ACTIVE GLOW ─────────────────────────────────────── */
+.sc-focus-card-active {
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.2), 0 8px 32px rgba(0,0,0,0.6) !important;
+}
+
+/* ── OVERSCROLL BEHAVIOR ─────────────────────────────────────────── */
+.sc-main-column {
+  overscroll-behavior-y: contain;
+}
+
+/* ── HORIZONTAL SCROLL SECTIONS ─────────────────────────────────── */
+.sc-hscroll {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+.sc-hscroll::-webkit-scrollbar { display: none; }
+.sc-hscroll > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* ── BUTTON PRIMARY VIBE ─────────────────────────────────────────── */
+.sc-vibe-btn {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 120ms ease,
+    background 200ms ease;
+}
+.sc-vibe-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.08);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.sc-vibe-btn:hover::before { opacity: 1; }
+.sc-vibe-btn:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+/* ── ANIMATED SKELETON SHIMMER ───────────────────────────────────── */
+@keyframes scShimmerSlide {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.sc-skeleton-vibe {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.03) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: scShimmerSlide 1.6s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+/* ── LEADERBOARD ROW HIGHLIGHT ───────────────────────────────────── */
+.sc-lb-first  { background: linear-gradient(90deg, rgba(255,215,0,0.07), transparent) !important; border-color: rgba(255,215,0,0.25) !important; }
+.sc-lb-second { background: linear-gradient(90deg, rgba(192,192,192,0.06), transparent) !important; border-color: rgba(192,192,192,0.2) !important; }
+.sc-lb-third  { background: linear-gradient(90deg, rgba(205,127,50,0.07), transparent) !important; border-color: rgba(205,127,50,0.22) !important; }
+
+/* Light theme overrides */
+body.sc-light .sc-speech-bubble {
+  background: rgba(255,255,255,0.96);
+  color: #0f172a;
+  border-color: rgba(22,163,74,0.3);
+}
+body.sc-light .sc-speech-bubble::after {
+  border-top-color: rgba(255,255,255,0.96);
+}
