@@ -80,6 +80,14 @@ const IC = {
   shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
   book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
 };
+// ── Filled icon variants (for active nav/sidebar states) ─────────
+IC.home_filled     = '<path fill="currentColor" stroke="none" d="M11.47 3.84a.75.75 0 0 1 1.06 0l8.69 8.69a.75.75 0 1 0 1.06-1.06l-1.97-1.97V6a.75.75 0 0 0-.75-.75h-1.5a.75.75 0 0 0-.75.75v1.81L12.53 4.28a.75.75 0 0 0-1.06 0l-8.69 8.69a.75.75 0 1 0 1.06 1.06l.66-.66V19.5a.75.75 0 0 0 .75.75h4.5a.75.75 0 0 0 .75-.75v-4.5h2.5v4.5c0 .41.34.75.75.75h4.5a.75.75 0 0 0 .75-.75v-6.34l.66.66a.75.75 0 1 0 1.06-1.06l-8.69-8.68z"/>';
+IC.bat_filled      = '<path fill="currentColor" stroke="none" d="M3 21l3.5-3.5 1.1 3.9L3 21zm2.8-3.2L16.3 7.5a2 2 0 000-2.83L15.1 3.4a2 2 0 00-2.83 0L2.4 13l-1 1 1.1 4.4z"/><circle fill="currentColor" stroke="none" cx="20" cy="4" r="1.5"/>';
+IC.barChart_filled = '<rect fill="currentColor" stroke="none" x="3" y="9" width="4" height="11" rx="1"/><rect fill="currentColor" stroke="none" x="10" y="3" width="4" height="17" rx="1"/><rect fill="currentColor" stroke="none" x="17" y="6" width="4" height="14" rx="1"/>';
+IC.user_filled     = '<circle fill="currentColor" stroke="none" cx="12" cy="7" r="4"/><path fill="currentColor" stroke="none" d="M4 21v-2a8 8 0 0116 0v2H4z"/>';
+IC.brain_filled    = '<path fill="currentColor" stroke="none" d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18a4 4 0 1 0 7.718-1.645 4 4 0 0 0 .555-6.588 4 4 0 0 0-2.526-5.77A3 3 0 0 0 12 5z"/>';
+IC.trophy_filled   = '<path fill="currentColor" stroke="none" d="M6 9a6 6 0 0012 0V3H6v6zM6 9H4a1 1 0 010-2h2m12 2h2a1 1 0 000-2h-2m-6 6v5m-4 2h8"/>';
+
 A.IC = IC;
 
 // ── Drill category config ─────────────────────────────────────────
