@@ -42,7 +42,7 @@ var STANDARD_PAGES = new Set([
 ]);
 
 var FULLSCREEN_PAGES = new Set([
-  'AICoach','MentalPlayer','MentalRoutinePlayer','WorkoutPlayer',
+  'AICoach','MentalPlayer','MentalRoutinePlayer','WorkoutPlayer','Paywall',
 ]);
 
 var PAGE_LABELS = {
@@ -56,7 +56,7 @@ var PAGE_LABELS = {
   IntelligenceHub:'Cricket Intelligence',
   NinetyDay:'90-Day Program', MatchTracker:'Match Tracker',
   MiniMatch:'MiniMatch IQ', DrillDetail:'Drill', WorkoutDetail:'Workout',
-  VideoAnalysis:'ProVision™', Crick:'Crick',
+  VideoAnalysis:'ProVision™', Crick:'Crick', Paywall:'Go Pro',
 };
 
 function getPage(name) {
@@ -81,7 +81,7 @@ function getPage(name) {
     MiniMatch:P.MiniMatchPage, Quizzes:P.QuizzesPage,
     CricketDNA:P.CricketDNAPage, DailyNet:P.DailyNetPage,
     IntelligenceHub:P.IntelligenceHubPage,
-    Crick:P.CrickPage,
+    Crick:P.CrickPage, Paywall:P.PaywallPage,
   };
   return map[name] || null;
 }
