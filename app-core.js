@@ -178,6 +178,16 @@ const DB = {
         window.SC_INTEL.updateOnDrill(drillObj || { id:drillId });
       } catch(e) {}
     }
+    // Auto-complete matching plan + schedule sessions
+    (function autoCompletePlan(refId) {
+      try {
+        var today = new Date().toISOString().slice(0,10);
+        var sch = DB.getSchedule();
+        var pending = (sch.sessions||[]).filter(function(s){ return s.date===today && s.ref_id===refId && s.status==='pending'; });
+        pending.forEach(function(s){ DB.updateSession(s.id, { status:'complete' }); });
+        if (pending.length) window.dispatchEvent(new CustomEvent('sc_plan_autocomplete', { detail:{ type:'drill', ref_id:refId } }));
+      } catch(e) {}
+    })(drillId);
     return prog[drillId];
   },
   getSingleDrillProgress: function(id) { return this.getDrillProgress()[id]||null; },
@@ -207,6 +217,16 @@ const DB = {
         window.SC_INTEL.updateOnMental(mtype, rating);
       } catch(e) {}
     }
+    // Auto-complete matching plan + schedule sessions
+    (function autoCompleteMental(refId) {
+      try {
+        var today = new Date().toISOString().slice(0,10);
+        var sch = DB.getSchedule();
+        var pending = (sch.sessions||[]).filter(function(s){ return s.date===today && s.ref_id===refId && s.status==='pending'; });
+        pending.forEach(function(s){ DB.updateSession(s.id, { status:'complete' }); });
+        if (pending.length) window.dispatchEvent(new CustomEvent('sc_plan_autocomplete', { detail:{ type:'mental', ref_id:refId } }));
+      } catch(e) {}
+    })(sessionId);
   },
   getAverageMentalRating: function(days) {
     var d=days||7, cutoff=Date.now()-d*864e5;
@@ -705,6 +725,31 @@ function isToday(str){return str===new Date().toISOString().slice(0,10);}
 function fmtTime(s){var hh=Math.floor(s/3600),mm=Math.floor((s%3600)/60),sec=s%60;if(hh>0)return hh+':'+String(mm).padStart(2,'0')+':'+String(sec).padStart(2,'0');return String(mm).padStart(2,'0')+':'+String(sec).padStart(2,'0');}
 A.getWeekMonday=getWeekMonday; A.dateStr=dateStr; A.addDays=addDays;
 A.formatDate=formatDate; A.isToday=isToday; A.fmtTime=fmtTime;
+
+// ── Evening Training Reminder ─────────────────────────────────────
+A.scheduleEveningReminder = function() {
+  try {
+    var user = DB.getUser ? DB.getUser() : null;
+    if (!user || !user.notifications) return;
+    var today = new Date().toISOString().slice(0,10);
+    var sch = DB.getSchedule ? DB.getSchedule() : { sessions:[] };
+    var pending = (sch.sessions||[]).filter(function(s){ return s.date===today && s.status==='pending'; });
+    if (!pending.length) return;
+    var now = new Date();
+    var target = new Date(now); target.setHours(19,30,0,0);
+    if (now >= target) return;
+    setTimeout(function() {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type:'SC_REMINDER',
+          title:'Your cricket plan is waiting 🏏',
+          body: pending.length + ' session' + (pending.length>1?'s':'') + ' still on today\'s plan. You\'ve got this.',
+          url:'/#/Schedule'
+        });
+      }
+    }, target - now);
+  } catch(e) {}
+};
 
 const SCHED_TYPES = {
   drill:{label:'Cricket Drill',icon:'bat',color:'#3b82f6',bg:'rgba(59,130,246,0.12)',border:'rgba(59,130,246,0.4)'},
