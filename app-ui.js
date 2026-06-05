@@ -1113,6 +1113,165 @@ function KudosOverlay() {
 }
 A.KudosOverlay = KudosOverlay;
 
-// (End of app-ui additions — the existing console.log('[SC] app-ui...') line follows below)
-console.log('[SC] app-ui v3.3 ready — ProgressRings, KudosOverlay, MinimalistToggle');
+// ── Cricket-Themed Loading Components ────────────────────────────
+// Shared CSS injection — idempotent, called by all three loaders.
+// Injects: scBallBounce, scBallShadow, scSeamSpin, scSkeleton keyframes
+// + .sc-skeleton-shimmer utility class.
+function _injectCricketLoaderCSS() {
+  var sid = 'sc-cricket-loader-anim';
+  if (document.getElementById(sid)) return;
+  var el = document.createElement('style');
+  el.id = sid;
+  el.textContent = [
+    // Vertical bounce — eased to mimic real gravity
+    '@keyframes scBallBounce{' +
+      '0%,100%{transform:translateY(0);animation-timing-function:cubic-bezier(0.215,0.61,0.355,1)}' +
+      '50%{transform:translateY(-28px);animation-timing-function:cubic-bezier(0.55,0.055,0.675,0.19)}' +
+    '}',
+    // Shadow squash/fade in sync with bounce
+    '@keyframes scBallShadow{' +
+      '0%,100%{transform:scaleX(1);opacity:0.35}' +
+      '50%{transform:scaleX(0.45);opacity:0.12}' +
+    '}',
+    // Seam lines spin independently around ball centre
+    '@keyframes scSeamSpin{' +
+      'from{transform:rotate(0deg)}' +
+      'to{transform:rotate(360deg)}' +
+    '}',
+    // Skeleton shimmer — left-to-right gradient sweep
+    '@keyframes scSkeleton{' +
+      '0%{background-position:-200% 0}' +
+      '100%{background-position:200% 0}' +
+    '}',
+    // Utility class consumed by CricketSkeleton
+    '.sc-skeleton-shimmer{' +
+      'background:linear-gradient(' +
+        '90deg,' +
+        'rgba(255,255,255,0.04) 25%,' +
+        'rgba(255,255,255,0.09) 50%,' +
+        'rgba(255,255,255,0.04) 75%' +
+      ');' +
+      'background-size:200% 100%;' +
+      'animation:scSkeleton 1.6s ease-in-out infinite' +
+    '}',
+  ].join('');
+  document.head.appendChild(el);
+}
+
+// CricketLoader — full-page centred loader
+// SVG cricket ball: red body, white seam lines (scSeamSpin),
+// vertical bounce (scBallBounce), ground shadow (scBallShadow).
+// Wraps in a min-height:100dvh flex centred container.
+function CricketLoader(props) {
+  var msg = props && props.message;
+  // Inject synchronously so styles are present before first paint
+  _injectCricketLoaderCSS();
+  useEffect(function() { _injectCricketLoaderCSS(); }, []);
+
+  return h('div', {
+    style: {
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      minHeight: '100dvh', width: '100%', gap: 20,
+    }
+  },
+    // Bouncing ball + ground shadow stack
+    h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 } },
+      // Outer wrapper carries the bounce transform
+      h('div', {
+        style: {
+          width: 56, height: 56, position: 'relative',
+          animation: 'scBallBounce 0.85s ease-in-out infinite',
+        }
+      },
+        h('svg', {
+          viewBox: '0 0 48 48', width: 56, height: 56,
+          style: { display: 'block', overflow: 'visible' },
+        },
+          // Cricket-red ball body
+          h('circle', { cx: 24, cy: 24, r: 22, fill: '#c0392b' }),
+          // Specular highlight
+          h('ellipse', {
+            cx: 17, cy: 15, rx: 7, ry: 4,
+            fill: 'rgba(255,255,255,0.13)',
+          }),
+          // Seam lines group — rotates via scSeamSpin around ball centre
+          h('g', {
+            style: {
+              animation: 'scSeamSpin 2.4s linear infinite',
+              transformOrigin: '24px 24px',
+            }
+          },
+            h('path', { d: 'M8 16 Q24 8 40 16',  stroke: '#fff', strokeWidth: 1.8, fill: 'none', opacity: 0.75 }),
+            h('path', { d: 'M8 32 Q24 40 40 32',  stroke: '#fff', strokeWidth: 1.8, fill: 'none', opacity: 0.75 }),
+            h('line', { x1: 24, y1: 2, x2: 24, y2: 46, stroke: '#fff', strokeWidth: 1.4, opacity: 0.5 })
+          )
+        )
+      ),
+      // Ground shadow — squashes as ball rises
+      h('div', {
+        style: {
+          width: 34, height: 8, borderRadius: '50%',
+          background: 'rgba(0,0,0,0.32)',
+          animation: 'scBallShadow 0.85s ease-in-out infinite',
+        }
+      })
+    ),
+    h('div', {
+      style: { fontSize: 13, color: '#6b7280', letterSpacing: '0.06em', fontWeight: 600 }
+    }, msg || 'Loading SmartCrick...')
+  );
+}
+A.CricketLoader = CricketLoader;
+
+// CricketLoaderSmall — 20px inline variant
+// Safe to render before CricketLoader ever mounts — injects its own CSS.
+function CricketLoaderSmall() {
+  _injectCricketLoaderCSS();
+  useEffect(function() { _injectCricketLoaderCSS(); }, []);
+  return h('div', {
+    style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+  },
+    h('div', {
+      style: { width: 20, height: 20, animation: 'scBallBounce 0.7s ease-in-out infinite' }
+    },
+      h('svg', {
+        viewBox: '0 0 48 48', width: 20, height: 20,
+        style: { display: 'block', overflow: 'visible' },
+      },
+        h('circle', { cx: 24, cy: 24, r: 22, fill: '#c0392b' }),
+        h('g', {
+          style: {
+            animation: 'scSeamSpin 2.4s linear infinite',
+            transformOrigin: '24px 24px',
+          }
+        },
+          h('path', { d: 'M8 16 Q24 8 40 16',  stroke: '#fff', strokeWidth: 2.5, fill: 'none', opacity: 0.75 }),
+          h('path', { d: 'M8 32 Q24 40 40 32',  stroke: '#fff', strokeWidth: 2.5, fill: 'none', opacity: 0.75 }),
+          h('line', { x1: 24, y1: 2, x2: 24, y2: 46, stroke: '#fff', strokeWidth: 2, opacity: 0.5 })
+        )
+      )
+    )
+  );
+}
+A.CricketLoaderSmall = CricketLoaderSmall;
+
+// CricketSkeleton — shimmer loading card
+// Props: height (px, default 120), radius (px, default 14)
+// Uses CSS linear-gradient animation (left→right shimmer via scSkeleton keyframe).
+function CricketSkeleton(props) {
+  var height = (props && props.height) || 120;
+  var radius = (props && props.radius) || 14;
+  _injectCricketLoaderCSS();
+  useEffect(function() { _injectCricketLoaderCSS(); }, []);
+  return h('div', {
+    className: 'sc-skeleton-shimmer',
+    style: { width: '100%', height: height, borderRadius: radius, flexShrink: 0 },
+    'aria-hidden': 'true',
+  });
+}
+A.CricketSkeleton = CricketSkeleton;
+
+// (End of app-ui additions)
+console.log('[SC] app-ui v3.4 ready — CricketLoader, CricketLoaderSmall, CricketSkeleton, ProgressRings, KudosOverlay, MinimalistToggle');
 })();
