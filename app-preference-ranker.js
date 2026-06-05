@@ -135,6 +135,22 @@ function QuickPickModal(props) {
     setChosen(winner.id);
     setTimeout(function () {
       recordChoice(winner.id, loser.id, winner.category, loser.category);
+      try {
+        if (A.BrainEngine && A.BrainEngine.train) {
+          var wCat = (winner.category || '').toLowerCase();
+          var lCat = (loser.category  || '').toLowerCase();
+          var input = {
+            category_batting:  wCat==='batting'  ? 1 : lCat==='batting'  ? 0 : 0.5,
+            category_bowling:  wCat==='bowling'  ? 1 : lCat==='bowling'  ? 0 : 0.5,
+            category_fielding: wCat==='fielding' ? 1 : lCat==='fielding' ? 0 : 0.5,
+            category_mental:   wCat==='mental'   ? 1 : lCat==='mental'   ? 0 : 0.5,
+            category_fitness:  wCat==='fitness'  ? 1 : lCat==='fitness'  ? 0 : 0.5,
+            drill_level: winner.level === 'beginner' ? 0.25 : winner.level === 'intermediate' ? 0.5 : 0.75,
+          };
+          var output = { shouldRetry: 0.2, shouldAdvance: 0.5, relevance_boost: 0.9 };
+          A.BrainEngine.train('DrillAdaptor', input, output);
+        }
+      } catch(e) {}
       onClose && onClose('chose');
     }, 500);
   }
