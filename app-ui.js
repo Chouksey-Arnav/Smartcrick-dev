@@ -223,7 +223,7 @@ function SidebarLevelSection({p,info,streak}){
 }
 
 // All nav items content — shared between desktop and mobile sidebars
-function SidebarNavContent({currentPage,onNavClick,handleSmartStart}){
+function SidebarNavContent({currentPage,onNavClick}){
   const props = (label,icon,pg,extra={})=>({label,icon,pg,active:currentPage===pg,onNavClick,...extra});
   return h('div',{style:{
     display:'block',  // CRITICAL: block layout so each flex-button is on its own row
@@ -240,7 +240,7 @@ function SidebarNavContent({currentPage,onNavClick,handleSmartStart}){
 
     h(NavSection,{label:'Training'}),
     h(NavBtn,{...props('Home','home','Home')}),
-    h(NavBtn,{label:'Smart Start',icon:'zap',onClick:handleSmartStart,active:false,onNavClick}),
+    h(NavBtn,{...props('Crick','crick','Crick')}),
     h(NavBtn,{...props('Cricket Drills','bat','Drills')}),
     h(NavBtn,{...props('Mental Training','brain','Mental')}),
     h(NavBtn,{...props('30-Day Challenge','target','ThirtyDay')}),
@@ -280,10 +280,6 @@ function SidebarNavContent({currentPage,onNavClick,handleSmartStart}){
 function DesktopSidebar({currentPage}){
   const {dark,toggle}=A.useTheme();
   const p=A.DB.getProgress(), info=A.getLevelInfo(p.total_xp||0), streak=p.current_streak||0;
-  const handleSmartStart=()=>{
-    if(currentPage!=='Home'){A.nav('Home');setTimeout(()=>{document.getElementById('smart-start')?.scrollIntoView({behavior:'smooth'});},200);}
-    else{document.getElementById('smart-start')?.scrollIntoView({behavior:'smooth'});}
-  };
   return h('div',{style:{
     width:260,flexShrink:0,display:'flex',flexDirection:'column',
     height:'100dvh',background:'#080b0f',
@@ -302,7 +298,7 @@ function DesktopSidebar({currentPage}){
       )
     ),
     h(SidebarLevelSection,{p,info,streak}),
-    h(SidebarNavContent,{currentPage,onNavClick:null,handleSmartStart}),
+    h(SidebarNavContent,{currentPage,onNavClick:null}),
     // Dark mode toggle at bottom
     h('div',{style:{padding:'10px 14px',borderTop:'1px solid rgba(36,42,50,0.85)',flexShrink:0}},
       h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}},
@@ -328,12 +324,6 @@ function Sidebar({open,onClose,currentPage}){
 
   const handleClose=useCallback(()=>{savedScroll.current=scrollRef.current?.scrollTop||0;onClose();},[onClose]);
   useEffect(()=>{if(open&&scrollRef.current){requestAnimationFrame(()=>{if(scrollRef.current)scrollRef.current.scrollTop=savedScroll.current;});}},[open]);
-
-  const handleSmartStart=()=>{
-    handleClose();
-    if(currentPage!=='Home'){A.nav('Home');setTimeout(()=>{document.getElementById('smart-start')?.scrollIntoView({behavior:'smooth'});},200);}
-    else{document.getElementById('smart-start')?.scrollIntoView({behavior:'smooth'});}
-  };
 
   return h(Fragment,null,
     // Backdrop
@@ -370,7 +360,7 @@ function Sidebar({open,onClose,currentPage}){
       // Scrollable nav
       h('div',{ref:scrollRef,style:{flex:1,overflowY:'auto',display:'block',scrollbarWidth:'thin',scrollbarColor:'rgba(48,54,61,0.9) transparent'}},
         h('div',{style:{display:'block',padding:'2px 8px 8px'}},
-          h(SidebarNavContent,{currentPage,onNavClick:handleClose,handleSmartStart})
+          h(SidebarNavContent,{currentPage,onNavClick:handleClose})
         )
       ),
       // Dark mode
@@ -899,76 +889,145 @@ function Badge3D(props) {
 }
 A.Badge3D = Badge3D;
 
-// ── Progress Rings — Triple Concentric SVG (PR-1) ────────────────
+// ── Progress Rings — Apple Activity-style triple concentric SVG ──
 function ProgressRings(props) {
   var content      = props.content      || {done:0, target:3};
   var contribution = props.contribution || {xp:0, target:150};
   var consistency  = props.consistency  || {streak:0, target:7};
   var onRingClick  = props.onRingClick  || function(){};
-  var size = 140, cx = 70, cy = 70;
+
+  var SIZE = 220, CX = 110, CY = 110;
   var rings = [
-    {key:'content',      r:54, color:'#3b82f6', value:content.done,       max:Math.max(content.target,1),      label:'Drills'},
-    {key:'contribution', r:42, color:'#f59e0b', value:contribution.xp,    max:Math.max(contribution.target,1), label:'XP'},
-    {key:'consistency',  r:30, color:'#ef4444', value:consistency.streak, max:Math.max(consistency.target,1),  label:'Streak'},
+    {key:'content',      r:98, sw:15, color:'#FF375F', value:content.done,       max:Math.max(content.target,1),      label:'Content',      sub:'Drills'},
+    {key:'contribution', r:78, sw:14, color:'#92F736', value:contribution.xp,    max:Math.max(contribution.target,1), label:'Contribution', sub:'XP'},
+    {key:'consistency',  r:58, sw:13, color:'#62F4EB', value:consistency.streak, max:Math.max(consistency.target,1),  label:'Consistency',  sub:'Streak'},
   ];
   var prevPcts = useRef({content:0, contribution:0, consistency:0});
+  var animRef  = useRef(false);
 
+  // Inject keyframe CSS once
   useEffect(function() {
-    var sid = 'sc-ring-glow-style';
+    var sid = 'sc-ring-apple-style';
     if (!document.getElementById(sid)) {
       var el = document.createElement('style'); el.id = sid;
       el.textContent = [
-        '@keyframes sc_glow_blue{0%,100%{filter:drop-shadow(0 0 6px #3b82f688)}50%{filter:drop-shadow(0 0 14px #3b82f6)}}',
-        '@keyframes sc_glow_gold{0%,100%{filter:drop-shadow(0 0 6px #f59e0b88)}50%{filter:drop-shadow(0 0 14px #f59e0b)}}',
-        '@keyframes sc_glow_red {0%,100%{filter:drop-shadow(0 0 6px #ef444488)}50%{filter:drop-shadow(0 0 14px #ef4444)}}',
-        '.sc-ring-glow-blue{animation:sc_glow_blue 1.4s ease-in-out infinite}',
-        '.sc-ring-glow-gold{animation:sc_glow_gold 1.4s ease-in-out infinite}',
-        '.sc-ring-glow-red {animation:sc_glow_red  1.4s ease-in-out infinite}',
+        '@keyframes sc_ring_glow_red  {0%,100%{filter:drop-shadow(0 0 5px #FF375F)}50%{filter:drop-shadow(0 0 16px #FF375F)}}',
+        '@keyframes sc_ring_glow_green{0%,100%{filter:drop-shadow(0 0 5px #92F736)}50%{filter:drop-shadow(0 0 16px #92F736)}}',
+        '@keyframes sc_ring_glow_cyan {0%,100%{filter:drop-shadow(0 0 5px #62F4EB)}50%{filter:drop-shadow(0 0 16px #62F4EB)}}',
+        '.sc-ring-glow-red  {animation:sc_ring_glow_red   1.8s ease-in-out infinite}',
+        '.sc-ring-glow-green{animation:sc_ring_glow_green 1.8s ease-in-out infinite}',
+        '.sc-ring-glow-cyan {animation:sc_ring_glow_cyan  1.8s ease-in-out infinite}',
       ].join('\n');
       document.head.appendChild(el);
     }
   }, []);
 
+  // GSAP mount animation — arcs fill from 0 to pct on first render
+  useEffect(function() {
+    if (animRef.current) return;
+    animRef.current = true;
+    var gsap = window.gsap;
+    if (!gsap) return;
+    rings.forEach(function(ring, i) {
+      var pct  = Math.min(1, ring.value / ring.max);
+      var circ = 2 * Math.PI * ring.r;
+      var el   = document.getElementById('sc-ring-arc-' + ring.key);
+      if (!el) return;
+      gsap.fromTo(el,
+        { attr: { strokeDashoffset: circ } },
+        { attr: { strokeDashoffset: circ * (1 - pct) },
+          duration: 1.4, delay: i * 0.14, ease: 'power3.out' }
+      );
+    });
+  }, []);
+
+  // Ring completion haptic + event
   useEffect(function() {
     rings.forEach(function(ring) {
-      var pct = Math.min(1, ring.value / ring.max);
+      var pct  = Math.min(1, ring.value / ring.max);
       var prev = prevPcts.current[ring.key] || 0;
       if (pct >= 1 && prev < 1) {
-        if (navigator.vibrate) navigator.vibrate([100,50,100]);
-        if (A.Emotion) try { A.Emotion.emit('sc_ring_complete', {ring:ring.key}); } catch(e) {}
+        if (navigator.vibrate) navigator.vibrate([80, 40, 100]);
+        if (A.Emotion) try { A.Emotion.emit('sc_ring_complete', {ring: ring.key}); } catch(e) {}
       }
       prevPcts.current[ring.key] = pct;
     });
   }, [content.done, contribution.xp, consistency.streak]);
 
-  var glowMap = {'#3b82f6':'sc-ring-glow-blue','#f59e0b':'sc-ring-glow-gold','#ef4444':'sc-ring-glow-red'};
+  var glowMap = {'#FF375F':'sc-ring-glow-red','#92F736':'sc-ring-glow-green','#62F4EB':'sc-ring-glow-cyan'};
+  var labelValueMap = {
+    content:      content.done + '/' + content.target,
+    contribution: (contribution.xp || 0) + ' XP',
+    consistency:  (consistency.streak || 0) + ' d',
+  };
 
-  return h('div', {style:{display:'flex',flexDirection:'column',alignItems:'center',gap:10}, onClick:onRingClick},
-    h('svg', {width:size, height:size, viewBox:'0 0 140 140', style:{cursor:'pointer',overflow:'visible'}},
+  return h('div', {
+    style: { display:'flex', flexDirection:'column', alignItems:'center', gap:16 },
+    onClick: onRingClick,
+    role: 'button', 'aria-label': 'View progress details', tabIndex: 0,
+  },
+    h('svg', {
+      width: SIZE, height: SIZE, viewBox: '0 0 220 220',
+      style: { cursor:'pointer', overflow:'visible', display:'block' },
+    },
+      // Build rings outer → inner
       rings.map(function(ring) {
-        var pct = Math.min(1, ring.value / ring.max);
+        var pct  = Math.min(ring.value / ring.max, 1);
+        var over = ring.value / ring.max > 1 ? Math.min((ring.value / ring.max - 1), 1) : 0;
         var circ = 2 * Math.PI * ring.r;
         var offset = circ * (1 - pct);
-        var glowCls = pct >= 0.9 ? glowMap[ring.color] : '';
-        return h(Fragment, {key:ring.key},
-          h('circle', {cx:cx,cy:cy,r:ring.r,fill:'none',stroke:'rgba(255,255,255,0.07)',strokeWidth:8}),
-          h('circle', {cx:cx,cy:cy,r:ring.r,fill:'none',stroke:ring.color,strokeWidth:8,strokeLinecap:'round',
-            strokeDasharray:circ, strokeDashoffset:offset,
-            transform:'rotate(-90 70 70)',
-            style:{transition:'stroke-dashoffset 0.8s ease', filter:pct>=1?('drop-shadow(0 0 6px '+ring.color+')'):'none'},
-            className:glowCls})
+        var gCls = pct >= 0.9 ? glowMap[ring.color] : '';
+
+        return h(Fragment, { key: ring.key },
+          // Track arc (faint)
+          h('circle', {
+            cx: CX, cy: CY, r: ring.r,
+            fill: 'none', stroke: ring.color,
+            strokeWidth: ring.sw, opacity: 0.12,
+          }),
+          // Progress arc (animated via GSAP on mount, transitions on update)
+          h('circle', {
+            id: 'sc-ring-arc-' + ring.key,
+            cx: CX, cy: CY, r: ring.r,
+            fill: 'none', stroke: ring.color,
+            strokeWidth: ring.sw, strokeLinecap: 'round',
+            strokeDasharray: circ, strokeDashoffset: circ * (1 - pct),
+            transform: 'rotate(-90 110 110)',
+            style: { transition: 'stroke-dashoffset 0.7s cubic-bezier(0.16,1,0.3,1)' },
+            className: gCls,
+          }),
+          // Overflow arc (white, appears when > 100%)
+          over > 0 && h('circle', {
+            cx: CX, cy: CY, r: ring.r,
+            fill: 'none', stroke: '#fff',
+            strokeWidth: ring.sw - 3, strokeLinecap: 'round', opacity: 0.55,
+            strokeDasharray: circ, strokeDashoffset: circ * (1 - over * 0.3),
+            transform: 'rotate(-90 110 110)',
+          }),
         );
       }),
-      h('text',{x:70,y:64,textAnchor:'middle',style:{fontSize:11,fill:'#94a3b8',fontWeight:600,fontFamily:'system-ui'}},'TODAY'),
-      h('text',{x:70,y:80,textAnchor:'middle',style:{fontSize:20,fill:'#f0fdf4',fontWeight:800,fontFamily:'system-ui'}},String(contribution.xp||0)),
-      h('text',{x:70,y:94,textAnchor:'middle',style:{fontSize:9,fill:'#6b7280',fontWeight:500,fontFamily:'system-ui'}},'XP')
+      // Center text
+      h('text', { x: CX, y: CY - 14, textAnchor:'middle',
+        style:{ fontSize:11, fill:'#64748b', fontWeight:700, fontFamily:'system-ui', letterSpacing:'0.1em', textTransform:'uppercase' }
+      }, 'TODAY'),
+      h('text', { x: CX, y: CY + 10, textAnchor:'middle',
+        style:{ fontSize:28, fill:'#f0fdf4', fontWeight:900, fontFamily:'system-ui', letterSpacing:'-0.02em' }
+      }, String(contribution.xp || 0)),
+      h('text', { x: CX, y: CY + 26, textAnchor:'middle',
+        style:{ fontSize:10, fill:'#475569', fontWeight:600, fontFamily:'system-ui' }
+      }, 'XP TODAY'),
     ),
-    h('div',{style:{display:'flex',gap:12,alignItems:'center'}},
+    // Ring labels row
+    h('div', { style:{ display:'flex', gap:20, alignItems:'flex-start' } },
       rings.map(function(ring) {
         var pct = Math.min(1, ring.value / ring.max);
-        return h('div',{key:ring.key,style:{display:'flex',alignItems:'center',gap:4}},
-          h('div',{style:{width:8,height:8,borderRadius:'50%',background:ring.color,opacity:pct>0?1:0.3}}),
-          h('span',{style:{fontSize:10,color:'#94a3b8',fontWeight:600}}, ring.label+': '+ring.value+'/'+ring.max)
+        return h('div', { key: ring.key, style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 } },
+          h('div', { style:{ width:10, height:10, borderRadius:'50%', background: ring.color, opacity: pct > 0 ? 1 : 0.25,
+            boxShadow: pct > 0 ? ('0 0 8px ' + ring.color + '88') : 'none' } }),
+          h('div', { style:{ fontSize:13, fontWeight:800, color: pct > 0 ? '#e5e7eb' : '#374151' } },
+            labelValueMap[ring.key]),
+          h('div', { style:{ fontSize:10, fontWeight:600, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.06em' } },
+            ring.sub),
         );
       })
     )
