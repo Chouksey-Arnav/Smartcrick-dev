@@ -1529,3 +1529,31 @@ body {
   .progress-close-to-win,
   .sc-nav-pill { animation: none !important; transition: none !important; }
 }
+
+/* ── Apple-style ring glow animation ─────────────────────────── */
+@keyframes sc-ring-fill-pulse {
+  0%, 100% { filter: drop-shadow(0 0 5px currentColor); }
+  50%       { filter: drop-shadow(0 0 16px currentColor); }
+}
+.sc-ring-complete { animation: sc-ring-fill-pulse 1.8s ease-in-out infinite; }
+
+/* ── Crick page color swatches ────────────────────────────────── */
+.sc-crick-swatch        { width:52px; height:52px; border-radius:50%; cursor:pointer;
+                          transition: transform 0.2s, box-shadow 0.2s; border:none; }
+.sc-crick-swatch:hover  { transform: scale(1.12); }
+.sc-crick-swatch.active { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #22c55e; }
+.sc-crick-swatch.locked { opacity: 0.5; cursor: default; }
+
+/* ── Spin wheel container glow ────────────────────────────────── */
+@keyframes sc-wheel-spin-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(245,158,11,0.25); }
+  50%       { box-shadow: 0 0 45px rgba(245,158,11,0.55), 0 0 80px rgba(245,158,11,0.15); }
+}
+
+/* ── Crick Nets run number reveal animation ───────────────────── */
+@keyframes sc-runs-reveal {
+  0%   { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+  70%  { transform: scale(1.1) rotate(2deg);   opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);      opacity: 1; }
+}
+.sc-runs-reveal { animation: sc-runs-reveal 0.6s cubic-bezier(0.34,1.56,0.64,1) both; }
