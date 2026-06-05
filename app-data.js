@@ -442,6 +442,189 @@ function generateWeekPlan(pathId,levelId) {
 }
 A.generateWeekPlan = generateWeekPlan;
 
+// ── Personalised Plan Engine ─────────────────────────────────────────────────
+// generatePersonalizedPlan(user) — produces deeply personalised plan metadata
+// and activity selections based on the full onboarding profile.
+// Wraps generateWeekPlan() — does NOT replace it.
+(function() {
+
+function pickStartLevel(user) {
+  var sk = user.skills || {};
+  var role = (user.role || '').toLowerCase();
+  var primary = role === 'batsman' ? (sk.batting || 3)
+    : role === 'bowler' ? (sk.bowling || 3)
+    : role === 'wicketkeeper' ? (sk.fielding || 3)
+    : ((sk.batting || 3) + (sk.bowling || 3)) / 2;
+  if (user.level === 'state')    return primary >= 4 ? 'pro'          : 'advanced';
+  if (user.level === 'district') return primary >= 4 ? 'advanced'     : 'intermediate';
+  if (user.level === 'club')     return primary >= 4 ? 'intermediate' : 'beginner';
+  return 'beginner'; // school
+}
+
+function getPhaseNames(user) {
+  var junior = (user.ageGroup === 'u13' || user.ageGroup === 'u15');
+  var elite  = (user.goal === 'pro' || user.level === 'state');
+  if (junior) return ['Building Basics', 'Growing Strong', 'First Breakthrough', 'Match Ready', 'Star Player'];
+  if (elite)  return ['Elite Foundation', 'Performance Peak', 'Championship Mindset', 'Pro Standard', 'Elite Selection'];
+  var goalMap = {
+    team:     ['Build My Case',      'Prove Myself',    'Match Winner',   'Selection Ready', 'In The XI'],
+    average:  ['Technical Base',     'Shot Expansion',  'Consistency',    'Run Machine',     'Master Batter'],
+    wickets:  ['Line & Length',      'Variation Arsenal','Death Bowler',  'Wicket Taker',    'Match Winner'],
+    district: ['Club Excellence',    'Dist. Prep',      'Rep Form',       'Step Up',         'District Player'],
+    state:    ['District Edge',      'State Prep',      'High-Perf Form', 'Academy Ready',   'State Performer'],
+    pro:      ['Elite Foundation',   'Performance Peak','Championship',   'Pro Standard',    'Elite Selection'],
+  };
+  return goalMap[user.goal] || ['Foundation', 'Development', 'Integration', 'Performance', 'Mastery'];
+}
+
+function getWeekTheme(user, weekIdx, phaseName) {
+  var name = ((user.name || '').split(' ')[0]) || 'You';
+  var visionMap = {
+    fifty:       'that match-winning 50',
+    five_wickets:'your 5-for',
+    consistent:  'consistent excellence',
+    calm:        'calm under pressure',
+    selected:    'getting selected up',
+  };
+  var vision = visionMap[user.vision] || 'your goal';
+  var themes = [
+    'Week 1: ' + phaseName + ' — The path to ' + vision + ' starts here',
+    'Week 2: ' + phaseName + ' — ' + name + '\'s technique takes shape',
+    'Week 3: ' + phaseName + ' — ' + name + ', meet pressure. Beat it.',
+    'Week 4: ' + phaseName + ' — First milestone. ' + vision + ' is closer than you think.',
+    'Week 5: ' + phaseName + ' — This is where ' + name + ' becomes elite.',
+  ];
+  return themes[weekIdx] || ('Week ' + (weekIdx + 1) + ': ' + phaseName);
+}
+
+function getPersonalizedPlanName(user) {
+  var firstName = (user.name || '').split(' ')[0];
+  var levelNext = { school: 'Club', club: 'District', district: 'State', state: 'Elite' };
+  var pathNames = { batting: 'Batting', bowling: 'Bowling', allrounder: 'All-Round', fielding: 'Keeper/Fielding' };
+  var path = pathNames[user.recommendedPath] || 'Cricket';
+  var next = levelNext[user.level] || 'Next-Level';
+  return firstName
+    ? firstName + '\'s ' + next + '-Level ' + path + ' Plan'
+    : 'Your Personalised ' + path + ' Plan';
+}
+
+function getPlanPromise(user) {
+  var name = ((user.name || '').split(' ')[0]) || 'You';
+  var goalText = {
+    team:     'lock down a spot in the playing XI',
+    average:  'raise your batting average and become more consistent',
+    wickets:  'become a consistent wicket-taker who wins matches',
+    district: 'earn selection at district/representative level',
+    state:    'force your way into state academy consideration',
+    pro:      'put yourself on the pathway to professional cricket',
+  };
+  var goal = goalText[user.goal] || 'reach your cricket goals';
+  return 'In 12 weeks, ' + name + ' will have the technique, fitness, and mental edge to ' + goal + '. Every session in this plan targets your specific gaps — not a generic template.';
+}
+
+function pickDrillForSlot(user, levelId, weekIdx, dayIdx, usedIds) {
+  var score = (A.Personalization && A.Personalization.drillCategoryScore)
+    ? A.Personalization.drillCategoryScore
+    : function() { return 50; };
+  var levelOrder = { beginner: 0, intermediate: 1, advanced: 2, pro: 3 };
+  var targetLevelIdx = levelOrder[levelId] || 0;
+
+  var candidates = DRILLS.filter(function(d) {
+    if (usedIds.indexOf(d.id) !== -1) return false;
+    var catScore = score(user, d.category);
+    return catScore > 35;
+  }).slice(); // copy
+
+  // Sort by relevance + level proximity
+  candidates.sort(function(a, b) {
+    var sa = score(user, a.category) + (levelOrder[a.skill_level] === targetLevelIdx ? 20 : 0);
+    var sb = score(user, b.category) + (levelOrder[b.skill_level] === targetLevelIdx ? 20 : 0);
+    return sb - sa;
+  });
+
+  var pool = candidates.slice(0, Math.min(12, candidates.length));
+  if (!pool.length) return DRILLS[0];
+  return pool[(weekIdx * 6 + dayIdx) % pool.length];
+}
+
+function pickMentalForSlot(user, weekIdx, dayIdx, isLight) {
+  var blockers    = user.blockers || [];
+  var weights     = { focus: 1, confidence: 1, recovery: 1, 'pre-performance': 1, pressure: 1, visualization: 1, 'match-day-calm': 1, 'pro-mental': 0.5 };
+  // Blocker-based weighting
+  if (blockers.indexOf('nerves') !== -1)      { weights.confidence += 1.5; weights.pressure += 1.5; }
+  if (blockers.indexOf('motivation') !== -1)  { weights.recovery   += 1.5; weights.visualization += 1; }
+  if (blockers.indexOf('no_plan') !== -1)     { weights.focus      += 1.5; }
+  if (blockers.indexOf('fitness') !== -1)     { weights['pre-performance'] += 1; }
+  // Light days → recovery
+  if (isLight) weights.recovery += 2;
+  // Later weeks → more pressure
+  if (weekIdx >= 3) weights.pressure += 1;
+  // Elite/pro → visualisation
+  if (user.level === 'state' || user.goal === 'pro') weights.visualization += 1;
+
+  var candidates = MENTAL_SESSIONS.filter(function(m) { return !m.is_premium; });
+  candidates.sort(function(a, b) { return (weights[b.category] || 1) - (weights[a.category] || 1); });
+  var pool = candidates.slice(0, 20);
+  return pool[(weekIdx * 7 + dayIdx) % pool.length] || MENTAL_SESSIONS[0];
+}
+
+function pickFitnessForSlot(user, weekIdx) {
+  var isHeavy = weekIdx >= 3;
+  var levelMap = { school: 'beginner', club: 'beginner', district: 'intermediate', state: 'advanced' };
+  var wLevel   = levelMap[user.level] || 'beginner';
+  var goal     = (user.goal === 'team' || user.goal === 'average') ? 'build-muscle' : 'improve-endurance';
+  var options  = WORKOUTS.filter(function(w) { return w.level === wLevel && (isHeavy ? w.goal === goal : w.goal === 'improve-endurance'); });
+  if (!options.length) options = WORKOUTS.filter(function(w) { return w.level === wLevel; });
+  if (!options.length) options = WORKOUTS;
+  return options[weekIdx % options.length];
+}
+
+A.generatePersonalizedPlan = function(user) {
+  if (!user) return null;
+  var pathId  = user.recommendedPath || 'batting';
+  var levelId = pickStartLevel(user);
+  var phases  = getPhaseNames(user);
+  var baseWeeks = generateWeekPlan(pathId, levelId);
+  var usedDrillIds = [];
+
+  return {
+    name:    getPersonalizedPlanName(user),
+    promise: getPlanPromise(user),
+    pathId:  pathId,
+    levelId: levelId,
+    weeks: baseWeeks.map(function(week, wi) {
+      var phaseName = phases[wi] || week.phase;
+      return Object.assign({}, week, {
+        phase: phaseName,
+        theme: getWeekTheme(user, wi, phaseName),
+        days: week.days.map(function(day, di) {
+          if (day.isRest) return day;
+          var isLight = (di === 2 || di === 4);
+          var drill   = pickDrillForSlot(user, levelId, wi, di, usedDrillIds);
+          var mental  = pickMentalForSlot(user, wi, di, isLight);
+          var fitness = pickFitnessForSlot(user, wi);
+          if (drill && usedDrillIds.indexOf(drill.id) === -1) usedDrillIds.push(drill.id);
+
+          var activities = isLight
+            ? [{ type:'mental', id:mental.id, title:mental.title, duration:Math.floor(mental.duration_seconds/60)+' min', xp:mental.xp_value, ref_id:mental.id }]
+            : [
+                { type:'drill',   id:drill ? drill.id : 'b001',     title:drill ? drill.title : 'Skill Session',   duration:(drill ? (drill.duration_minutes||20) : 20)+' min',  xp:drill ? drill.xp_value : 60,     ref_id:drill ? drill.id : null },
+                { type:'fitness', id:fitness ? fitness.id : 'wb001', title:fitness ? fitness.name : 'Cricket Fitness', duration:(fitness ? (fitness.duration_minutes||20) : 20)+' min', xp:fitness ? fitness.xp_value : 60, ref_id:fitness ? fitness.id : null },
+                { type:'mental',  id:mental.id, title:mental.title,  duration:Math.floor(mental.duration_seconds/60)+' min', xp:mental.xp_value, ref_id:mental.id },
+              ];
+
+          return Object.assign({}, day, {
+            activities: activities,
+            totalXP:    activities.reduce(function(s, a) { return s + (a.xp || 0); }, 0),
+          });
+        }),
+      });
+    }),
+  };
+};
+
+})(); // end personalized plan engine
+
 function generateSmartSchedule(focusArea,trainingDays,intensity,weekMondayStr) {
   var monday=new Date(weekMondayStr+'T00:00:00');
   var restPatterns={3:[1,3,5,6],4:[2,4,6],5:[3,6],6:[6],7:[]};
