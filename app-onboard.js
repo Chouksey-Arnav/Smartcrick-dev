@@ -259,35 +259,127 @@ function SkillSlider({ label, emoji, value, onChange }) {
   );
 }
 
-// Inline SVG growth curve — used for proof + reveal screens.
-function GrowthCurve({ color, w, height, withYou }) {
-  w = w || 300; height = height || 120;
-  // "With SmartCrick" curve (accelerating) + faint "on your own" line.
-  var you = [ [0, 0.18], [0.25, 0.34], [0.5, 0.55], [0.75, 0.8], [1, 0.97] ];
+// Cinematic animated growth curve — draws itself in, glows, pops milestones.
+// withYou: show dashed "on your own" comparison line that draws in first.
+// withMilestones: show Week 4 / Week 8 / Week 12 dot pop-ins.
+// sparkleRef: optional ref; if provided, fires sparkle at graph endpoint after draw.
+function CinematicGrowthCurve({ color, w, height, withYou, withMilestones, sparkleRef }) {
+  var endpointRef = useRef(null);
+  w = w || 300; height = height || 130;
+  var you  = [ [0, 0.18], [0.25, 0.34], [0.5, 0.55], [0.75, 0.8], [1, 0.97] ];
   var solo = [ [0, 0.18], [0.25, 0.26], [0.5, 0.36], [0.75, 0.45], [1, 0.55] ];
-  function path(pts) {
-    return pts.map(function (p, i) {
-      var x = p[0] * w, y = height - p[1] * (height - 10) - 4;
+  function pts(arr) {
+    return arr.map(function(p, i) {
+      var x = p[0] * w, y = height - p[1] * (height - 14) - 5;
       return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
     }).join(' ');
   }
-  return h('svg', { width: '100%', viewBox: '0 0 ' + w + ' ' + height, style: { display: 'block' }, 'aria-hidden': 'true' },
-    h('defs', null,
-      h('linearGradient', { id: 'gcFill', x1: '0', y1: '0', x2: '0', y2: '1' },
-        h('stop', { offset: '0%', stopColor: color, stopOpacity: 0.35 }),
-        h('stop', { offset: '100%', stopColor: color, stopOpacity: 0 })
-      )
+  var endX = w, endY = height - you[4][1] * (height - 14) - 5;
+  // Milestone dot positions (at ~33%, ~67%, 100% of x)
+  var m1x = w * 0.33, m1y = height - you[1][1] * (height - 14) - 5;
+  var m2x = w * 0.67, m2y = height - you[3][1] * (height - 14) - 5;
+  var fillPath = pts(you) + ' L' + w.toFixed(1) + ' ' + height + ' L0 ' + height + ' Z';
+  var gradId = 'cgFill_' + Math.round(w);
+
+  useEffect(function() {
+    if (!withMilestones) return;
+    // Sparkle at graph endpoint after green line finishes drawing (0.4s delay + 1.8s draw = 2.2s)
+    var t = setTimeout(function() {
+      var el = endpointRef.current || (sparkleRef && sparkleRef.current);
+      if (el && A.Emotion && A.Emotion.fireSparkleSVG) A.Emotion.fireSparkleSVG(el);
+    }, 2600);
+    return function() { clearTimeout(t); };
+  }, []);
+
+  return h('div', { style: { position: 'relative' } },
+    h('svg', { width: '100%', viewBox: '0 0 ' + w + ' ' + height, style: { display: 'block', overflow: 'visible' }, 'aria-hidden': 'true' },
+      h('defs', null,
+        h('linearGradient', { id: gradId, x1: '0', y1: '0', x2: '0', y2: '1' },
+          h('stop', { offset: '0%',   stopColor: color, stopOpacity: 0.45 }),
+          h('stop', { offset: '100%', stopColor: color, stopOpacity: 0 })
+        ),
+        h('filter', { id: 'lineGlow' },
+          h('feGaussianBlur', { stdDeviation: '2.5', result: 'blur' }),
+          h('feMerge', null,
+            h('feMergeNode', { in: 'blur' }),
+            h('feMergeNode', { in: 'SourceGraphic' })
+          )
+        )
+      ),
+      // Filled area — fades in after line draws
+      h('path', { d: fillPath, fill: 'url(#' + gradId + ')', className: 'sc-fade-fill' }),
+      // Comparison "on your own" line — draws first if withYou
+      withYou && h('path', {
+        d: pts(solo), fill: 'none',
+        stroke: 'rgba(139,148,158,0.45)', strokeWidth: 2, strokeLinecap: 'round',
+        pathLength: '1', className: 'sc-draw-line-solo',
+      }),
+      // Main SmartCrick line — animated draw with glow
+      h('path', {
+        d: pts(you), fill: 'none',
+        stroke: color, strokeWidth: 3.5, strokeLinecap: 'round',
+        filter: 'url(#lineGlow)',
+        pathLength: '1',
+        className: withYou ? 'sc-draw-line-green' : 'sc-draw-line-gray',
+        style: { animationDuration: withYou ? '1.8s' : '1.6s' },
+      }),
+      // Milestone dots
+      withMilestones && h('circle', { cx: m1x.toFixed(1), cy: m1y.toFixed(1), r: 5, fill: color, className: 'sc-pop-dot-1' }),
+      withMilestones && h('circle', { cx: m2x.toFixed(1), cy: m2y.toFixed(1), r: 5, fill: color, className: 'sc-pop-dot-2' }),
+      // Endpoint glow dot
+      h('circle', {
+        ref: endpointRef,
+        cx: endX.toFixed(1), cy: endY.toFixed(1), r: 6, fill: color,
+        className: withMilestones ? 'sc-pop-dot-3' : '',
+        style: withMilestones ? {} : { filter: 'drop-shadow(0 0 6px ' + color + ')' },
+      })
     ),
-    h('path', { d: path(you) + ' L' + w + ' ' + height + ' L0 ' + height + ' Z', fill: 'url(#gcFill)' }),
-    withYou && h('path', { d: path(solo), fill: 'none', stroke: 'rgba(139,148,158,0.5)', strokeWidth: 2.5, strokeDasharray: '5 5' }),
-    h('path', { d: path(you), fill: 'none', stroke: color, strokeWidth: 3.5, strokeLinecap: 'round' }),
-    h('circle', { cx: w, cy: height - you[4][1] * (height - 10) - 4, r: 5, fill: color })
+    // Milestone label chips
+    withMilestones && h('div', { style: { display: 'flex', justifyContent: 'space-around', marginTop: 6 } },
+      [
+        { label: 'Week 4: First breakthrough', delay: '1.5s' },
+        { label: 'Week 8: Match form',          delay: '2.0s' },
+        { label: 'Week 12: Selected ✓',          delay: '2.5s' },
+      ].map(function(chip, i) {
+        return h('span', {
+          key: i,
+          className: 'sc-milestone-chip',
+          style: {
+            fontSize: 9.5, fontWeight: 700, color: color,
+            background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)',
+            borderRadius: 99, padding: '2px 7px', animationDelay: chip.delay,
+          }
+        }, chip.label);
+      })
+    )
   );
 }
 
-// Tiny haptic helper.
-function haptic() {
+// Animated number counter — counts from `from` to `to` on mount.
+function AnimatedCounter({ from, to, duration, style }) {
+  var _from = from || 0, _to = to || 0, _dur = duration || 1500;
+  var val = useState(_from);
+  var setVal = val[1];
+  useEffect(function() {
+    if (_from === _to) return;
+    var start = null, raf;
+    function tick(ts) {
+      if (!start) start = ts;
+      var t = Math.min(1, (ts - start) / _dur);
+      var eased = 1 - Math.pow(1 - t, 4); // easeOutQuart
+      setVal(Math.round(_from + (_to - _from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return function() { cancelAnimationFrame(raf); };
+  }, [_from, _to]);
+  return h('span', { style: style }, val[0]);
+}
+
+// Typed haptic helper — delegates to A.Emotion.haptic when available.
+function haptic(type) {
   try {
+    if (A.Emotion && A.Emotion.haptic) { A.Emotion.haptic(type || 'light'); return; }
     if (navigator.vibrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) navigator.vibrate(6);
   } catch (e) {}
 }
@@ -461,8 +553,8 @@ function ScrProof1({ onNext, onBack, progress }) {
   return h(InfoShell, { onNext: onNext, onBack: onBack, progress: progress },
     h(QHead, { title: 'SmartCrick creates long-term results' }),
     h('div', { style: { padding: 18, borderRadius: 16, background: C.card, border: '1px solid ' + C.border, marginBottom: 18 }},
-      h(GrowthCurve, { color: C.green2 }),
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.faint, marginTop: 6 }},
+      h(CinematicGrowthCurve, { color: C.green2, withMilestones: true }),
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.faint, marginTop: 8 }},
         h('span', null, 'Week 1'), h('span', null, 'Week 6'), h('span', null, 'Week 12'))
     ),
     h('p', { style: { fontSize: 14.5, color: C.sub, lineHeight: 1.7 }},
@@ -491,13 +583,20 @@ function ScrProof2({ onNext, onBack, progress }) {
   return h(InfoShell, { onNext: onNext, onBack: onBack, progress: progress },
     h(QHead, { title: 'Improve up to 2× faster than training alone' }),
     h('div', { style: { padding: 18, borderRadius: 16, background: C.card, border: '1px solid ' + C.border, marginBottom: 18 }},
-      h(GrowthCurve, { color: C.green2, withYou: true }),
-      h('div', { style: { display: 'flex', gap: 16, justifyContent: 'center', marginTop: 12 }},
-        h('span', { style: { fontSize: 12, color: C.greenLt, fontWeight: 700 }},
-          h('span', { 'aria-hidden': 'true' }, '—'), ' With SmartCrick'),
-        h('span', { style: { fontSize: 12, color: C.dim, fontWeight: 700 }},
-          h('span', { 'aria-hidden': 'true' }, '- -'), ' On your own')
+      h(CinematicGrowthCurve, { color: C.green2, withYou: true }),
+      h('div', { style: { display: 'flex', gap: 16, justifyContent: 'center', marginTop: 14 }},
+        h('span', { style: { fontSize: 12, color: C.greenLt, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }},
+          h('span', { 'aria-hidden': 'true', style: { width: 16, height: 3, background: C.greenLt, borderRadius: 2, display: 'inline-block' } }),
+          'With SmartCrick'),
+        h('span', { style: { fontSize: 12, color: C.dim, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }},
+          h('span', { 'aria-hidden': 'true', style: { width: 16, height: 2, background: C.dim, borderRadius: 2, display: 'inline-block', opacity: 0.6 } }),
+          'On your own')
       )
+    ),
+    h('div', { style: { padding: '12px 14px', borderRadius: 12, background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.2)', marginBottom: 14 }},
+      h('div', { style: { fontSize: 13, fontWeight: 800, color: C.greenLt, marginBottom: 4 }}, '📊 The data is clear'),
+      h('p', { style: { fontSize: 13.5, color: C.sub, lineHeight: 1.6, margin: 0 }},
+        'Structured SmartCrick players see ', h('strong', { style: { color: C.text }}, '2× the improvement'), ' vs. self-coached training in the same 12-week window.')
     ),
     h('p', { style: { fontSize: 14.5, color: C.sub, lineHeight: 1.7 }},
       'Most players plateau because they repeat what they are already good at. SmartCrick targets the exact gaps holding you back — so every session moves the needle.')
@@ -620,94 +719,184 @@ function ScrBuilding({ onNext }) {
     'Personalising your mental routine…',
     'Finalising your 12-week plan…',
   ];
-  var [stepIdx, setStepIdx] = useState(0);
+  var [completedSteps, setCompletedSteps] = useState([false, false, false, false, false, false]);
+  var stepRefs = [useRef(null), useRef(null), useRef(null), useRef(null), useRef(null), useRef(null)];
+
   useEffect(function () {
     var p = 0;
     var iv = setInterval(function () {
       p += Math.random() * 7 + 3;
-      if (p >= 100) { p = 100; clearInterval(iv); setTimeout(onNext, 650); }
-      setPct(Math.min(100, Math.round(p)));
-      setStepIdx(Math.min(steps.length - 1, Math.floor((p / 100) * steps.length)));
-    }, 260);
+      if (p >= 100) { p = 100; clearInterval(iv); setTimeout(onNext, 800); }
+      var rounded = Math.min(100, Math.round(p));
+      setPct(rounded);
+      var newCompleted = steps.map(function(_, i) { return rounded > (i + 1) / steps.length * 100; });
+      setCompletedSteps(function(prev) {
+        // Fire sparkle for newly completed steps
+        newCompleted.forEach(function(done, i) {
+          if (done && !prev[i]) {
+            haptic('success');
+            setTimeout(function() {
+              var el = stepRefs[i].current;
+              if (el && A.Emotion && A.Emotion.fireSparkleSVG) A.Emotion.fireSparkleSVG(el);
+            }, 50);
+          }
+        });
+        return newCompleted;
+      });
+    }, 280);
     return function () { clearInterval(iv); };
   }, []);
+
   var R = 54, CIRC = 2 * Math.PI * R;
-  return h('div', { style: { minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, rgba(22,163,74,0.16), #0d1117 55%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box' }},
-    h('div', { style: { position: 'relative', width: 140, height: 140, marginBottom: 28 }},
-      h('svg', { width: 140, height: 140, viewBox: '0 0 140 140', 'aria-hidden': 'true' },
+  var isGlowing = pct >= 80;
+  return h('div', { style: { minHeight: '100dvh', background: 'radial-gradient(120% 80% at 50% 0%, rgba(22,163,74,0.16), #0d1117 55%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 28px', maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box' }},
+    h('div', { style: { position: 'relative', width: 140, height: 140, marginBottom: 24 }},
+      h('svg', { width: 140, height: 140, viewBox: '0 0 140 140', 'aria-hidden': 'true',
+        style: isGlowing ? { filter: 'drop-shadow(0 0 12px rgba(52,211,153,0.6))' } : {} },
         h('circle', { cx: 70, cy: 70, r: R, fill: 'none', stroke: 'rgba(48,54,61,0.8)', strokeWidth: 9 }),
         h('circle', { cx: 70, cy: 70, r: R, fill: 'none', stroke: C.green2, strokeWidth: 9, strokeLinecap: 'round',
           strokeDasharray: CIRC, strokeDashoffset: CIRC * (1 - pct / 100),
-          transform: 'rotate(-90 70 70)', style: { transition: 'stroke-dashoffset 0.26s linear' }})
+          transform: 'rotate(-90 70 70)', style: { transition: 'stroke-dashoffset 0.28s linear' }})
       ),
-      h('div', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 900, color: C.text }}, pct + '%')
+      h('div', { style: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }},
+        h('div', { style: { fontSize: 28, fontWeight: 900, color: pct === 100 ? C.greenLt : C.text, lineHeight: 1, transition: 'color 0.3s' }}, pct + '%'),
+        pct === 100 && h('div', { style: { fontSize: 11, fontWeight: 700, color: C.greenLt, marginTop: 2 }}, 'DONE ✓')
+      )
     ),
-    h('h2', { style: { fontSize: '1.45rem', fontWeight: 900, color: C.text, marginBottom: 10, textAlign: 'center' }}, 'Building your custom plan'),
-    h('p', { 'aria-live': 'polite', style: { fontSize: 14, color: C.greenLt, fontWeight: 600, minHeight: 22, textAlign: 'center', transition: 'opacity 0.3s' }}, steps[stepIdx])
+    h('h2', { style: { fontSize: '1.35rem', fontWeight: 900, color: C.text, marginBottom: 20, textAlign: 'center' }}, 'Building your custom plan'),
+    // Step checklist
+    h('div', { style: { width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }},
+      steps.map(function(step, i) {
+        var done = completedSteps[i];
+        return h('div', {
+          key: i,
+          style: {
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 14px', borderRadius: 11,
+            background: done ? 'rgba(22,163,74,0.08)' : 'rgba(22,27,34,0.6)',
+            border: '1px solid ' + (done ? 'rgba(52,211,153,0.3)' : 'rgba(48,54,61,0.5)'),
+            transition: 'all 0.3s ease',
+          }
+        },
+          h('div', {
+            ref: stepRefs[i],
+            style: {
+              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: done ? C.green : 'rgba(48,54,61,0.8)',
+              border: '2px solid ' + (done ? C.green2 : 'rgba(72,79,88,0.8)'),
+              transition: 'all 0.2s',
+            }
+          },
+            done ? h('span', { className: 'sc-check-pop', style: { fontSize: 12, color: '#fff', fontWeight: 900, lineHeight: 1 }}, '✓') : null
+          ),
+          h('span', { style: { fontSize: 13, fontWeight: done ? 700 : 500, color: done ? C.greenLt : C.sub, transition: 'all 0.3s', flex: 1, lineHeight: 1.4 }}, step)
+        );
+      })
+    )
   );
 }
 
 // Screen — plan ready reveal. PURPOSE: deliver perceived value the user
 // now "owns" (custom path, projected rating curve, weekly target).
 function ScrReveal({ data, onNext, onBack }) {
-  useEffect(function () { try { A.fireConfetti && A.fireConfetti(); } catch (e) {} }, []);
+  var endpointRef = useRef(null);
+  useEffect(function () {
+    try { A.fireConfetti && A.fireConfetti(); } catch (e) {}
+    // Mascot cheer after counter finishes (1.5s)
+    var t1 = setTimeout(function() {
+      try { if (A.Emotion && A.Emotion.cheerMascot) A.Emotion.cheerMascot(); } catch(e) {}
+    }, 1600);
+    // Sparkle at graph endpoint
+    var t2 = setTimeout(function() {
+      var el = endpointRef.current;
+      if (el && A.Emotion && A.Emotion.fireSparkleSVG) A.Emotion.fireSparkleSVG(el);
+    }, 2400);
+    return function() { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
   var pathMap = { batsman: 'batting', bowler: 'bowling', allrounder: 'allrounder', wicketkeeper: 'fielding' };
   var recommendedPath = pathMap[data.role] || 'batting';
   var pathLabels = { batting: 'Batting Mastery', bowling: 'Bowling Excellence', allrounder: 'All-Round Elite', fielding: 'Keeper / Fielding Athlete' };
-  var pathEmoji = { batting: '🏏', bowling: '🎯', allrounder: '⭐', fielding: '🧤' };
-  var xpGoalMap = { '3': 150, '4': 200, '5': 280, '6': 350, '7': 450 };
-  var weeklyXP = xpGoalMap[data.trainingDays] || 200;
-  var sk = data.skills || { batting: 3, bowling: 3, fielding: 3, fitness: 3, mental: 3 };
-  var avg = (sk.batting + sk.bowling + sk.fielding + sk.fitness + sk.mental) / 5;
-  var current = Math.round(avg * 18 + 8);          // 0–100ish baseline rating
-  var projected = Math.min(98, current + 17);      // 12-week projection
-  var name = (data.name || '').trim();
+  var pathEmoji  = { batting: '🏏', bowling: '🎯', allrounder: '⭐', fielding: '🧤' };
+  var xpGoalMap  = { '3': 150, '4': 200, '5': 280, '6': 350, '7': 450 };
+  var weeklyXP   = xpGoalMap[data.trainingDays] || 200;
+  var sk         = data.skills || { batting: 3, bowling: 3, fielding: 3, fitness: 3, mental: 3 };
+  var avg        = (sk.batting + sk.bowling + sk.fielding + sk.fitness + sk.mental) / 5;
+  var current    = Math.round(avg * 18 + 8);
+  var projected  = Math.min(98, current + 17);
+  var name       = (data.name || '').trim();
+  var firstName  = name.split(' ')[0];
+
+  // Build personalised plan name using generatePersonalizedPlan if available
+  var planName = pathLabels[recommendedPath];
+  if (A.generatePersonalizedPlan && data.level) {
+    var tempUser = Object.assign({ recommendedPath: recommendedPath }, data);
+    try { var pp = A.generatePersonalizedPlan(tempUser); if (pp && pp.name) planName = pp.name; } catch(e) {}
+  }
+
   return h(OnboardShell, { onNext: onNext, onBack: onBack, showProgress: false, nextLabel: 'See my plan  →' },
-    h('div', { style: { textAlign: 'center', marginBottom: 18 }},
+    h('div', { style: { textAlign: 'center', marginBottom: 16 }},
       h('div', { 'aria-hidden': 'true', style: { fontSize: 44, marginBottom: 8 }}, '🎉'),
       h('h2', { style: { fontSize: '1.6rem', fontWeight: 900, color: C.text, marginBottom: 6, lineHeight: 1.2 }},
-        (name ? name + ', your' : 'Your') + ' plan is ready!'),
+        (firstName ? firstName + ', your' : 'Your') + ' plan is ready!'),
       h('p', { style: { fontSize: 14, color: C.sub, lineHeight: 1.6 }}, 'Built from everything you told us. This is yours.')
     ),
-    // Projected rating curve — the "value" they now own.
-    h('div', { style: { padding: 16, borderRadius: 16, background: C.card, border: '1px solid ' + C.border, marginBottom: 14 }},
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 }},
-        h('div', null,
-          h('div', { style: { fontSize: 11, color: C.dim, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}, 'Your SmartCrick Rating'),
-          h('div', { style: { fontSize: 13, color: C.sub, marginTop: 2 }}, 'Projected over 12 weeks')
+
+    // Projected rating card — shimmer entrance + animated counter
+    h('div', { style: {
+      padding: 16, borderRadius: 16, marginBottom: 14,
+      background: 'linear-gradient(135deg, rgba(22,27,34,0.95), rgba(22,27,34,0.8))',
+      border: '1px solid rgba(52,211,153,0.3)',
+      boxShadow: '0 0 24px rgba(52,211,153,0.08)',
+    }},
+      h('div', { style: { fontSize: 10, color: C.greenLt, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}, '📈 Your SmartCrick Rating — 12-Week Projection'),
+      h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }},
+        h('div', { style: { textAlign: 'center' }},
+          h(AnimatedCounter, { from: current, to: current, duration: 1500, style: { fontSize: 38, fontWeight: 900, color: C.dim } }),
+          h('div', { style: { fontSize: 10, color: C.faint, fontWeight: 600, marginTop: 2 }}, 'TODAY')
         ),
-        h('div', { style: { textAlign: 'right' }},
-          h('span', { style: { fontSize: 26, fontWeight: 900, color: C.dim }}, current),
-          h('span', { style: { fontSize: 18, fontWeight: 900, color: C.faint, margin: '0 6px' }}, '→'),
-          h('span', { style: { fontSize: 30, fontWeight: 900, color: C.greenLt }}, projected)
+        h('div', { style: { fontSize: 22, color: C.faint, fontWeight: 300 }}, '→'),
+        h('div', { style: { textAlign: 'center' }},
+          h(AnimatedCounter, { from: current, to: projected, duration: 1500, style: { fontSize: 46, fontWeight: 900, color: C.greenLt, filter: 'drop-shadow(0 0 8px rgba(74,222,128,0.5))' } }),
+          h('div', { style: { fontSize: 10, color: C.greenLt, fontWeight: 700, marginTop: 2 }}, 'WEEK 12')
         )
       ),
-      h(GrowthCurve, { color: C.green2, height: 90 })
+      h('div', { ref: endpointRef },
+        h(CinematicGrowthCurve, { color: C.green2, height: 90, withMilestones: false })
+      ),
+      h('div', { style: { textAlign: 'center', marginTop: 8 }},
+        h('span', { style: { fontSize: 12, fontWeight: 700, color: C.greenLt, background: 'rgba(52,211,153,0.1)', borderRadius: 99, padding: '3px 10px' }}, '+' + (projected - current) + ' points in 12 weeks')
+      )
     ),
-    // Recommended path card.
+
+    // Recommended path card — shows personalised name
     h('div', { style: { padding: 16, borderRadius: 14, marginBottom: 12, background: 'rgba(22,163,74,0.06)', border: '1px solid rgba(22,163,74,0.3)' }},
       h('div', { style: { fontSize: 10, fontWeight: 800, color: C.greenLt, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}, '⭐ Your recommended path'),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 }},
         h('span', { 'aria-hidden': 'true', style: { fontSize: 28 }}, pathEmoji[recommendedPath]),
         h('div', null,
-          h('div', { style: { fontSize: 15, fontWeight: 800, color: C.text }}, pathLabels[recommendedPath]),
+          h('div', { style: { fontSize: 15, fontWeight: 800, color: C.text }}, planName),
           h('div', { style: { fontSize: 12.5, color: C.sub, marginTop: 2 }}, (data.trainingDays || 4) + ' days/week · ' + weeklyXP + ' XP weekly target')
         )
       )
     ),
-    // What's inside — value stack.
-    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }},
-      [
-        { e: '🏏', t: '35+ pro drills' },
-        { e: '🧠', t: '60+ mental sessions' },
-        { e: '💪', t: 'Personal fitness plan' },
-        { e: '📊', t: 'Progress tracking' },
-      ].map(function (x, i) {
-        return h('div', { key: i, style: { padding: '12px 14px', borderRadius: 11, background: C.card, border: '1px solid ' + C.border, display: 'flex', alignItems: 'center', gap: 9 }},
-          h('span', { 'aria-hidden': 'true', style: { fontSize: 18 }}, x.e),
-          h('span', { style: { fontSize: 12.5, fontWeight: 700, color: C.text }}, x.t)
-        );
-      })
+
+    // Value stack — staggered with StaggerChildren
+    h(StaggerChildren, { baseDelay: 80 },
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }},
+        [
+          { e: '🏏', t: '35+ pro drills' },
+          { e: '🧠', t: '60+ mental sessions' },
+          { e: '💪', t: 'Personal fitness plan' },
+          { e: '📊', t: 'Progress tracking' },
+        ].map(function (x, i) {
+          return h('div', { key: i, style: { padding: '12px 14px', borderRadius: 11, background: C.card, border: '1px solid ' + C.border, display: 'flex', alignItems: 'center', gap: 9 }},
+            h('span', { 'aria-hidden': 'true', style: { fontSize: 18 }}, x.e),
+            h('span', { style: { fontSize: 12.5, fontWeight: 700, color: C.text }}, x.t)
+          );
+        })
+      )
     )
   );
 }
