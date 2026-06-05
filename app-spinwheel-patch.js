@@ -18,17 +18,7 @@
  with the following:
 */
 
-// ── Fixed prize table (expected value ~38 XP — appropriate) ─────
-// OLD expected: ~101 XP. NEW: ~38 XP.
-var SPIN_PRIZES_V2 = [
-  { xp:10,  weight:34, label:'+10 XP',    color:'#6b7280', glowColor:'rgba(107,114,128,0.4)' },
-  { xp:25,  weight:28, label:'+25 XP',    color:'#3b82f6', glowColor:'rgba(59,130,246,0.4)' },
-  { xp:50,  weight:20, label:'+50 XP!',   color:'#10b981', glowColor:'rgba(16,185,129,0.4)' },
-  { xp:100, weight:11, label:'+100 XP!!', color:'#f59e0b', glowColor:'rgba(245,158,11,0.4)' },
-  { xp:250, weight:5,  label:'+250!',     color:'#ef4444', glowColor:'rgba(239,68,68,0.4)' },
-  { xp:500, weight:1.5,label:'MEGA 500',  color:'#ec4899', glowColor:'rgba(236,72,153,0.4)' },
-  { xp:1000,weight:0.5,label:'JACKPOT!',  color:'#ffd700', glowColor:'rgba(255,215,0,0.6)' },
-];
+// Prize table v3.0 — hard mode, max 200 XP, expected ~21 XP/spin
 
 (function() {
 'use strict';
@@ -39,14 +29,14 @@ var useRef = React.useRef;
 var A = window.SC_APP;
 var DB = A.DB;
 
+// Hard-mode distribution — expected value ~21 XP/spin
 var SPIN_PRIZES = [
-  { xp:10,  weight:34, label:'+10',   color:'#64748b', dark:'#334155' },
-  { xp:25,  weight:28, label:'+25',   color:'#3b82f6', dark:'#1d4ed8' },
-  { xp:50,  weight:20, label:'+50',   color:'#10b981', dark:'#059669' },
-  { xp:100, weight:11, label:'+100',  color:'#f59e0b', dark:'#d97706' },
-  { xp:250, weight:5,  label:'+250',  color:'#ef4444', dark:'#dc2626' },
-  { xp:500, weight:1.5,label:'500!',  color:'#ec4899', dark:'#db2777' },
-  { xp:1000,weight:0.5,label:'🏆',    color:'#fbbf24', dark:'#f59e0b' },
+  { xp:10,  weight:50,  label:'+10',  color:'#475569', dark:'#1e293b' },
+  { xp:20,  weight:25,  label:'+20',  color:'#3b82f6', dark:'#1d4ed8' },
+  { xp:30,  weight:15,  label:'+30',  color:'#10b981', dark:'#059669' },
+  { xp:50,  weight:8,   label:'+50',  color:'#f59e0b', dark:'#d97706' },
+  { xp:100, weight:1.5, label:'+100', color:'#ef4444', dark:'#dc2626' },
+  { xp:200, weight:0.5, label:'+200', color:'#ffd700', dark:'#b45309' },
 ];
 
 function weightedRandom(prizes) {
@@ -114,7 +104,7 @@ function WheelModal(props) {
         setSpinning(false); setResult(winner);
         DB.set('last_spin_date',today); DB.set('last_spin_prize',winner);
         if(A.awardXP) A.awardXP(winner.xp,0,'spin_wheel',null,null);
-        if(winner.xp>=300 && A.fireConfetti) A.fireConfetti();
+        if(winner.xp>=100 && A.fireConfetti) A.fireConfetti();
         setFloatWin(true); setTimeout(function(){setFloatWin(false);},2800);
         window.dispatchEvent(new CustomEvent('sc_update'));
       }
@@ -213,13 +203,15 @@ function WheelModal(props) {
           );
         }),
         // Center hub ring
-        h('circle',{cx:cx,cy:cy,r:26,fill:'#0d1117',stroke:'rgba(255,215,0,0.5)',strokeWidth:3}),
-        h('circle',{cx:cx,cy:cy,r:18,fill:'#161b22',stroke:'rgba(255,255,255,0.1)',strokeWidth:1}),
-        // Center SC logo
-        h('text',{
-          x:cx,y:cy,textAnchor:'middle',dominantBaseline:'central',
-          fontSize:11,fontWeight:900,fill:'#f59e0b',style:{userSelect:'none'},
-        },'SC'),
+        h('circle',{cx:cx,cy:cy,r:28,fill:'#060c18',stroke:'rgba(255,215,0,0.6)',strokeWidth:2.5}),
+        h('circle',{cx:cx,cy:cy,r:20,fill:'#0d1117',stroke:'rgba(255,255,255,0.08)',strokeWidth:1}),
+        // Center Crick face (SVG mini-ball)
+        h('circle',{cx:cx,cy:cy-1,r:13,fill:'#b91c1c',stroke:'#7f1d1d',strokeWidth:1}),
+        h('ellipse',{cx:cx-5,cy:cy-4,rx:3.5,ry:3.5,fill:'#fff'}),
+        h('ellipse',{cx:cx+5,cy:cy-4,rx:3.5,ry:3.5,fill:'#fff'}),
+        h('circle',{cx:cx-5,cy:cy-4,r:2,fill:'#1e1b4b'}),
+        h('circle',{cx:cx+5,cy:cy-4,r:2,fill:'#1e1b4b'}),
+        h('path',{d:'M '+(cx-4)+' '+(cy+2)+' Q '+cx+' '+(cy+6)+' '+(cx+4)+' '+(cy+2),fill:'none',stroke:'#fff',strokeWidth:1.5,strokeLinecap:'round'}),
       ),
 
       // Float win popup
@@ -308,7 +300,7 @@ function SpinWheelWidget() {
         h('div',{style:{fontSize:11,color:'#6b7280',marginTop:2}},
           alreadySpun
             ? (savedPrize?'Won +'+savedPrize.xp+' XP  ·  Resets in '+timeLeft():'Resets in '+timeLeft())
-            : 'Spin once a day — win 10 to 1,000 bonus XP')
+            : 'Spin once a day — win 10 to 200 bonus XP')
       ),
       !alreadySpun && h('span',{style:{fontSize:13,fontWeight:700,color:'#f59e0b',flexShrink:0}},'SPIN →')
     ),
