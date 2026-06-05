@@ -176,6 +176,29 @@ function AssessmentPage() {
   var weakest = axisKeys.reduce(function(a,b) { return axes[a]<axes[b]?a:b; });
   var strongest = axisKeys.reduce(function(a,b) { return axes[a]>axes[b]?a:b; });
 
+  // Train ProMatcher whenever this page renders with real data
+  React.useEffect(function() {
+    try {
+      if (!A.BrainEngine || !A.BrainEngine.train || !axes) return;
+      var input = {
+        batting:     Math.min(1, (axes.batting||0)/100),
+        bowling:     Math.min(1, (axes.bowling||0)/100),
+        fielding:    Math.min(1, (axes.fielding||0)/100),
+        fitness:     Math.min(1, (axes.fitness||0)/100),
+        mental:      Math.min(1, (axes.mental||0)/100),
+        consistency: Math.min(1, (axes.consistency||0)/100),
+      };
+      var role = ((user && user.role) || 'batsman').toLowerCase();
+      var output = {
+        batsman_type:  role==='batsman'     ? 0.9 : role==='allrounder' ? 0.6 : 0.2,
+        bowler_type:   role==='bowler'      ? 0.9 : role==='allrounder' ? 0.6 : 0.1,
+        allrounder_type: role==='allrounder'? 0.9 : 0.3,
+        keeper_type:   role==='wicketkeeper'? 0.9 : 0.1,
+      };
+      A.BrainEngine.train('ProMatcher', input, output);
+    } catch(e) {}
+  }, []);
+
   var tips = {
     batting:     'Work on the Cover Drive, Defensive Block, and Pull Shot drills for batting gains.',
     bowling:     'Focus on the Line & Length Precision and Yorker Death Bowling drills.',
