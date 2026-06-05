@@ -132,6 +132,13 @@ function AICoachPage() {
   var bottomRef = useRef(null);
   var inputRef = useRef(null);
 
+  // Clear offline state when device regains connectivity
+  useEffect(function() {
+    function onOnline() { if (navigator.onLine) setOffline(false); }
+    window.addEventListener('online', onOnline);
+    return function() { window.removeEventListener('online', onOnline); };
+  }, []);
+
   useEffect(function() {
     if(bottomRef.current) bottomRef.current.scrollIntoView({ behavior:'smooth' });
   }, [msgs, busy]);
@@ -139,6 +146,15 @@ function AICoachPage() {
   async function send(text) {
     text = (text||'').trim();
     if(!text || busy) return;
+    // Pre-flight: skip API if device is confirmed offline
+    if (!navigator.onLine) {
+      setOffline(true);
+      var fb = getFallback(text);
+      var userMsg0 = { role:'user', content:text };
+      setMsgs(function(prev) { return prev.concat([userMsg0, { role:'assistant', content:fb+'\n\n_[Offline mode — connect for AI coaching]_' }]); });
+      setInput('');
+      return;
+    }
     var userMsg = { role:'user', content:text };
     var newHistory = msgs.concat([userMsg]);
     setMsgs(newHistory);
@@ -150,7 +166,8 @@ function AICoachPage() {
       setMsgs(function(prev) { return prev.concat([{ role:'assistant', content:reply }]); });
       setOffline(false);
     } catch(e) {
-      setOffline(true);
+      // Only flag as offline if device reports offline; otherwise it's a server error
+      setOffline(!navigator.onLine);
       var fallback = getFallback(text);
       setMsgs(function(prev) { return prev.concat([{ role:'assistant', content:fallback+'\n\n_[Offline mode — connect for AI coaching]_' }]); });
     }
@@ -188,8 +205,8 @@ function AICoachPage() {
           display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}, '🤖'),
         h('div', null,
           h('div', { style:{ fontSize:15, fontWeight:800, color:'#f0fdf4' }}, 'AI Head Coach'),
-          h('div', { style:{ fontSize:11, color: offline ? '#f59e0b' : '#16a34a', fontWeight:600 }},
-            offline ? '⚠ Offline mode' : '● SmartCrick Intelligence'
+          h('div', { style:{ fontSize:11, color: (offline && !navigator.onLine) ? '#f59e0b' : '#16a34a', fontWeight:600 }},
+            (offline && !navigator.onLine) ? '⚠ Offline mode' : '● SmartCrick Intelligence'
           )
         )
       )
