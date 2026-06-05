@@ -813,13 +813,20 @@ function ProfilePage(props) {
           var layer1 = dnaReport && dnaReport.layer1;
           var layer5 = dnaReport && dnaReport.layer5;
           var topFive = dnaReport && dnaReport.topFive;
-          var styleLabel = null;
+          var brainStatus = null;
+          var brainStyles = null;
+          var brainRoles  = null;
           try {
-            if (A.BrainEngine && A.BrainEngine.getStyleLabel && A.BrainEngine.buildStyleSignals) {
-              var sig = A.BrainEngine.buildStyleSignals();
-              if (sig) styleLabel = A.BrainEngine.getStyleLabel(sig);
+            if (A.BrainEngine) {
+              if (A.BrainEngine.getFullStatus) brainStatus = A.BrainEngine.getFullStatus();
+              var sig = A.BrainEngine.buildStyleSignals ? A.BrainEngine.buildStyleSignals() : null;
+              if (sig) {
+                brainStyles = A.BrainEngine.predict ? A.BrainEngine.predict('StylePredictor', sig) : null;
+                brainRoles  = A.BrainEngine.predict ? A.BrainEngine.predict('ProMatcher', sig) : null;
+              }
             }
           } catch(e) {}
+          var styleLabel = brainStatus && brainStatus.styleLabel;
           return h('div', null,
             layer1 && layer1.primary ? h('div', {
               style: { padding: '14px', borderRadius: 14, marginBottom: 12,
@@ -843,13 +850,83 @@ function ProfilePage(props) {
               'Complete training sessions to unlock your DNA archetype'
             ),
 
-            styleLabel && h('div', { style: { padding: '10px 14px', borderRadius: 10, marginBottom: 12,
-              background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.25)',
-              display: 'flex', alignItems: 'center', gap: 10 } },
-              h('div', { style: { fontSize: 18 } }, '🧠'),
-              h('div', null,
-                h('div', { style: { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 } }, 'AI Playing Style'),
-                h('div', { style: { fontSize: 14, fontWeight: 700, color: '#c084fc' } }, styleLabel)
+            brainStatus && h('div', { style: { borderRadius: 14, overflow: 'hidden', marginBottom: 12,
+              border: '1px solid rgba(79,70,229,0.25)', background: 'rgba(79,70,229,0.06)' } },
+              // Header
+              h('div', { style: { padding: '12px 14px 10px', borderBottom: '1px solid rgba(79,70,229,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+                  h('div', { style: { fontSize: 14 } }, '⬡'),
+                  h('div', { style: { fontSize: 13, fontWeight: 800, color: '#c4b5fd' } }, 'AI Brain Profile')
+                ),
+                h('div', { style: { fontSize: 11, color: '#6b7280' } }, (brainStatus.totalSamples||0) + ' signals')
+              ),
+              h('div', { style: { padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 12 } },
+                // Style + Role chips
+                (styleLabel || brainStatus.proLabel) && h('div', { style: { display: 'flex', gap: 8 } },
+                  styleLabel && h('div', { style: { flex: 1, padding: '8px 10px', background: 'rgba(139,92,246,0.12)', borderRadius: 10, border: '1px solid rgba(139,92,246,0.2)' } },
+                    h('div', { style: { fontSize: 9, color: '#6b7280', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.08em' } }, 'STYLE'),
+                    h('div', { style: { fontSize: 13, fontWeight: 800, color: '#e9d5ff' } }, styleLabel)
+                  ),
+                  brainStatus.proLabel && h('div', { style: { flex: 1, padding: '8px 10px', background: 'rgba(99,102,241,0.12)', borderRadius: 10, border: '1px solid rgba(99,102,241,0.2)' } },
+                    h('div', { style: { fontSize: 9, color: '#6b7280', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.08em' } }, 'ARCHETYPE'),
+                    h('div', { style: { fontSize: 13, fontWeight: 800, color: '#c7d2fe' } }, brainStatus.proLabel)
+                  )
+                ),
+                // Style dimensions
+                brainStyles && h('div', null,
+                  h('div', { style: { fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 } }, 'Style Dimensions'),
+                  [
+                    { k:'aggressive',      l:'Power',     c:'#f97316' },
+                    { k:'technical',       l:'Technical', c:'#3b82f6' },
+                    { k:'versatile',       l:'Versatile', c:'#10b981' },
+                    { k:'mental_dominant', l:'Mental',    c:'#8b5cf6' },
+                  ].map(function(s) {
+                    var val = Math.round((brainStyles[s.k]||0)*100);
+                    return h('div', { key: s.k, style: { marginBottom: 5 } },
+                      h('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 2 } },
+                        h('span', { style: { fontSize: 11, color: '#cbd5e1' } }, s.l),
+                        h('span', { style: { fontSize: 10, color: s.c, fontWeight: 700 } }, val + '%')
+                      ),
+                      h('div', { style: { height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)' } },
+                        h('div', { style: { height: '100%', width: val + '%', background: s.c, borderRadius: 99, transition: 'width 0.5s' } })
+                      )
+                    );
+                  })
+                ),
+                // Role affinity
+                brainRoles && h('div', null,
+                  h('div', { style: { fontSize: 10, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 } }, 'Role Affinity'),
+                  [
+                    { k:'batsman_type',    l:'Batsman',   c:'#3b82f6' },
+                    { k:'bowler_type',     l:'Bowler',    c:'#ef4444' },
+                    { k:'allrounder_type', l:'All-Rounder',c:'#f59e0b' },
+                    { k:'keeper_type',     l:'Keeper',    c:'#06b6d4' },
+                  ].map(function(r) {
+                    var val = Math.round((brainRoles[r.k]||0)*100);
+                    return h('div', { key: r.k, style: { marginBottom: 5 } },
+                      h('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 2 } },
+                        h('span', { style: { fontSize: 11, color: '#cbd5e1' } }, r.l),
+                        h('span', { style: { fontSize: 10, color: r.c, fontWeight: 700 } }, val + '%')
+                      ),
+                      h('div', { style: { height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)' } },
+                        h('div', { style: { height: '100%', width: val + '%', background: r.c, borderRadius: 99, transition: 'width 0.5s' } })
+                      )
+                    );
+                  })
+                ),
+                // Confidence + signal count
+                h('div', { style: { display: 'flex', gap: 8 } },
+                  h('div', { style: { flex: 1, padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, textAlign: 'center' } },
+                    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#4ade80' } },
+                      Math.min(100, Math.round(((brainStatus.totalSamples||0)/100)*100)) + '%'
+                    ),
+                    h('div', { style: { fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' } }, 'AI Confidence')
+                  ),
+                  h('div', { style: { flex: 1, padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, textAlign: 'center' } },
+                    h('div', { style: { fontSize: 18, fontWeight: 900, color: '#818cf8' } }, brainStatus.totalSamples||0),
+                    h('div', { style: { fontSize: 9, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' } }, 'Signals Trained')
+                  )
+                )
               )
             ),
 
