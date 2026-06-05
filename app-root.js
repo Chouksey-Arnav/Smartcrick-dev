@@ -28,12 +28,12 @@ var nav           = A.nav;
 
 var CHROME_PAGES = new Set([
   'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
-  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger',
+  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
 ]);
 
 var STANDARD_PAGES = new Set([
   'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
-  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger',
+  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
   'DrillDetail','MentalPlayer','MentalRoutines','MentalRoutinePlayer',
   'PracticeSession','WorkoutDetail','WorkoutPlayer','SkillPathDetail',
   'VideoAnalysis','Performance','ReactionDrill','NinetyDay','AIWorkout',
@@ -56,7 +56,7 @@ var PAGE_LABELS = {
   IntelligenceHub:'Cricket Intelligence',
   NinetyDay:'90-Day Program', MatchTracker:'Match Tracker',
   MiniMatch:'MiniMatch IQ', DrillDetail:'Drill', WorkoutDetail:'Workout',
-  VideoAnalysis:'ProVision™',
+  VideoAnalysis:'ProVision™', Crick:'Crick',
 };
 
 function getPage(name) {
@@ -81,6 +81,7 @@ function getPage(name) {
     MiniMatch:P.MiniMatchPage, Quizzes:P.QuizzesPage,
     CricketDNA:P.CricketDNAPage, DailyNet:P.DailyNetPage,
     IntelligenceHub:P.IntelligenceHubPage,
+    Crick:P.CrickPage,
   };
   return map[name] || null;
 }
@@ -125,6 +126,10 @@ function AppShell() {
   useEffect(function() {
     window.scrollTo(0, 0);
     setMenuOpen(false);
+    // Micro-haptic on page transition
+    if (navigator.vibrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      try { navigator.vibrate(7); } catch(e) {}
+    }
   }, [page]);
 
   // Body background
@@ -299,16 +304,21 @@ function AppShell() {
       // ── Mascot Controller singleton (renders null, drives GSAP) ──
       A.MascotController ? h(A.MascotController, null) : null,
 
-      // ── Persistent MascotSVG — always in DOM so GSAP has a target ─
-      // Sits fixed at bottom-right, subtle in idle, animated on cheer.
+      // ── Persistent Crick — fixed bottom-right, tap to open Crick page ─
       A.Mascot ? h('div', {
         id: 'em-mascot-fixed-host',
+        title: 'Open Crick',
+        onClick: function() { nav('Crick'); },
         style: {
-          position: 'fixed', bottom: 70, right: 12, zIndex: 200,
-          pointerEvents: 'none', opacity: 0.18,
-          transition: 'opacity 0.4s ease',
+          position: 'fixed', bottom: 78, right: 14, zIndex: 200,
+          pointerEvents: 'auto', opacity: 0.7,
+          transition: 'opacity 0.4s ease, transform 0.2s ease',
+          cursor: 'pointer',
+          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
         },
-      }, h(A.Mascot, { size: 'sm' })) : null
+        onMouseEnter: function(e) { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.1)'; },
+        onMouseLeave: function(e) { e.currentTarget.style.opacity='0.7'; e.currentTarget.style.transform='scale(1)'; },
+      }, h(A.Mascot, { size: 'md' })) : null
     )
   );
 }
