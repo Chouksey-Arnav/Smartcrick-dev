@@ -104,6 +104,7 @@ var CLEAN_NAV = [
   { label:'90-Day Program',   icon:'diamond',  pg:'NinetyDay',  badge:'PRO', section:'PREMIUM' },
   // Core Training
   { label:'Home',             icon:'home',     pg:'Home',       section:'TRAINING' },
+  { label:'Crick',            icon:'crick',    pg:'Crick',      section:'TRAINING' },
   { label:'Cricket Drills',   icon:'bat',      pg:'Drills',     section:'TRAINING' },
   { label:'Mental Training',  icon:'brain',    pg:'Mental',     section:'TRAINING' },
   { label:'30-Day Challenge', icon:'target',   pg:'ThirtyDay',  section:'TRAINING' },
@@ -181,7 +182,7 @@ function CleanSidebarContent(props) {
 }
 
 function LevelSection(props) {
-  var p = DB.getProgress ? DB.getProgress() : {};
+  var p = A.DB && A.DB.getProgress ? A.DB.getProgress() : {};
   var info = A.getLevelInfo ? A.getLevelInfo(p.total_xp||0) : { level:1, name:'Rookie', pct:0, xpToNext:500 };
   var streak = p.current_streak||0;
   return h('div', { style:{ padding:'10px 14px 12px', borderBottom:'1px solid rgba(40,46,54,0.8)', background:'rgba(13,17,23,0.4)', flexShrink:0 } },
