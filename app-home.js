@@ -40,14 +40,16 @@ function getAvgWeeklyXP(log){
   return v.length?Math.round(v.reduce(function(s,x){return s+x;},0)/v.length):0;
 }
 
-// ── Spin prizes — hard-mode distribution (expected ~21 XP) ────────
+// ── 8 Spin prizes ─────────────────────────────────────────────────
 var SPIN_PRIZES=[
-  {xp:10, weight:50, label:'+10 XP',  color:'#475569'},
-  {xp:20, weight:25, label:'+20 XP',  color:'#3b82f6'},
-  {xp:30, weight:15, label:'+30 XP',  color:'#10b981'},
-  {xp:50, weight:8,  label:'+50 XP',  color:'#f59e0b'},
-  {xp:100,weight:1.5,label:'+100 XP', color:'#ef4444'},
-  {xp:200,weight:0.5,label:'+200 XP', color:'#ffd700'},
+  {xp:15,  weight:25,label:'+15 XP',    color:'#6366f1'},
+  {xp:30,  weight:22,label:'+30 XP',    color:'#10b981'},
+  {xp:75,  weight:18,label:'+75 XP!',   color:'#3b82f6'},
+  {xp:10,  weight:12,label:'+10 XP',    color:'#6b7280'},
+  {xp:150, weight:10,label:'+150 XP!!', color:'#f59e0b'},
+  {xp:300, weight:7, label:'+300 XP!!!',color:'#ef4444'},
+  {xp:500, weight:4, label:'+500 XP!',  color:'#ec4899'},
+  {xp:1000,weight:2, label:'JACKPOT!',  color:'#ffd700'},
 ];
 function weightedRandom(prizes){
   var tot=prizes.reduce(function(s,p){return s+p.weight;},0), r=Math.random()*tot, c=0;
@@ -715,37 +717,74 @@ function WeeklyGoalSection(props){
   );
 }
 
-// ── TimerHomeWidget — quick-start timer card on home page ─────────
-function TimerHomeWidget() {
-  var recent = (A.DB && A.DB.get('timer_last_used')) || null;
-  var Icon = A.Icon;
-  return h('div', {style:{margin:'12px 16px 0'}},
-    h('div', {
-      role:'button', tabIndex:0,
-      onClick:function(){ nav('Timer'); },
-      onKeyDown:function(e){if(e.key==='Enter'||e.key===' ')nav('Timer');},
-      style:{
-        display:'flex', alignItems:'center', gap:12,
-        padding:'11px 14px', borderRadius:12, cursor:'pointer', outline:'none',
-        background:'rgba(16,185,129,0.06)',
-        border:'1px solid rgba(16,185,129,0.18)',
-        transition:'border-color 0.2s, background 0.2s',
+// ── AI Brain DNA Card ─────────────────────────────────────────────
+function AIBrainDNACard() {
+  var [status, setStatus] = useState(null);
+
+  useEffect(function() {
+    function loadStatus() {
+      if (A.BrainEngine && A.BrainEngine.getFullStatus) {
+        try { setStatus(A.BrainEngine.getFullStatus()); } catch(e) {}
       }
-    },
-      h('div',{style:{
-        width:36,height:36,borderRadius:9,flexShrink:0,
-        background:'rgba(16,185,129,0.12)',
-        display:'flex',alignItems:'center',justifyContent:'center',
-      }},
-        Icon ? h(Icon,{n:'timer',cls:'w-5 h-5',style:{color:'#10b981'}})
-             : h('div',{style:{fontSize:18}}, '⏱')
+    }
+    loadStatus();
+    var t = setTimeout(loadStatus, 600); // retry after Brain.js init
+    var onUpdate = function() { loadStatus(); };
+    window.addEventListener('sc_update', onUpdate);
+    return function() { clearTimeout(t); window.removeEventListener('sc_update', onUpdate); };
+  }, []);
+
+  var totalSamples = status ? (status.totalSamples || 0) : 0;
+  var styleLabel   = (status && totalSamples >= 5 && status.styleLabel) || null;
+  var proLabel     = (status && totalSamples >= 5 && status.proLabel)   || null;
+  var models       = (status && status.models) || {};
+  var MODEL_KEYS   = ['StylePredictor','ProMatcher','DrillAdaptor','MentalReadiness'];
+  var MODEL_SHORT  = { StylePredictor:'Style', ProMatcher:'Role', DrillAdaptor:'Drills', MentalReadiness:'Mental' };
+
+  return h('button', {
+    onClick: function() { nav('IntelligenceHub'); },
+    style: {
+      display:'block', width:'calc(100% - 32px)', margin:'0 16px 12px',
+      padding:'14px 16px',
+      background:'linear-gradient(135deg, rgba(79,70,229,0.9) 0%, rgba(124,58,237,0.9) 100%)',
+      border:'1px solid rgba(139,92,246,0.3)',
+      borderRadius:14, cursor:'pointer', textAlign:'left',
+      boxShadow:'0 4px 20px rgba(79,70,229,0.25)',
+    }
+  },
+    h('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 } },
+      h('div', { style:{ display:'flex', alignItems:'center', gap:8 } },
+        h('div', { style:{ fontSize:16 } }, '⬡'),
+        h('div', { style:{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.85)', letterSpacing:'0.08em', textTransform:'uppercase' } }, 'Your Cricket DNA')
       ),
-      h('div',{style:{flex:1}},
-        h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb'}},'Training Timer'),
-        h('div',{style:{fontSize:11,color:'#6b7280',marginTop:2}},
-          recent ? 'Last: ' + recent.label : 'Stopwatch · Countdown · Intervals')
-      ),
-      h('span',{style:{fontSize:12,fontWeight:800,color:'#10b981',flexShrink:0}},'Start →')
+      h('div', { style:{ fontSize:11, color:'rgba(255,255,255,0.45)' } }, totalSamples + ' signals →')
+    ),
+    totalSamples < 5
+      ? h('div', { style:{ fontSize:12, color:'rgba(255,255,255,0.65)', lineHeight:1.5 } },
+          'The AI is learning about you — complete drills and sessions to train your personal model.'
+        )
+      : h('div', { style:{ display:'flex', gap:20, flexWrap:'wrap' } },
+          styleLabel && h('div', null,
+            h('div', { style:{ fontSize:9, color:'rgba(255,255,255,0.5)', marginBottom:2, letterSpacing:'0.06em' } }, 'STYLE'),
+            h('div', { style:{ fontSize:14, fontWeight:800, color:'#fff' } }, styleLabel)
+          ),
+          proLabel && h('div', null,
+            h('div', { style:{ fontSize:9, color:'rgba(255,255,255,0.5)', marginBottom:2, letterSpacing:'0.06em' } }, 'ARCHETYPE'),
+            h('div', { style:{ fontSize:14, fontWeight:800, color:'#fff' } }, proLabel)
+          )
+        ),
+    h('div', { style:{ display:'flex', gap:6, marginTop:10, alignItems:'flex-end' } },
+      MODEL_KEYS.map(function(name) {
+        var m = models[name] || {};
+        var pct = Math.min(100, Math.round(((m.samples || 0) / 25) * 100));
+        var col = m.trained ? '#4ade80' : 'rgba(255,255,255,0.35)';
+        return h('div', { key:name, style:{ flex:1 } },
+          h('div', { style:{ fontSize:8, color:'rgba(255,255,255,0.4)', marginBottom:3, textAlign:'center' } }, MODEL_SHORT[name]),
+          h('div', { style:{ height:3, borderRadius:99, background:'rgba(255,255,255,0.12)', overflow:'hidden' } },
+            h('div', { style:{ height:'100%', width:pct+'%', background:col, borderRadius:99, transition:'width 0.5s' } })
+          )
+        );
+      })
     )
   );
 }
@@ -822,10 +861,11 @@ function HomePage(){
   if(!progress){
     return h('div',{style:{background:'#0d1117',minHeight:'100dvh',
       display:'flex',alignItems:'center',justifyContent:'center'}},
-      h('div',{style:{textAlign:'center',color:'#6b7280'}},
-        h('div',{style:{fontSize:40,marginBottom:12}},'🏏'),
-        h('div',{style:{fontSize:14}},'Loading SmartCrick...')
-      )
+      A.CricketLoader ? h(A.CricketLoader, null) :
+        h('div',{style:{textAlign:'center',color:'#6b7280'}},
+          h('div',{style:{fontSize:40,marginBottom:12}},'🏏'),
+          h('div',{style:{fontSize:14}},'Loading...')
+        )
     );
   }
 
@@ -892,25 +932,15 @@ function HomePage(){
       A.DNAOverview?h(A.DNAOverview,{}):null,
 
       // ── Triple Progress Rings ──────────────────────────────────
-      A.ProgressRings?h('div',{style:{display:'flex',justifyContent:'center',padding:'16px 0 8px'}},
+      A.ProgressRings?h('div',{style:{display:'flex',justifyContent:'center',padding:'16px 0 4px'}},
         h(A.ProgressRings,{
           content:{done:todayDrills,target:dailyTargets.drills},
           contribution:{xp:todayXP,target:dailyTargets.xp},
           consistency:{streak:streak,target:dailyTargets.streakGoal},
           onRingClick:function(){A.nav('Progress');}
         })
-      ):null,
-      // ── Timer quick-start ──────────────────────────────────────
-      h(TimerHomeWidget,{}),
+      ):null
     ),
-
-    // ── Crick daily message card ───────────────────────────────────
-    !isMinimalist&&(A.CrickHomeCard?h('div',{className:'sc-home-card-enter',style:{animationDelay:'40ms'}},
-      h(A.CrickHomeCard,{})):null),
-
-    // ── Crick's Daily Net — prominent placement ───────────────────
-    !isMinimalist&&(A.CrickNetsCard?h('div',{className:'sc-home-card-enter',style:{animationDelay:'60ms'}},
-      h(A.CrickNetsCard,{})):null),
 
     // ── Streak Shield (always visible) ────────────────────────────
     A.StreakShieldWidget
@@ -919,6 +949,8 @@ function HomePage(){
       : null,
 
     !isMinimalist&&h(MultiplierBanner,{streak:streak,multiplier:mult}),
+    !isMinimalist&&h('div',{className:'sc-home-card-enter',style:{animationDelay:'90ms'}},
+      h(AIBrainDNACard,{})),
     !isMinimalist&&(A.IntelligenceDigestCard?h(A.IntelligenceDigestCard,{}):null),
     !isMinimalist&&h('div',{className:'sc-home-card-enter',style:{animationDelay:'160ms'}},
       h(StreakCalendarSection,{})),
@@ -931,8 +963,7 @@ function HomePage(){
       onOpen:function(){window.dispatchEvent(new CustomEvent('sc_open_reward_modal'));}
     }):null),
 
-    !isMinimalist&&h('div',{className:'sc-reveal'},
-      A.SpinWheelWidget ? h(A.SpinWheelWidget,{}) : h(SpinWheelWidget,{})),
+    !isMinimalist&&h('div',{className:'sc-reveal'},h(SpinWheelWidget,{})),
     !isMinimalist&&(A.DailyNetHomeWidget?h('div',{className:'sc-reveal'},h(A.DailyNetHomeWidget,{})):null),
 
     // ── Mission ────────────────────────────────────────────────────
@@ -943,7 +974,7 @@ function HomePage(){
         borderRadius:12,padding:'14px 16px',
         boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},role:'region','aria-label':'Today\'s mission'},
         h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
-          h('div',{style:{fontSize:14,fontWeight:800,color:'#f8fafc',textTransform:'uppercase',letterSpacing:'0.06em'}},'Today\'s Mission'),
+          h('div',{style:{fontSize:16,fontWeight:700,color:'#f8fafc'}},'📋 Today\'s Mission'),
           mission.reason&&h('div',{style:{marginLeft:'auto',fontSize:11,color:'#64748b',fontStyle:'italic'}},mission.reason)
         ),
         h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
@@ -995,9 +1026,9 @@ function HomePage(){
 
     h('div',{className:'sc-reveal'},h(WeeklyGoalSection,{weekXP:weekXP,goal:weeklyGoal,setGoal:setWeeklyGoal})),
 
-    // ── Quick Access ───────────────────────────────────────────────
+    // ── Quick Start (AI Coach removed → Badges added) ──────────────
     h('div',{style:{margin:'0 16px 12px'}},
-      h('div',{style:{fontSize:11,fontWeight:800,color:'#374151',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.1em'}},'Quick Access'),
+      h('div',{style:{fontSize:13,fontWeight:700,color:'#f8fafc',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.06em'}},'Quick Start'),
       h('div',{className:'sc-stagger',style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
         [
           {label:'Drills',      emoji:'🎯', page:'Drills',     color:'#3b82f6'},
