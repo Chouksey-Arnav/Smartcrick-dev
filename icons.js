@@ -54,6 +54,8 @@ var ICONS = {
   check: '<polyline points="20 6 9 17 4 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   
   alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2" stroke-linecap="round"/>',
+
+  crick: '<circle cx="12" cy="13" r="8" fill="#b91c1c" stroke="#7f1d1d" stroke-width="1.5"/><ellipse cx="9" cy="11" rx="2.5" ry="2.5" fill="#fff"/><ellipse cx="15" cy="11" rx="2.5" ry="2.5" fill="#fff"/><circle cx="9" cy="11" r="1.5" fill="#1e1b4b"/><circle cx="15" cy="11" r="1.5" fill="#1e1b4b"/><path d="M9 15 Q12 17.5 15 15" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>',
 };
 
 function Icon(props) {
