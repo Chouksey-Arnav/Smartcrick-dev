@@ -466,7 +466,96 @@
     buildDrillSignals: function(drillId) { return A.BrainEngine.encodeDrillInput(drillId); },
     buildMentalSignals: function() { return A.BrainEngine._encodeMentalInput(); },
     addSample: function(modelName, input, output) { return A.BrainEngine.train(modelName, input, output); },
-    isModelTrained: function(modelName) { return A.BrainEngine.isTrained(modelName); }
+    isModelTrained: function(modelName) { return A.BrainEngine.isTrained(modelName); },
+
+    // ── getProLabel ────────────────────────────────────────────────
+    // Runs ProMatcher on the current user's stats and returns a
+    // human-readable role label.
+    // Returns one of: "Batting Specialist" | "Bowling Specialist" |
+    //   "All-Rounder" | "Keeper-Batsman" | "Well-Rounded Cricketer"
+    getProLabel: function() {
+      try {
+        var prog = DB.getProgress ? DB.getProgress() : (DB.get('progress') || {});
+        var bat  = _cap((prog.batting      || 50) / 100);
+        var bowl = _cap((prog.bowling      || 50) / 100);
+        var fld  = _cap((prog.fielding     || 50) / 100);
+        var men  = _cap((prog.mental       || 50) / 100);
+        var fit  = _cap((prog.fitness      || 50) / 100);
+        var con  = _cap((prog.consistency  || 50) / 100);
+        var input = { batting: bat, bowling: bowl, fielding: fld, fitness: fit, mental: men, consistency: con };
+        var out  = A.BrainEngine.predict('ProMatcher', input);
+        if (!out) return 'All-Rounder';
+        var labels = [
+          { key: 'batsman_type',    label: 'Batting Specialist' },
+          { key: 'bowler_type',     label: 'Bowling Specialist' },
+          { key: 'allrounder_type', label: 'All-Rounder'        },
+          { key: 'keeper_type',     label: 'Keeper-Batsman'     },
+        ];
+        var best = labels[0];
+        labels.forEach(function(l) {
+          if ((out[l.key] || 0) > (out[best.key] || 0)) best = l;
+        });
+        if ((out[best.key] || 0) < 0.5) return 'Well-Rounded Cricketer';
+        return best.label;
+      } catch (e) {
+        console.warn('[SC BrainEngine] getProLabel error:', e);
+        return 'All-Rounder';
+      }
+    },
+
+    // ── getDrillAdvice ─────────────────────────────────────────────
+    // Encodes drill history via encodeDrillInput, runs DrillAdaptor,
+    // returns an advice object: { action, label, color }
+    //   action:'advance' → Ready to Level Up   (#22c55e)
+    //   action:'retry'   → Keep Practising     (#f59e0b)
+    //   action:'fresh'   → Good Time to Try    (#3b82f6)
+    getDrillAdvice: function(drillId) {
+      try {
+        var sig = A.BrainEngine.encodeDrillInput(drillId);
+        var out = A.BrainEngine.predict('DrillAdaptor', sig);
+        if (!out) return { action: 'fresh', label: 'Good Time to Try', color: '#3b82f6' };
+        if ((out.shouldAdvance || 0) > 0.7) {
+          return { action: 'advance', label: 'Ready to Level Up', color: '#22c55e' };
+        }
+        if ((out.shouldRetry || 0) > 0.6) {
+          return { action: 'retry', label: 'Keep Practising', color: '#f59e0b' };
+        }
+        return { action: 'fresh', label: 'Good Time to Try', color: '#3b82f6' };
+      } catch (e) {
+        console.warn('[SC BrainEngine] getDrillAdvice error:', e);
+        return { action: 'fresh', label: 'Good Time to Try', color: '#3b82f6' };
+      }
+    },
+
+    // ── getFullStatus ──────────────────────────────────────────────
+    // Returns a complete status snapshot for UI rendering:
+    // {
+    //   styleLabel   : string  — from StylePredictor
+    //   proLabel     : string  — from ProMatcher
+    //   models       : { StylePredictor:{samples,trained,blend}, … }
+    //   totalSamples : number
+    // }
+    getFullStatus: function() {
+      try {
+        var styleLabel = A.BrainEngine.getStyleLabel();
+        var proLabel   = A.BrainEngine.getProLabel();
+        var models = {};
+        MODEL_NAMES.forEach(function(name) {
+          models[name] = {
+            samples: _userSamples[name] || 0,
+            trained: A.BrainEngine.isTrained(name),
+            blend:   A.BrainEngine.getBlendFactor(name),
+          };
+        });
+        var totalSamples = MODEL_NAMES.reduce(function(s, n) {
+          return s + (_userSamples[n] || 0);
+        }, 0);
+        return { styleLabel: styleLabel, proLabel: proLabel, models: models, totalSamples: totalSamples };
+      } catch (e) {
+        console.warn('[SC BrainEngine] getFullStatus error:', e);
+        return { styleLabel: 'Cricketer', proLabel: 'All-Rounder', models: {}, totalSamples: 0 };
+      }
+    }
   };
 
   // Auto-init after a brief delay so other modules load first
@@ -480,5 +569,5 @@
     }
   }, 500);
 
-  console.log('[SC] BrainEngine module registered');
+  console.log('[SC] BrainEngine v1.1 ready — getProLabel, getDrillAdvice, getFullStatus');
 })();
