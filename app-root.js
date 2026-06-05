@@ -28,12 +28,12 @@ var nav           = A.nav;
 
 var CHROME_PAGES = new Set([
   'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
-  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
+  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger',
 ]);
 
 var STANDARD_PAGES = new Set([
   'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
-  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
+  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger',
   'DrillDetail','MentalPlayer','MentalRoutines','MentalRoutinePlayer',
   'PracticeSession','WorkoutDetail','WorkoutPlayer','SkillPathDetail',
   'VideoAnalysis','Performance','ReactionDrill','NinetyDay','AIWorkout',
@@ -42,7 +42,7 @@ var STANDARD_PAGES = new Set([
 ]);
 
 var FULLSCREEN_PAGES = new Set([
-  'AICoach','MentalPlayer','MentalRoutinePlayer','WorkoutPlayer','Paywall',
+  'AICoach','MentalPlayer','MentalRoutinePlayer','WorkoutPlayer',
 ]);
 
 var PAGE_LABELS = {
@@ -56,7 +56,7 @@ var PAGE_LABELS = {
   IntelligenceHub:'Cricket Intelligence',
   NinetyDay:'90-Day Program', MatchTracker:'Match Tracker',
   MiniMatch:'MiniMatch IQ', DrillDetail:'Drill', WorkoutDetail:'Workout',
-  VideoAnalysis:'ProVision™', Crick:'Crick', Paywall:'Go Pro',
+  VideoAnalysis:'ProVision™',
 };
 
 function getPage(name) {
@@ -81,7 +81,6 @@ function getPage(name) {
     MiniMatch:P.MiniMatchPage, Quizzes:P.QuizzesPage,
     CricketDNA:P.CricketDNAPage, DailyNet:P.DailyNetPage,
     IntelligenceHub:P.IntelligenceHubPage,
-    Crick:P.CrickPage, Paywall:P.PaywallPage,
   };
   return map[name] || null;
 }
@@ -126,10 +125,6 @@ function AppShell() {
   useEffect(function() {
     window.scrollTo(0, 0);
     setMenuOpen(false);
-    // Micro-haptic on page transition
-    if (navigator.vibrate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      try { navigator.vibrate(7); } catch(e) {}
-    }
   }, [page]);
 
   // Body background
@@ -162,10 +157,13 @@ function AppShell() {
     if (!A.OnboardPage) {
       return h('div', {
         style:{
-          display:'flex', alignItems:'center', justifyContent:'center',
-          minHeight:'100dvh', background:'#0d1117', color:'#6b7280', fontSize:14,
+          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+          minHeight:'100dvh', background:'#0d1117', gap:16,
         }
-      }, 'Loading SmartCrick...');
+      },
+        A.CricketLoader ? h(A.CricketLoader, null) :
+          h('div', { style:{ color:'#6b7280', fontSize:14 } }, 'Loading SmartCrick...')
+      );
     }
     return h(ThemeCtx.Provider, { value:{ dark:true, toggle:function(){} } },
       h(ErrorBoundary, null, h(A.OnboardPage, null))
@@ -249,11 +247,11 @@ function AppShell() {
             _AP && _mDiv
               ? h(_AP, { mode:'wait' },
                   h(_mDiv, {
-                    key: page,
-                    initial:    { opacity:0, scale:0.97, y:8  },
-                    animate:    { opacity:1, scale:1,    y:0   },
-                    exit:       { opacity:0, scale:0.98, y:-6  },
-                    transition: { type:'spring', stiffness:320, damping:28, mass:0.9 },
+                    key: page + (params && params.id ? '_' + params.id : ''),
+                    initial:    { opacity:0, x: 12 },
+                    animate:    { opacity:1, x: 0  },
+                    exit:       { opacity:0, x:-12 },
+                    transition: { duration:0.2, ease:[0.25,0.46,0.45,0.94] },
                     style:      { width:'100%' },
                   },
                     PageComp
@@ -304,21 +302,16 @@ function AppShell() {
       // ── Mascot Controller singleton (renders null, drives GSAP) ──
       A.MascotController ? h(A.MascotController, null) : null,
 
-      // ── Persistent Crick — fixed bottom-right, tap to open Crick page ─
+      // ── Persistent MascotSVG — always in DOM so GSAP has a target ─
+      // Sits fixed at bottom-right, subtle in idle, animated on cheer.
       A.Mascot ? h('div', {
         id: 'em-mascot-fixed-host',
-        title: 'Open Crick',
-        onClick: function() { nav('Crick'); },
         style: {
-          position: 'fixed', bottom: 78, right: 14, zIndex: 200,
-          pointerEvents: 'auto', opacity: 0.7,
-          transition: 'opacity 0.4s ease, transform 0.2s ease',
-          cursor: 'pointer',
-          filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))',
+          position: 'fixed', bottom: 70, right: 12, zIndex: 200,
+          pointerEvents: 'none', opacity: 0.18,
+          transition: 'opacity 0.4s ease',
         },
-        onMouseEnter: function(e) { e.currentTarget.style.opacity='1'; e.currentTarget.style.transform='scale(1.1)'; },
-        onMouseLeave: function(e) { e.currentTarget.style.opacity='0.7'; e.currentTarget.style.transform='scale(1)'; },
-      }, h(A.Mascot, { size: 'md' })) : null
+      }, h(A.Mascot, { size: 'sm' })) : null
     )
   );
 }
