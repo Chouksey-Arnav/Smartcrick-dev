@@ -14,7 +14,7 @@ var nav = A.nav;
 
 var MENU_ITEMS = [
   { id: 'Home', icon: 'home', label: 'Home', section: 'TRAINING' },
-  { id: 'SmartStart', icon: 'smartstart', label: 'Smart Start', section: 'TRAINING' },
+  { id: 'Crick', icon: 'crick', label: 'Crick', section: 'TRAINING' },
   { id: 'Drills', icon: 'drills', label: 'Cricket Drills', section: 'TRAINING' },
   { id: 'Mental', icon: 'mental', label: 'Mental Training', section: 'TRAINING' },
   { id: 'Challenges', icon: 'challenge', label: '30-Day Challenge', section: 'TRAINING' },
