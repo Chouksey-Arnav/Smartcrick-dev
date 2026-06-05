@@ -70,6 +70,7 @@ if (_origNav) {
       console.warn('[SC] app-root-patch: nav to dead page blocked:', page);
       return;
     }
+    if (A.Emotion && A.Emotion.haptic) A.Emotion.haptic('light');
     return _origNav(page, params);
   };
 }
