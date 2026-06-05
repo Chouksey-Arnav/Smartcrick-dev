@@ -388,7 +388,7 @@ function BottomNav({page}){
     h('div',{style:{display:'flex',alignItems:'center',height:58}},
       items.map(item=>{
         const active=page===item.pg;
-        return h('button',{key:item.pg,onClick:()=>A.nav(item.pg),style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,height:'100%',position:'relative',background:'transparent',border:'none',cursor:'pointer',padding:0}},
+        return h('button',{key:item.pg,onClick:()=>{if(A.Emotion&&A.Emotion.haptic)A.Emotion.haptic('light');A.nav(item.pg);},style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,height:'100%',position:'relative',background:'transparent',border:'none',cursor:'pointer',padding:0}},
           active&&h('div',{style:{position:'absolute',top:0,left:'50%',transform:'translateX(-50%)',width:24,height:3,background:'#16a34a',borderRadius:'0 0 4px 4px'}}),
           h(Icon,{n:item.n,cls:'w-5 h-5',style:{color:active?'#4ade80':'#374151',transition:'color 0.15s'}}),
           h('span',{style:{fontSize:10,fontWeight:active?700:500,color:active?'#4ade80':'#374151',transition:'color 0.15s'}},item.label)
