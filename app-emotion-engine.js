@@ -57,6 +57,22 @@ A.Emotion.runSpring = function (fromVal, toVal, springFn, onFrame, onDone) {
   return function cancel() { if (rafId) cancelAnimationFrame(rafId); };
 };
 
+// ── Typed Haptic Feedback ─────────────────────────────────────────
+var HAPTIC_PATTERNS = {
+  light:    [6],
+  medium:   [10],
+  success:  [15, 30, 25],
+  badge:    [20, 15, 20, 15, 30],
+  complete: [50],
+  paywall:  [15],
+  spin:     [20, 20, 20, 20, 50],
+  streak:   [80],
+};
+A.Emotion.haptic = function(type) {
+  if (!navigator.vibrate || A.Emotion.prefersReducedMotion()) return;
+  try { navigator.vibrate(HAPTIC_PATTERNS[type] || HAPTIC_PATTERNS.light); } catch(e) {}
+};
+
 // ── Emotion Event Bus ─────────────────────────────────────────────
 var _listeners = {};
 A.Emotion.on = function (type, fn) {
