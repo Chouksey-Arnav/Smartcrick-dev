@@ -1,5 +1,5 @@
 // ================================================================
-// SmartCrick — Drill Video Map v1.0
+// SmartCrick — Drill Video Map v2.0
 // app-drill-video-map.js — loaded AFTER app-drills-data.js, BEFORE app-drills.js
 // Maps every drill subcategory → a curated YouTube video.
 // Also exports AMBIENT_VIDEOS for the cinematic drill-page background.
@@ -10,7 +10,7 @@
   if (!A) { console.error('[SC] app-drill-video-map: SC_APP not found'); return; }
 
   // ── Subcategory → Video ──────────────────────────────────────────
-  // Covers all 38 subcategories found in the 500-drill library.
+  // Covers 60+ subcategories found in the 500-drill library (incl. V2 categories).
   // Each entry: { videoId, title, channel, quality }
   var SUBCAT_VIDEOS = {
 
@@ -190,15 +190,15 @@
       quality: 'gold',
     },
     'stumping': {
-      videoId: 'YFwvJqCR3yU',
-      title: 'Stumping Technique & Reaction Drills',
-      channel: 'WK Cricket Training',
+      videoId: '6sRVHiGOlk0',
+      title: 'Stumping Technique — Cricket Mentor',
+      channel: 'Cricket Mentor',
       quality: 'gold',
     },
     'stance-footwork': {
-      videoId: 'YFwvJqCR3yU',
-      title: 'Keeper Stance, Footwork & Take Drills',
-      channel: 'WK Cricket Training',
+      videoId: 'oSIa1yDf1K8',
+      title: 'Keeper Stance & Movement — ICC Cricket',
+      channel: 'ICC Cricket',
       quality: 'gold',
     },
 
@@ -228,9 +228,9 @@
       quality: 'great',
     },
     'running-between-wickets': {
-      videoId: 'Hm3u0Em6D0M',
-      title: 'Running Between Wickets — Decision Drills',
-      channel: 'Cricket Coach Online',
+      videoId: 'T8BbFYq4ztU',
+      title: 'Running Between Wickets Drills',
+      channel: 'Cricket Coach',
       quality: 'gold',
     },
 
@@ -242,22 +242,120 @@
       quality: 'gold',
     },
     'pre-performance-routines': {
-      videoId: 'G2sAIBM8QKs',
-      title: 'Pre-Performance Routines for Cricketers',
-      channel: 'Cricket Performance Lab',
+      videoId: 'Nrg_-bT_MbE',
+      title: 'Cricket Pre-Match Routine',
+      channel: 'Cricket Mentor',
       quality: 'gold',
     },
     'pressure-adversity': {
-      videoId: 'G2sAIBM8QKs',
-      title: 'Mental Toughness & Pressure Training',
-      channel: 'Cricket Performance Lab',
+      videoId: 'cLWHoSYDYzw',
+      title: 'Mental Toughness — Cricket Coach Online',
+      channel: 'Cricket Coach Online',
       quality: 'great',
     },
     'in-play-focus': {
-      videoId: 'G2sAIBM8QKs',
-      title: 'In-Play Focus & Concentration Drills',
-      channel: 'Cricket Performance Lab',
+      videoId: 'DUHPNhfB5LA',
+      title: 'Concentration & Focus — Cricket Performance',
+      channel: 'Cricket Performance',
       quality: 'great',
+    },
+
+    // ── SHOTS (V2) ────────────────────────────────────────────────
+    'cover-drive': {
+      videoId: 'yeImrfgNJoM',
+      title: 'How to Play the Perfect Cover Drive',
+      channel: 'B3 Cricket',
+      quality: 'gold',
+    },
+    'pull-shot': {
+      videoId: 'EZPxOjLLCkU',
+      title: 'Pull Shot Masterclass — Setup & Execution',
+      channel: 'B3 Cricket',
+      quality: 'gold',
+    },
+    'sweep-shot': {
+      videoId: 'jqtaBMD7Wa8',
+      title: 'Sweep & Reverse Sweep Masterclass',
+      channel: 'Kookaburra Sport UK',
+      quality: 'gold',
+    },
+    'flick-shot': {
+      videoId: 'EZPxOjLLCkU',
+      title: 'Wrist Flick & On-Drive Technique',
+      channel: 'B3 Cricket',
+      quality: 'great',
+    },
+    'cut-shot': {
+      videoId: 'EZPxOjLLCkU',
+      title: 'Square Cut & Late Cut — Complete Guide',
+      channel: 'B3 Cricket',
+      quality: 'gold',
+    },
+    'lofted-slog': {
+      videoId: 'm5tudvaSSiY',
+      title: 'T20 Power Hitting — Lofted Shots',
+      channel: 'B3 Cricket',
+      quality: 'gold',
+    },
+
+    // ── DECISIONS (V2) ────────────────────────────────────────────
+    'off-stump-discipline': {
+      videoId: 'RxIGMIbgD88',
+      title: 'Off-Stump Discipline — Leave & Play',
+      channel: 'Sportplan Cricket',
+      quality: 'gold',
+    },
+    'field-reading': {
+      videoId: 'GV9VFzZyFY0',
+      title: 'Reading the Field — Shot Selection',
+      channel: 'Cricket Training Tips',
+      quality: 'gold',
+    },
+    'death-batting': {
+      videoId: 'm5tudvaSSiY',
+      title: 'Death Batting — T20 Tactics',
+      channel: 'B3 Cricket',
+      quality: 'gold',
+    },
+    'match-pressure': {
+      videoId: 'RxIGMIbgD88',
+      title: 'Playing Under Pressure — Mental Skills',
+      channel: 'Sportplan Cricket',
+      quality: 'great',
+    },
+
+    // ── PARTNERSHIP / RUNNING (V2) ────────────────────────────────
+    'calling-running': {
+      videoId: 'Hm3u0Em6D0M',
+      title: 'Running Between Wickets — Calling & Communication',
+      channel: 'Cricket Coach Online',
+      quality: 'gold',
+    },
+    'backing-up': {
+      videoId: 'T8BbFYq4ztU',
+      title: 'Backing Up & Sharp Running',
+      channel: 'Cricket Coach Online',
+      quality: 'great',
+    },
+
+    // ── BOWLING (V2 extras) ───────────────────────────────────────
+    'wrist-spin': {
+      videoId: 'xbT4kp7LHBU',
+      title: 'Wrist Spin — Grip, Action & Variations',
+      channel: 'Cricket Training Tips',
+      quality: 'gold',
+    },
+    'death-bowling': {
+      videoId: 'gbEBe3quvBI',
+      title: 'Death Bowling — Yorkers, Slower Balls & Bouncers',
+      channel: 'Donovan Miller Cricket',
+      quality: 'gold',
+    },
+    'swing-bowling': {
+      videoId: 'JRZD7Jk8wuI',
+      title: 'Swing Bowling — In, Out & Reverse',
+      channel: 'Cricket Mentor',
+      quality: 'gold',
     },
   };
 
@@ -269,6 +367,8 @@
     wicketkeeping: { videoId: 'YFwvJqCR3yU', title: 'Keeping Drills', channel: 'WK Cricket Training', quality: 'great' },
     fitness:       { videoId: 'VLjJhGkRkpE', title: 'Cricket Fitness', channel: 'Cricket Fitness Pro', quality: 'great' },
     mental:        { videoId: 'G2sAIBM8QKs', title: 'Cricket Mental Skills', channel: 'Cricket Performance Lab', quality: 'great' },
+    shots:         { videoId: 'yeImrfgNJoM', title: 'Shot-Making Masterclass', channel: 'B3 Cricket', quality: 'great' },
+    decisions:     { videoId: 'RxIGMIbgD88', title: 'Game Reading & Decisions', channel: 'Sportplan Cricket', quality: 'great' },
   };
 
   // ── Ambient background videos by category ────────────────────────
@@ -283,6 +383,8 @@
     wicketkeeping: 'oSIa1yDf1K8',   // Best Wicket Keeping — ICC Cricket
     fitness:       'VLjJhGkRkpE',   // Cricket Agility & SAQ Training
     mental:        'NjkS67_kFU8',   // Cricket — The Mental Game (focus compilation)
+    shots:         'dEG3f0lfBHM',   // Best shots compilations (same as batting)
+    decisions:     'RxIGMIbgD88',   // Decision-making under match conditions
   };
 
   // ── Video resolver ───────────────────────────────────────────────
@@ -308,5 +410,5 @@
   A.AMBIENT_VIDEOS     = AMBIENT_VIDEOS;
   A.getVideoForDrill   = getVideoForDrill;
 
-  console.log('[SC] app-drill-video-map v1.0 — ' + Object.keys(SUBCAT_VIDEOS).length + ' subcategories mapped, ' + Object.keys(AMBIENT_VIDEOS).length + ' ambient videos');
+  console.log('[SC] app-drill-video-map v2.0 — ' + Object.keys(SUBCAT_VIDEOS).length + ' subcategories mapped, ' + Object.keys(AMBIENT_VIDEOS).length + ' ambient videos, ' + Object.keys(CAT_FALLBACK_VIDEOS).length + ' category fallbacks');
 })();
