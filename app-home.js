@@ -40,16 +40,14 @@ function getAvgWeeklyXP(log){
   return v.length?Math.round(v.reduce(function(s,x){return s+x;},0)/v.length):0;
 }
 
-// ── 8 Spin prizes ─────────────────────────────────────────────────
+// ── Spin prizes — hard-mode distribution (expected ~21 XP) ────────
 var SPIN_PRIZES=[
-  {xp:15,  weight:25,label:'+15 XP',    color:'#6366f1'},
-  {xp:30,  weight:22,label:'+30 XP',    color:'#10b981'},
-  {xp:75,  weight:18,label:'+75 XP!',   color:'#3b82f6'},
-  {xp:10,  weight:12,label:'+10 XP',    color:'#6b7280'},
-  {xp:150, weight:10,label:'+150 XP!!', color:'#f59e0b'},
-  {xp:300, weight:7, label:'+300 XP!!!',color:'#ef4444'},
-  {xp:500, weight:4, label:'+500 XP!',  color:'#ec4899'},
-  {xp:1000,weight:2, label:'JACKPOT!',  color:'#ffd700'},
+  {xp:10, weight:50, label:'+10 XP',  color:'#475569'},
+  {xp:20, weight:25, label:'+20 XP',  color:'#3b82f6'},
+  {xp:30, weight:15, label:'+30 XP',  color:'#10b981'},
+  {xp:50, weight:8,  label:'+50 XP',  color:'#f59e0b'},
+  {xp:100,weight:1.5,label:'+100 XP', color:'#ef4444'},
+  {xp:200,weight:0.5,label:'+200 XP', color:'#ffd700'},
 ];
 function weightedRandom(prizes){
   var tot=prizes.reduce(function(s,p){return s+p.weight;},0), r=Math.random()*tot, c=0;
@@ -717,6 +715,41 @@ function WeeklyGoalSection(props){
   );
 }
 
+// ── TimerHomeWidget — quick-start timer card on home page ─────────
+function TimerHomeWidget() {
+  var recent = (A.DB && A.DB.get('timer_last_used')) || null;
+  var Icon = A.Icon;
+  return h('div', {style:{margin:'12px 16px 0'}},
+    h('div', {
+      role:'button', tabIndex:0,
+      onClick:function(){ nav('Timer'); },
+      onKeyDown:function(e){if(e.key==='Enter'||e.key===' ')nav('Timer');},
+      style:{
+        display:'flex', alignItems:'center', gap:12,
+        padding:'11px 14px', borderRadius:12, cursor:'pointer', outline:'none',
+        background:'rgba(16,185,129,0.06)',
+        border:'1px solid rgba(16,185,129,0.18)',
+        transition:'border-color 0.2s, background 0.2s',
+      }
+    },
+      h('div',{style:{
+        width:36,height:36,borderRadius:9,flexShrink:0,
+        background:'rgba(16,185,129,0.12)',
+        display:'flex',alignItems:'center',justifyContent:'center',
+      }},
+        Icon ? h(Icon,{n:'timer',cls:'w-5 h-5',style:{color:'#10b981'}})
+             : h('div',{style:{fontSize:18}}, '⏱')
+      ),
+      h('div',{style:{flex:1}},
+        h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb'}},'Training Timer'),
+        h('div',{style:{fontSize:11,color:'#6b7280',marginTop:2}},
+          recent ? 'Last: ' + recent.label : 'Stopwatch · Countdown · Intervals')
+      ),
+      h('span',{style:{fontSize:12,fontWeight:800,color:'#10b981',flexShrink:0}},'Start →')
+    )
+  );
+}
+
 // ── HomePage ──────────────────────────────────────────────────────
 function HomePage(){
   var [progress,        setProgress]       = useState(null);
@@ -859,15 +892,25 @@ function HomePage(){
       A.DNAOverview?h(A.DNAOverview,{}):null,
 
       // ── Triple Progress Rings ──────────────────────────────────
-      A.ProgressRings?h('div',{style:{display:'flex',justifyContent:'center',padding:'16px 0 4px'}},
+      A.ProgressRings?h('div',{style:{display:'flex',justifyContent:'center',padding:'16px 0 8px'}},
         h(A.ProgressRings,{
           content:{done:todayDrills,target:dailyTargets.drills},
           contribution:{xp:todayXP,target:dailyTargets.xp},
           consistency:{streak:streak,target:dailyTargets.streakGoal},
           onRingClick:function(){A.nav('Progress');}
         })
-      ):null
+      ):null,
+      // ── Timer quick-start ──────────────────────────────────────
+      h(TimerHomeWidget,{}),
     ),
+
+    // ── Crick daily message card ───────────────────────────────────
+    !isMinimalist&&(A.CrickHomeCard?h('div',{className:'sc-home-card-enter',style:{animationDelay:'40ms'}},
+      h(A.CrickHomeCard,{})):null),
+
+    // ── Crick's Daily Net — prominent placement ───────────────────
+    !isMinimalist&&(A.CrickNetsCard?h('div',{className:'sc-home-card-enter',style:{animationDelay:'60ms'}},
+      h(A.CrickNetsCard,{})):null),
 
     // ── Streak Shield (always visible) ────────────────────────────
     A.StreakShieldWidget
@@ -888,7 +931,8 @@ function HomePage(){
       onOpen:function(){window.dispatchEvent(new CustomEvent('sc_open_reward_modal'));}
     }):null),
 
-    !isMinimalist&&h('div',{className:'sc-reveal'},h(SpinWheelWidget,{})),
+    !isMinimalist&&h('div',{className:'sc-reveal'},
+      A.SpinWheelWidget ? h(A.SpinWheelWidget,{}) : h(SpinWheelWidget,{})),
     !isMinimalist&&(A.DailyNetHomeWidget?h('div',{className:'sc-reveal'},h(A.DailyNetHomeWidget,{})):null),
 
     // ── Mission ────────────────────────────────────────────────────
@@ -899,7 +943,7 @@ function HomePage(){
         borderRadius:12,padding:'14px 16px',
         boxShadow:'0 2px 8px rgba(0,0,0,0.4)'},role:'region','aria-label':'Today\'s mission'},
         h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
-          h('div',{style:{fontSize:16,fontWeight:700,color:'#f8fafc'}},'📋 Today\'s Mission'),
+          h('div',{style:{fontSize:14,fontWeight:800,color:'#f8fafc',textTransform:'uppercase',letterSpacing:'0.06em'}},'Today\'s Mission'),
           mission.reason&&h('div',{style:{marginLeft:'auto',fontSize:11,color:'#64748b',fontStyle:'italic'}},mission.reason)
         ),
         h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
@@ -951,9 +995,9 @@ function HomePage(){
 
     h('div',{className:'sc-reveal'},h(WeeklyGoalSection,{weekXP:weekXP,goal:weeklyGoal,setGoal:setWeeklyGoal})),
 
-    // ── Quick Start (AI Coach removed → Badges added) ──────────────
+    // ── Quick Access ───────────────────────────────────────────────
     h('div',{style:{margin:'0 16px 12px'}},
-      h('div',{style:{fontSize:13,fontWeight:700,color:'#f8fafc',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.06em'}},'Quick Start'),
+      h('div',{style:{fontSize:11,fontWeight:800,color:'#374151',marginBottom:10,textTransform:'uppercase',letterSpacing:'0.1em'}},'Quick Access'),
       h('div',{className:'sc-stagger',style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
         [
           {label:'Drills',      emoji:'🎯', page:'Drills',     color:'#3b82f6'},
