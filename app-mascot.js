@@ -1,6 +1,5 @@
-// app-mascot.js — Cricket Ball Mascot v1.0
-// Phase 4: SVG mascot state machine (idle_look_around, idle_blink, cheer)
-// Uses GSAP for animation with CSS fallback
+// app-mascot.js — Crick v2.0
+// Cricket ball mascot with dynamic color theming + GSAP animations
 (function () {
 'use strict';
 var h         = React.createElement;
@@ -10,12 +9,43 @@ var useRef    = React.useRef;
 var A         = window.SC_APP;
 A.Emotion     = A.Emotion || {};
 
+// ── Crick Color System ───────────────────────────────────────────
+var CRICK_COLORS = {
+  classic:  { id:'classic',  name:'Classic Red',    fill:'#b91c1c', stroke:'#7f1d1d', seam:'#7f1d1d', cost:0   },
+  forest:   { id:'forest',   name:'Forest Green',   fill:'#15803d', stroke:'#14532d', seam:'#166534', cost:100 },
+  ocean:    { id:'ocean',    name:'Ocean Blue',     fill:'#1d4ed8', stroke:'#1e3a8a', seam:'#1e40af', cost:150 },
+  midnight: { id:'midnight', name:'Midnight Black', fill:'#1e1b4b', stroke:'#0f0f1a', seam:'#312e81', cost:200 },
+  golden:   { id:'golden',   name:'Gold Edition',   fill:'#b45309', stroke:'#78350f', seam:'#92400e', cost:350 },
+  galaxy:   { id:'galaxy',   name:'Galaxy Purple',  fill:'#6d28d9', stroke:'#4c1d95', seam:'#5b21b6', cost:500 },
+};
+A.CRICK_COLORS = CRICK_COLORS;
+
+A.getCrickColor = function() {
+  var id = (A.DB && A.DB.get('crick_active_color')) || 'classic';
+  return CRICK_COLORS[id] || CRICK_COLORS.classic;
+};
+A.getUnlockedColors = function() {
+  return (A.DB && A.DB.get('crick_unlocked_colors')) || ['classic'];
+};
+
 // ── MascotSVG — the visible cricket ball character ────────────────
 // Renders an inline SVG with stable DOM ids so GSAP can target them.
-// size: 'sm' (48px) | 'md' (80px) | 'lg' (120px)
+// size: 'sm' (48px) | 'md' (80px) | 'lg' (120px) | 'xl' (180px)
 function MascotSVG(props) {
-  var size   = props.size === 'sm' ? 48 : props.size === 'lg' ? 120 : 80;
-  var rootId = 'em-mascot-main'; // singleton id — only one per page
+  var size   = props.size === 'sm' ? 48 : props.size === 'lg' ? 120 : props.size === 'xl' ? 180 : 80;
+  var rootId = props.id || 'em-mascot-main'; // allow multiple instances via custom id
+  // Reactively read active color so color changes re-render
+  var [colorKey, setColorKey] = useState(function() {
+    return (A.DB && A.DB.get('crick_active_color')) || 'classic';
+  });
+  useEffect(function() {
+    function onUpdate() {
+      setColorKey((A.DB && A.DB.get('crick_active_color')) || 'classic');
+    }
+    window.addEventListener('sc_update', onUpdate);
+    return function() { window.removeEventListener('sc_update', onUpdate); };
+  }, []);
+  var col = CRICK_COLORS[colorKey] || CRICK_COLORS.classic;
 
   return h('div', {
     id: rootId + '-wrap',
@@ -36,17 +66,17 @@ function MascotSVG(props) {
       h('circle', {
         id: rootId + '-body',
         cx: 60, cy: 66, r: 42,
-        fill: '#b91c1c', stroke: '#7f1d1d', strokeWidth: 1.5,
+        fill: col.fill, stroke: col.stroke, strokeWidth: 1.5,
       }),
       // Seam arc top
       h('path', {
         d: 'M60 24 Q82 46 60 66 Q38 46 60 24',
-        fill: 'none', stroke: '#7f1d1d', strokeWidth: 2, opacity: 0.7,
+        fill: 'none', stroke: col.seam, strokeWidth: 2, opacity: 0.7,
       }),
       // Seam arc bottom
       h('path', {
         d: 'M60 108 Q82 86 60 66 Q38 86 60 108',
-        fill: 'none', stroke: '#7f1d1d', strokeWidth: 2, opacity: 0.7,
+        fill: 'none', stroke: col.seam, strokeWidth: 2, opacity: 0.7,
       }),
 
       // ── Eyes: sclera ───────────────────────────────────────────
@@ -161,7 +191,7 @@ function MascotController() {
       host.style.opacity = '1';
       host.style.transform = 'scale(1.15)';
       setTimeout(function () {
-        if (host) { host.style.opacity = '0.18'; host.style.transform = 'scale(1)'; }
+        if (host) { host.style.opacity = '0.7'; host.style.transform = 'scale(1)'; }
       }, 2400);
     }
 
@@ -259,6 +289,9 @@ function MascotController() {
 
 A.Mascot           = MascotSVG;
 A.MascotController = MascotController;
+// Crick aliases
+A.Crick            = MascotSVG;
+A.CrickController  = MascotController;
 
-console.log('[SC] Mascot v1.0 ready');
+console.log('[SC] Crick v2.0 ready — color system active');
 })();
