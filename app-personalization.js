@@ -61,6 +61,22 @@ function drillCategoryScore(user, category) {
   }
 
   var val = s[category] || 50;
+
+  // Neural blend — if BrainEngine has enough samples, adjust score with StylePredictor output
+  try {
+    if (A.BrainEngine && A.BrainEngine.getBlendFactor && A.BrainEngine.getBlendFactor('StylePredictor') > 0) {
+      var sig = A.BrainEngine.buildStyleSignals ? A.BrainEngine.buildStyleSignals() : null;
+      if (sig) {
+        var style = A.BrainEngine.predict('StylePredictor', sig);
+        if (style) {
+          // Aggressive style → boost batting/shots; mental_dominant → boost mental
+          if (category === 'batting' || category === 'shots') val += Math.round((style.aggressive||0) * 10);
+          if (category === 'mental')  val += Math.round((style.mental_dominant||0) * 12);
+          if (category === 'bowling') val += Math.round((style.technical||0) * 5);
+        }
+      }
+    }
+  } catch(e) {}
   return Math.max(0, Math.min(100, val));
 }
 
