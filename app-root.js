@@ -147,6 +147,8 @@ function AppShell() {
         setDailyReward(result);
         setShowReward(true);
       }
+      // Schedule evening reminder if user has pending sessions
+      if (A.scheduleEveningReminder) { try { A.scheduleEveningReminder(); } catch(e) {} }
     }, 800);
     return function() { clearTimeout(t); };
   }, []);
