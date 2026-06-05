@@ -9,6 +9,96 @@ const { DB, getLevelInfo } = window.SC_APP;
 const { SKILL_PATHS, BADGE_DEFS } = window.SC_APP;
 const { Icon, LevelBar, StatCard, XPChart, Heatmap, PageHeader } = window.SC_APP;
 
+// ── Brain AI Insights Banner ──────────────────────────────────────
+function BrainInsightsBanner() {
+  const [open,  setOpen]  = useState(false);
+  const [status,setStatus]= useState(null);
+  const [styles,setStyles]= useState(null);
+
+  useEffect(()=>{
+    function load() {
+      try {
+        if (!window.SC_APP.BrainEngine) return;
+        const BE = window.SC_APP.BrainEngine;
+        setStatus(BE.getFullStatus ? BE.getFullStatus() : null);
+        const sig = BE.buildStyleSignals ? BE.buildStyleSignals() : null;
+        if (sig) setStyles(BE.predict('StylePredictor', sig));
+      } catch(e) {}
+    }
+    load();
+    const t = setTimeout(load, 700);
+    window.addEventListener('sc_update', load);
+    return ()=>{ clearTimeout(t); window.removeEventListener('sc_update', load); };
+  },[]);
+
+  if (!status || status.totalSamples < 3) return null;
+  const models = status.models || {};
+  const MODEL_KEYS = ['StylePredictor','ProMatcher','DrillAdaptor','MentalReadiness'];
+  const MODEL_SHORT = { StylePredictor:'Style', ProMatcher:'Role', DrillAdaptor:'Drills', MentalReadiness:'Mental' };
+  const STYLE_KEYS = [
+    { k:'aggressive',      l:'Power'     },
+    { k:'technical',       l:'Technical' },
+    { k:'versatile',       l:'Versatile' },
+    { k:'mental_dominant', l:'Mental'    },
+  ];
+
+  return h('div',{style:{borderRadius:16, background:'rgba(79,70,229,0.08)', border:'1px solid rgba(79,70,229,0.25)', overflow:'hidden'}},
+    h('button',{
+      onClick:()=>setOpen(o=>!o),
+      style:{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',
+        padding:'14px 16px', background:'none', border:'none', cursor:'pointer', textAlign:'left'},
+    },
+      h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+        h('div',{style:{fontSize:13}},'⬡'),
+        h('span',{style:{fontSize:13,fontWeight:700,color:'#c4b5fd'}},'What the AI knows about you'),
+        h('span',{style:{fontSize:11,color:'#6b7280',marginLeft:6}},status.totalSamples+' signals')
+      ),
+      h('span',{style:{color:'#64748b',fontSize:14}}, open?'▲':'▼')
+    ),
+    open && h('div',{style:{padding:'0 16px 16px',display:'flex',flexDirection:'column',gap:12}},
+      h('div',{style:{display:'flex',gap:8}},
+        status.styleLabel&&h('div',{style:{flex:1,padding:'10px 12px',background:'rgba(255,255,255,0.05)',borderRadius:10}},
+          h('div',{style:{fontSize:9,color:'#6b7280',marginBottom:3,letterSpacing:'0.08em'}},'STYLE'),
+          h('div',{style:{fontSize:13,fontWeight:800,color:'#f8fafc'}},status.styleLabel)
+        ),
+        status.proLabel&&h('div',{style:{flex:1,padding:'10px 12px',background:'rgba(255,255,255,0.05)',borderRadius:10}},
+          h('div',{style:{fontSize:9,color:'#6b7280',marginBottom:3,letterSpacing:'0.08em'}},'ARCHETYPE'),
+          h('div',{style:{fontSize:13,fontWeight:800,color:'#f8fafc'}},status.proLabel)
+        )
+      ),
+      styles && h('div',{style:{display:'flex',flexDirection:'column',gap:6}},
+        h('div',{style:{fontSize:10,color:'#6b7280',marginBottom:2,textTransform:'uppercase',letterSpacing:'0.06em'}},'Style Dimensions'),
+        STYLE_KEYS.map(sk=>{
+          const val=Math.round((styles[sk.k]||0)*100);
+          return h('div',{key:sk.k},
+            h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3}},
+              h('span',{style:{fontSize:11,color:'#cbd5e1'}},sk.l),
+              h('span',{style:{fontSize:10,color:'#4ade80',fontWeight:700}},val+'%')
+            ),
+            h('div',{style:{height:3,borderRadius:99,background:'rgba(255,255,255,0.08)',overflow:'hidden'}},
+              h('div',{style:{height:'100%',width:val+'%',background:'linear-gradient(90deg,#6366f1,#8b5cf6)',borderRadius:99,transition:'width 0.5s'}})
+            )
+          );
+        })
+      ),
+      h('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+        h('div',{style:{fontSize:10,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}},'Model Training'),
+        MODEL_KEYS.map(name=>{
+          const m=models[name]||{};
+          const pct=Math.min(100,Math.round(((m.samples||0)/25)*100));
+          return h('div',{key:name,style:{display:'flex',alignItems:'center',gap:8}},
+            h('span',{style:{fontSize:11,color:'#94a3b8',width:52}},MODEL_SHORT[name]),
+            h('div',{style:{flex:1,height:4,borderRadius:99,background:'rgba(255,255,255,0.08)',overflow:'hidden'}},
+              h('div',{style:{height:'100%',width:pct+'%',background:m.trained?'#22c55e':'#64748b',borderRadius:99,transition:'width 0.5s'}})
+            ),
+            h('span',{style:{fontSize:9,color:'#6b7280',width:24,textAlign:'right'}},(m.samples||0)+'/25')
+          );
+        })
+      )
+    )
+  );
+}
+
 function ProgressPage() {
   const [progress,setProgress]=useState(()=>DB.getProgress());
   const [xpDays,setXpDays]=useState(()=>DB.getXPLast7Days());
@@ -73,6 +163,9 @@ function ProgressPage() {
           ];
         })().map(s=>h(StatCard,{key:s.label,...s}))
       ),
+
+      // AI Brain Insights (expandable)
+      h(BrainInsightsBanner,{}),
 
       // 7-day chart
       h('div',{className:'sc-reveal',style:{padding:16, borderRadius:16, background:'rgba(16,22,36,0.95)', border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 4px 16px rgba(0,0,0,0.25)'}},
