@@ -896,27 +896,29 @@ function ProgressRings(props) {
   var consistency  = props.consistency  || {streak:0, target:7};
   var onRingClick  = props.onRingClick  || function(){};
 
-  var SIZE = 220, CX = 110, CY = 110;
+  var SIZE = 240, CX = 120, CY = 120;
   var rings = [
-    {key:'content',      r:98, sw:15, color:'#FF375F', value:content.done,       max:Math.max(content.target,1),      label:'Content',      sub:'Drills'},
-    {key:'contribution', r:78, sw:14, color:'#92F736', value:contribution.xp,    max:Math.max(contribution.target,1), label:'Contribution', sub:'XP'},
-    {key:'consistency',  r:58, sw:13, color:'#62F4EB', value:consistency.streak, max:Math.max(consistency.target,1),  label:'Consistency',  sub:'Streak'},
+    {key:'content',      r:104, sw:16, color:'#FF375F', trk:'rgba(255,55,95,0.13)',  value:content.done,       max:Math.max(content.target,1),      label:'Content',      sub:'Drills'},
+    {key:'contribution', r:82,  sw:15, color:'#92F736', trk:'rgba(146,247,54,0.12)', value:contribution.xp,    max:Math.max(contribution.target,1), label:'Contribution', sub:'XP Earned'},
+    {key:'consistency',  r:60,  sw:14, color:'#62F4EB', trk:'rgba(98,244,235,0.11)', value:consistency.streak, max:Math.max(consistency.target,1),  label:'Consistency',  sub:'Day Streak'},
   ];
   var prevPcts = useRef({content:0, contribution:0, consistency:0});
   var animRef  = useRef(false);
+  var xpRef    = useRef(null);
 
   // Inject keyframe CSS once
   useEffect(function() {
-    var sid = 'sc-ring-apple-style';
+    var sid = 'sc-ring-apple-v3';
     if (!document.getElementById(sid)) {
       var el = document.createElement('style'); el.id = sid;
       el.textContent = [
-        '@keyframes sc_ring_glow_red  {0%,100%{filter:drop-shadow(0 0 5px #FF375F)}50%{filter:drop-shadow(0 0 16px #FF375F)}}',
-        '@keyframes sc_ring_glow_green{0%,100%{filter:drop-shadow(0 0 5px #92F736)}50%{filter:drop-shadow(0 0 16px #92F736)}}',
-        '@keyframes sc_ring_glow_cyan {0%,100%{filter:drop-shadow(0 0 5px #62F4EB)}50%{filter:drop-shadow(0 0 16px #62F4EB)}}',
+        '@keyframes sc_ring_glow_red  {0%,100%{filter:drop-shadow(0 0 6px #FF375F88)}50%{filter:drop-shadow(0 0 18px #FF375F)}}',
+        '@keyframes sc_ring_glow_green{0%,100%{filter:drop-shadow(0 0 6px #92F73688)}50%{filter:drop-shadow(0 0 18px #92F736)}}',
+        '@keyframes sc_ring_glow_cyan {0%,100%{filter:drop-shadow(0 0 6px #62F4EB88)}50%{filter:drop-shadow(0 0 18px #62F4EB)}}',
         '.sc-ring-glow-red  {animation:sc_ring_glow_red   1.8s ease-in-out infinite}',
-        '.sc-ring-glow-green{animation:sc_ring_glow_green 1.8s ease-in-out infinite}',
-        '.sc-ring-glow-cyan {animation:sc_ring_glow_cyan  1.8s ease-in-out infinite}',
+        '.sc-ring-glow-green{animation:sc_ring_glow_green 1.8s ease-in-out infinite;animation-delay:0.6s}',
+        '.sc-ring-glow-cyan {animation:sc_ring_glow_cyan  1.8s ease-in-out infinite;animation-delay:1.2s}',
+        '@keyframes sc_ring_hub_pulse{0%,100%{opacity:0.55}50%{opacity:0.75}}',
       ].join('\n');
       document.head.appendChild(el);
     }
@@ -936,9 +938,18 @@ function ProgressRings(props) {
       gsap.fromTo(el,
         { attr: { strokeDashoffset: circ } },
         { attr: { strokeDashoffset: circ * (1 - pct) },
-          duration: 1.4, delay: i * 0.14, ease: 'power3.out' }
+          duration: 1.5, delay: 0.1 + i * 0.16, ease: 'power3.out' }
       );
     });
+    // Animate center XP count-up
+    var xpEl = xpRef.current;
+    if (xpEl) {
+      var target = contribution.xp || 0;
+      var obj = { val: 0 };
+      gsap.to(obj, { val: target, duration: 1.4, delay: 0.3, ease: 'power2.out',
+        onUpdate: function() { if (xpEl) xpEl.textContent = Math.round(obj.val); }
+      });
+    }
   }, []);
 
   // Ring completion haptic + event
@@ -955,84 +966,169 @@ function ProgressRings(props) {
   }, [content.done, contribution.xp, consistency.streak]);
 
   var glowMap = {'#FF375F':'sc-ring-glow-red','#92F736':'sc-ring-glow-green','#62F4EB':'sc-ring-glow-cyan'};
-  var labelValueMap = {
-    content:      content.done + '/' + content.target,
-    contribution: (contribution.xp || 0) + ' XP',
-    consistency:  (consistency.streak || 0) + ' d',
-  };
+
+  // Get level info for center hub
+  var levelInfo = null;
+  try {
+    var p = A.DB ? A.DB.getProgress() : {};
+    levelInfo = A.getLevelInfo ? A.getLevelInfo(p.total_xp || 0) : null;
+  } catch(e) {}
 
   return h('div', {
-    style: { display:'flex', flexDirection:'column', alignItems:'center', gap:16 },
+    style: { display:'flex', flexDirection:'column', alignItems:'center', gap:18 },
     onClick: onRingClick,
     role: 'button', 'aria-label': 'View progress details', tabIndex: 0,
   },
     h('svg', {
-      width: SIZE, height: SIZE, viewBox: '0 0 220 220',
-      style: { cursor:'pointer', overflow:'visible', display:'block' },
+      width: SIZE, height: SIZE, viewBox: '0 0 240 240',
+      style: { cursor:'pointer', overflow:'visible', display:'block', filter:'drop-shadow(0 4px 24px rgba(0,0,0,0.45))' },
     },
+      // SVG defs for radial gradients (per ring)
+      h('defs', null,
+        rings.map(function(ring) {
+          return h('radialGradient', { key:'g'+ring.key, id:'sc-rg-'+ring.key, cx:'50%', cy:'50%', r:'50%' },
+            h('stop', { offset:'0%',   stopColor: ring.color, stopOpacity:'0.55' }),
+            h('stop', { offset:'100%', stopColor: ring.color, stopOpacity:'1'    }),
+          );
+        }),
+        // Center hub gradient
+        h('radialGradient', { id:'sc-rg-hub', cx:'40%', cy:'35%', r:'65%' },
+          h('stop', { offset:'0%',   stopColor:'#1e293b', stopOpacity:'1' }),
+          h('stop', { offset:'100%', stopColor:'#0a0e14', stopOpacity:'1' }),
+        )
+      ),
+
+      // Center dark hub disc (behind everything)
+      h('circle', { cx:CX, cy:CY, r:40, fill:'url(#sc-rg-hub)', stroke:'rgba(255,255,255,0.04)', strokeWidth:1 }),
+
       // Build rings outer → inner
       rings.map(function(ring) {
-        var pct  = Math.min(ring.value / ring.max, 1);
-        var over = ring.value / ring.max > 1 ? Math.min((ring.value / ring.max - 1), 1) : 0;
+        var rawPct = ring.value / ring.max;
+        var pct  = Math.min(rawPct, 1);
+        var over = rawPct > 1 ? Math.min(rawPct - 1, 1) : 0;
         var circ = 2 * Math.PI * ring.r;
-        var offset = circ * (1 - pct);
         var gCls = pct >= 0.9 ? glowMap[ring.color] : '';
 
         return h(Fragment, { key: ring.key },
-          // Track arc (faint)
+          // Track arc (faint colored)
           h('circle', {
             cx: CX, cy: CY, r: ring.r,
-            fill: 'none', stroke: ring.color,
-            strokeWidth: ring.sw, opacity: 0.12,
+            fill: 'none', stroke: ring.trk,
+            strokeWidth: ring.sw,
           }),
-          // Progress arc (animated via GSAP on mount, transitions on update)
+          // Round track end-caps for closed look (start dot)
+          h('circle', {
+            cx: CX, cy: CY - ring.r, r: ring.sw / 2,
+            fill: ring.trk,
+          }),
+          // Progress arc (animated via GSAP on mount)
           h('circle', {
             id: 'sc-ring-arc-' + ring.key,
             cx: CX, cy: CY, r: ring.r,
-            fill: 'none', stroke: ring.color,
+            fill: 'none', stroke: 'url(#sc-rg-'+ring.key+')',
             strokeWidth: ring.sw, strokeLinecap: 'round',
             strokeDasharray: circ, strokeDashoffset: circ * (1 - pct),
-            transform: 'rotate(-90 110 110)',
-            style: { transition: 'stroke-dashoffset 0.7s cubic-bezier(0.16,1,0.3,1)' },
+            transform: 'rotate(-90 120 120)',
+            style: { transition: 'stroke-dashoffset 0.75s cubic-bezier(0.16,1,0.3,1)' },
             className: gCls,
           }),
-          // Overflow arc (white, appears when > 100%)
+          // Overflow arc (bright white layer — Apple Watch style)
           over > 0 && h('circle', {
             cx: CX, cy: CY, r: ring.r,
             fill: 'none', stroke: '#fff',
-            strokeWidth: ring.sw - 3, strokeLinecap: 'round', opacity: 0.55,
-            strokeDasharray: circ, strokeDashoffset: circ * (1 - over * 0.3),
-            transform: 'rotate(-90 110 110)',
+            strokeWidth: ring.sw - 4, strokeLinecap: 'round', opacity: 0.6,
+            strokeDasharray: circ,
+            strokeDashoffset: circ * (1 - Math.min(over, 0.9) * 0.35),
+            transform: 'rotate(-90 120 120)',
           }),
         );
       }),
-      // Center text
-      h('text', { x: CX, y: CY - 14, textAnchor:'middle',
-        style:{ fontSize:11, fill:'#64748b', fontWeight:700, fontFamily:'system-ui', letterSpacing:'0.1em', textTransform:'uppercase' }
+
+      // Center XP value (animated count-up via ref)
+      h('text', { x: CX, y: CY - 12, textAnchor:'middle',
+        style:{ fontSize:10, fill:'#64748b', fontWeight:700, fontFamily:'system-ui', letterSpacing:'0.12em' }
       }, 'TODAY'),
-      h('text', { x: CX, y: CY + 10, textAnchor:'middle',
-        style:{ fontSize:28, fill:'#f0fdf4', fontWeight:900, fontFamily:'system-ui', letterSpacing:'-0.02em' }
+      h('text', {
+        x: CX, y: CY + 12, textAnchor:'middle',
+        style:{ fontSize:26, fill:'#f1f5f9', fontWeight:900, fontFamily:'system-ui', letterSpacing:'-0.025em' },
+        ref: xpRef,
       }, String(contribution.xp || 0)),
       h('text', { x: CX, y: CY + 26, textAnchor:'middle',
-        style:{ fontSize:10, fill:'#475569', fontWeight:600, fontFamily:'system-ui' }
-      }, 'XP TODAY'),
+        style:{ fontSize:9.5, fill:'#334155', fontWeight:700, fontFamily:'system-ui', letterSpacing:'0.07em' }
+      }, 'XP'),
+
+      // Level badge below center (if available)
+      levelInfo && h('text', { x: CX, y: CY + 40, textAnchor:'middle',
+        style:{ fontSize:8.5, fill: '#4ade80', fontWeight:700, fontFamily:'system-ui', letterSpacing:'0.05em', textTransform:'uppercase' }
+      }, 'Lv ' + (levelInfo.level || 1)),
     ),
-    // Ring labels row
-    h('div', { style:{ display:'flex', gap:20, alignItems:'flex-start' } },
+
+    // Ring labels — 3 columns, rich layout
+    h('div', { style:{ display:'flex', gap:6, alignItems:'stretch', width:'100%', maxWidth:260 } },
       rings.map(function(ring) {
-        var pct = Math.min(1, ring.value / ring.max);
-        return h('div', { key: ring.key, style:{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 } },
-          h('div', { style:{ width:10, height:10, borderRadius:'50%', background: ring.color, opacity: pct > 0 ? 1 : 0.25,
-            boxShadow: pct > 0 ? ('0 0 8px ' + ring.color + '88') : 'none' } }),
-          h('div', { style:{ fontSize:13, fontWeight:800, color: pct > 0 ? '#e5e7eb' : '#374151' } },
-            labelValueMap[ring.key]),
-          h('div', { style:{ fontSize:10, fontWeight:600, color:'#4b5563', textTransform:'uppercase', letterSpacing:'0.06em' } },
-            ring.sub),
+        var rawPct = ring.value / ring.max;
+        var pct    = Math.min(rawPct, 1);
+        var pctStr = Math.round(pct * 100) + '%';
+        var isComplete = pct >= 1;
+        var valueStr = ring.key === 'content'
+          ? content.done + '/' + content.target
+          : ring.key === 'contribution'
+            ? (contribution.xp || 0).toLocaleString()
+            : (consistency.streak || 0) + 'd';
+
+        return h('div', {
+          key: ring.key,
+          style:{
+            flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+            padding:'8px 4px 7px',
+            background: isComplete ? ('rgba('+hexToRgb(ring.color)+',0.08)') : 'rgba(255,255,255,0.025)',
+            borderRadius:10,
+            border: '1px solid ' + (isComplete ? ring.color + '44' : 'rgba(255,255,255,0.04)'),
+          }
+        },
+          // Color dot with glow
+          h('div', { style:{
+            width:8, height:8, borderRadius:'50%',
+            background: ring.color,
+            opacity: pct > 0 ? 1 : 0.2,
+            boxShadow: pct > 0.1 ? ('0 0 10px '+ring.color+'99') : 'none',
+            transition:'box-shadow 0.4s',
+          }}),
+          // Value
+          h('div', { style:{
+            fontSize:14, fontWeight:900,
+            color: pct > 0 ? '#f1f5f9' : '#374151',
+            fontFamily:'system-ui', letterSpacing:'-0.02em', lineHeight:1,
+          }}, valueStr),
+          // Sub label
+          h('div', { style:{
+            fontSize:9, fontWeight:700, color:'#475569',
+            textTransform:'uppercase', letterSpacing:'0.07em',
+          }}, ring.sub),
+          // Progress bar
+          h('div', { style:{ width:'80%', height:2.5, borderRadius:2, background:'rgba(255,255,255,0.06)', overflow:'hidden' } },
+            h('div', { style:{
+              height:'100%', borderRadius:2,
+              width: pctStr,
+              background: ring.color,
+              transition:'width 0.8s cubic-bezier(0.16,1,0.3,1)',
+              boxShadow: pct > 0 ? ('0 0 6px '+ring.color) : 'none',
+            }})
+          ),
         );
       })
     )
   );
 }
+
+// hex helper for ring labels rgba
+function hexToRgb(hex) {
+  var r = parseInt(hex.slice(1,3),16);
+  var g = parseInt(hex.slice(3,5),16);
+  var b = parseInt(hex.slice(5,7),16);
+  return r+','+g+','+b;
+}
+
 A.ProgressRings = ProgressRings;
 
 // ── Minimalist Mode (MIN-1) ───────────────────────────────────────
@@ -1113,165 +1209,6 @@ function KudosOverlay() {
 }
 A.KudosOverlay = KudosOverlay;
 
-// ── Cricket-Themed Loading Components ────────────────────────────
-// Shared CSS injection — idempotent, called by all three loaders.
-// Injects: scBallBounce, scBallShadow, scSeamSpin, scSkeleton keyframes
-// + .sc-skeleton-shimmer utility class.
-function _injectCricketLoaderCSS() {
-  var sid = 'sc-cricket-loader-anim';
-  if (document.getElementById(sid)) return;
-  var el = document.createElement('style');
-  el.id = sid;
-  el.textContent = [
-    // Vertical bounce — eased to mimic real gravity
-    '@keyframes scBallBounce{' +
-      '0%,100%{transform:translateY(0);animation-timing-function:cubic-bezier(0.215,0.61,0.355,1)}' +
-      '50%{transform:translateY(-28px);animation-timing-function:cubic-bezier(0.55,0.055,0.675,0.19)}' +
-    '}',
-    // Shadow squash/fade in sync with bounce
-    '@keyframes scBallShadow{' +
-      '0%,100%{transform:scaleX(1);opacity:0.35}' +
-      '50%{transform:scaleX(0.45);opacity:0.12}' +
-    '}',
-    // Seam lines spin independently around ball centre
-    '@keyframes scSeamSpin{' +
-      'from{transform:rotate(0deg)}' +
-      'to{transform:rotate(360deg)}' +
-    '}',
-    // Skeleton shimmer — left-to-right gradient sweep
-    '@keyframes scSkeleton{' +
-      '0%{background-position:-200% 0}' +
-      '100%{background-position:200% 0}' +
-    '}',
-    // Utility class consumed by CricketSkeleton
-    '.sc-skeleton-shimmer{' +
-      'background:linear-gradient(' +
-        '90deg,' +
-        'rgba(255,255,255,0.04) 25%,' +
-        'rgba(255,255,255,0.09) 50%,' +
-        'rgba(255,255,255,0.04) 75%' +
-      ');' +
-      'background-size:200% 100%;' +
-      'animation:scSkeleton 1.6s ease-in-out infinite' +
-    '}',
-  ].join('');
-  document.head.appendChild(el);
-}
-
-// CricketLoader — full-page centred loader
-// SVG cricket ball: red body, white seam lines (scSeamSpin),
-// vertical bounce (scBallBounce), ground shadow (scBallShadow).
-// Wraps in a min-height:100dvh flex centred container.
-function CricketLoader(props) {
-  var msg = props && props.message;
-  // Inject synchronously so styles are present before first paint
-  _injectCricketLoaderCSS();
-  useEffect(function() { _injectCricketLoaderCSS(); }, []);
-
-  return h('div', {
-    style: {
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      minHeight: '100dvh', width: '100%', gap: 20,
-    }
-  },
-    // Bouncing ball + ground shadow stack
-    h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 } },
-      // Outer wrapper carries the bounce transform
-      h('div', {
-        style: {
-          width: 56, height: 56, position: 'relative',
-          animation: 'scBallBounce 0.85s ease-in-out infinite',
-        }
-      },
-        h('svg', {
-          viewBox: '0 0 48 48', width: 56, height: 56,
-          style: { display: 'block', overflow: 'visible' },
-        },
-          // Cricket-red ball body
-          h('circle', { cx: 24, cy: 24, r: 22, fill: '#c0392b' }),
-          // Specular highlight
-          h('ellipse', {
-            cx: 17, cy: 15, rx: 7, ry: 4,
-            fill: 'rgba(255,255,255,0.13)',
-          }),
-          // Seam lines group — rotates via scSeamSpin around ball centre
-          h('g', {
-            style: {
-              animation: 'scSeamSpin 2.4s linear infinite',
-              transformOrigin: '24px 24px',
-            }
-          },
-            h('path', { d: 'M8 16 Q24 8 40 16',  stroke: '#fff', strokeWidth: 1.8, fill: 'none', opacity: 0.75 }),
-            h('path', { d: 'M8 32 Q24 40 40 32',  stroke: '#fff', strokeWidth: 1.8, fill: 'none', opacity: 0.75 }),
-            h('line', { x1: 24, y1: 2, x2: 24, y2: 46, stroke: '#fff', strokeWidth: 1.4, opacity: 0.5 })
-          )
-        )
-      ),
-      // Ground shadow — squashes as ball rises
-      h('div', {
-        style: {
-          width: 34, height: 8, borderRadius: '50%',
-          background: 'rgba(0,0,0,0.32)',
-          animation: 'scBallShadow 0.85s ease-in-out infinite',
-        }
-      })
-    ),
-    h('div', {
-      style: { fontSize: 13, color: '#6b7280', letterSpacing: '0.06em', fontWeight: 600 }
-    }, msg || 'Loading SmartCrick...')
-  );
-}
-A.CricketLoader = CricketLoader;
-
-// CricketLoaderSmall — 20px inline variant
-// Safe to render before CricketLoader ever mounts — injects its own CSS.
-function CricketLoaderSmall() {
-  _injectCricketLoaderCSS();
-  useEffect(function() { _injectCricketLoaderCSS(); }, []);
-  return h('div', {
-    style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
-  },
-    h('div', {
-      style: { width: 20, height: 20, animation: 'scBallBounce 0.7s ease-in-out infinite' }
-    },
-      h('svg', {
-        viewBox: '0 0 48 48', width: 20, height: 20,
-        style: { display: 'block', overflow: 'visible' },
-      },
-        h('circle', { cx: 24, cy: 24, r: 22, fill: '#c0392b' }),
-        h('g', {
-          style: {
-            animation: 'scSeamSpin 2.4s linear infinite',
-            transformOrigin: '24px 24px',
-          }
-        },
-          h('path', { d: 'M8 16 Q24 8 40 16',  stroke: '#fff', strokeWidth: 2.5, fill: 'none', opacity: 0.75 }),
-          h('path', { d: 'M8 32 Q24 40 40 32',  stroke: '#fff', strokeWidth: 2.5, fill: 'none', opacity: 0.75 }),
-          h('line', { x1: 24, y1: 2, x2: 24, y2: 46, stroke: '#fff', strokeWidth: 2, opacity: 0.5 })
-        )
-      )
-    )
-  );
-}
-A.CricketLoaderSmall = CricketLoaderSmall;
-
-// CricketSkeleton — shimmer loading card
-// Props: height (px, default 120), radius (px, default 14)
-// Uses CSS linear-gradient animation (left→right shimmer via scSkeleton keyframe).
-function CricketSkeleton(props) {
-  var height = (props && props.height) || 120;
-  var radius = (props && props.radius) || 14;
-  _injectCricketLoaderCSS();
-  useEffect(function() { _injectCricketLoaderCSS(); }, []);
-  return h('div', {
-    className: 'sc-skeleton-shimmer',
-    style: { width: '100%', height: height, borderRadius: radius, flexShrink: 0 },
-    'aria-hidden': 'true',
-  });
-}
-A.CricketSkeleton = CricketSkeleton;
-
-// (End of app-ui additions)
-console.log('[SC] app-ui v3.4 ready — CricketLoader, CricketLoaderSmall, CricketSkeleton, ProgressRings, KudosOverlay, MinimalistToggle');
+// (End of app-ui additions — the existing console.log('[SC] app-ui...') line follows below)
+console.log('[SC] app-ui v3.3 ready — ProgressRings, KudosOverlay, MinimalistToggle');
 })();
