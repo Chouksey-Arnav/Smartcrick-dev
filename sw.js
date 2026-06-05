@@ -271,6 +271,24 @@ self.addEventListener('fetch', function(event) {
   }
 });
 
+// ── MESSAGE FROM APP (training reminders) ───────────────────────
+self.addEventListener('message', function(event) {
+  if (!event.data) return;
+  if (event.data.type === 'SC_REMINDER') {
+    event.waitUntil(
+      self.registration.showNotification(event.data.title || 'SmartCrick 🏏', {
+        body: event.data.body || "Your training sessions are waiting!",
+        icon: '/icon.svg',
+        badge: '/icon.svg',
+        tag: 'sc-daily-reminder',
+        renotify: true,
+        requireInteraction: false,
+        data: { url: event.data.url || '/#/Schedule' },
+      })
+    );
+  }
+});
+
 // ── PUSH NOTIFICATIONS (optional) ───────────────────────────────
 self.addEventListener('push', function(event) {
   var data = event.data ? event.data.json() : {};
