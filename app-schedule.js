@@ -257,6 +257,7 @@ function SchedulePage() {
   var totalSess = (schedule.sessions||[]).length;
 
   return h('div', { style:{ paddingBottom:100, background:'#0d1117', minHeight:'100dvh' } },
+    A.CrickTip ? h(A.CrickTip, { context: 'schedule', trigger: 'first_visit' }) : null,
     h(PageHeader, { title:'Training Schedule', subtitle:'Plan · Track · Improve', gradient:'linear-gradient(135deg,#0f766e,#0891b2)',
       actions: h('div', { style:{display:'flex',gap:8} },
         h('button', { onClick:exportICal, title:'Export to calendar', style:{background:'rgba(255,255,255,.12)',border:'none',borderRadius:8,padding:'7px 10px',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:700} }, '📅 iCal'),
