@@ -351,10 +351,20 @@ function CrickPage() {
       display:'flex', flexDirection:'column', alignItems:'center',
       padding:'32px 16px 20px', gap:12,
     }},
-      h('div', {style:{
-        filter:'drop-shadow(0 8px 32px ' + (currentColor.fill||'#b91c1c') + '44)',
-        transition:'filter 0.4s ease',
-      }},
+      h('div', {
+        style:{
+          filter:'drop-shadow(0 8px 32px ' + (currentColor.fill||'#b91c1c') + '44)',
+          transition:'filter 0.4s ease',
+          cursor: 'pointer',
+        },
+        onClick: function() {
+          if (A.Emotion && A.Emotion.tapSpinMascot) A.Emotion.tapSpinMascot('crick-page-main');
+          if (A.Emotion && A.Emotion.fireSparkleSVG) {
+            var el = document.getElementById('crick-page-main-wrap');
+            if (el) A.Emotion.fireSparkleSVG(el, { color: currentColor.fill || '#b91c1c' });
+          }
+        },
+      },
         A.Crick ? h(A.Crick, {size:'xl', id:'crick-page-main'}) : h('div',{style:{fontSize:80}},'🏏')
       ),
       // Speech bubble
@@ -464,5 +474,115 @@ function CrickPage() {
 }
 A.CrickPage = CrickPage;
 
-console.log('[SC] app-crick.js v1.0 — Crick system ready');
+// ── CRICK_TIPS data — contextual tips per page ───────────────────
+A.CRICK_TIPS = {
+  general: [
+    "Consistency beats talent. Show up every day.",
+    "Track everything — what gets measured, gets improved.",
+    "Your best innings is always the next one.",
+  ],
+  drills: [
+    "Slow practice makes perfect execution under pressure.",
+    "Focus on one technique per session — don't scatter.",
+    "Shadow batting before nets — your brain leads your hands.",
+    "Record your sessions. You'll spot patterns you can't feel.",
+  ],
+  mental: [
+    "Breathe before every ball. Two seconds of calm wins matches.",
+    "Visualize the shot before you play it. Your brain can't tell the difference.",
+    "Pressure is just excitement without breath. Control the breath.",
+  ],
+  skillpaths: [
+    "Pick one path and finish it. Depth beats breadth.",
+    "Week 3 is always the hardest. Don't quit in week 3.",
+    "Your skill path is your curriculum. Follow it.",
+    "Each completed path permanently raises your ceiling.",
+  ],
+  profile: [
+    "Your stats don't lie. Train your weakest number.",
+    "XP is just a mirror — it shows what you've actually done.",
+    "Share your progress. Accountability accelerates everything.",
+  ],
+  schedule: [
+    "Schedule it or skip it. Unplanned sessions rarely happen.",
+    "Morning sessions have 73% higher completion rates.",
+    "Even 15 minutes is a win. Schedule the minimum.",
+  ],
+  fitness: [
+    "Cricket fitness is explosive power + endurance. Train both.",
+    "Most wickets fall in the last 10 overs. Be the fittest player on the field.",
+    "3 sessions a week beats 7 sessions then burnout.",
+    "Core strength is batting strength. Never skip core day.",
+  ],
+  home: [
+    "One session today is worth more than ten sessions planned.",
+    "Champions don't wait for motivation. They build discipline.",
+    "The best training is the training you actually do.",
+  ],
+};
+
+// ── CrickTip component — contextual tip card ─────────────────────
+function CrickTip(props) {
+  var context  = props.context  || 'general';
+  var trigger  = props.trigger  || 'first_visit';
+  var onDismiss = props.onDismiss;
+
+  var storageKey = 'crick_tip_' + context + '_' + trigger;
+  var [visible, setVisible] = useState(function() {
+    if (!A.DB) return false;
+    var ts = A.DB.get(storageKey);
+    if (!ts) return true;
+    if (trigger === 'always') return true;
+    // Hide if dismissed within 24h
+    return (Date.now() - ts) > 86400000;
+  });
+
+  if (!visible) return null;
+
+  var tips = A.CRICK_TIPS[context] || A.CRICK_TIPS.general;
+  var d = new Date();
+  var seed = d.getFullYear() * 1000 + d.getMonth() * 31 + d.getDate() + context.length;
+  var tip = tips[seed % tips.length];
+
+  function dismiss() {
+    if (A.DB) A.DB.set(storageKey, Date.now());
+    setVisible(false);
+    if (onDismiss) onDismiss();
+  }
+
+  return h('div', {
+    style: {
+      margin: '8px 16px',
+      padding: '12px 14px',
+      background: 'rgba(10,15,30,0.95)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 12,
+      display: 'flex', alignItems: 'flex-start', gap: 10,
+    }
+  },
+    h('div', { style: { flexShrink: 0, marginTop: 2 } },
+      A.Crick ? h(A.Crick, { size: 'sm', id: 'crick-tip-' + context }) : h('span', { style: { fontSize: 24 } }, '🏏')
+    ),
+    h('div', { style: { flex: 1, minWidth: 0 } },
+      h('div', { style: { fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 } },
+        'Crick says'
+      ),
+      h('div', { style: { fontSize: 13, color: '#cbd5e1', lineHeight: 1.45, fontStyle: 'italic' } },
+        '"' + tip + '"'
+      ),
+    ),
+    h('button', {
+      onClick: dismiss,
+      'aria-label': 'Dismiss tip',
+      style: {
+        flexShrink: 0, background: 'none', border: 'none',
+        color: '#374151', cursor: 'pointer', padding: '0 4px',
+        fontSize: 18, lineHeight: 1,
+      },
+    }, '×'),
+  );
+}
+A.CrickTip = CrickTip;
+
+console.log('[SC] app-crick.js v1.1 — Crick system + CrickTip ready');
 })();
