@@ -420,8 +420,11 @@ function MentalPlayerPage(props) {
 
   useEffect(function(){
     if(!started) return;
-    if(A.MentalYouTube) A.MentalYouTube.playSession(type);
-    var firstText = phases[0] && phases[0].text;
+    if(A.MentalYouTube) A.MentalYouTube.playSession(type, slug);
+    var rawFirst = phases[0] && phases[0].text;
+    var firstText = (A.MentalPersonalizer && rawFirst)
+      ? A.MentalPersonalizer.personalizePhase(phases[0], A.DB.getUser())
+      : rawFirst;
     if(firstText && A.MentalTTS) A.MentalTTS.speak(firstText);
     prevPiRef.current = 0;
   },[started]);
@@ -452,7 +455,10 @@ function MentalPlayerPage(props) {
     if(!started || !running) return;
     if(pi === 0 || pi === prevPiRef.current) return;
     prevPiRef.current = pi;
-    var text = phases[pi] && phases[pi].text;
+    var rawText = phases[pi] && phases[pi].text;
+    var text = (A.MentalPersonalizer && rawText)
+      ? A.MentalPersonalizer.personalizePhase(phases[pi], A.DB.getUser())
+      : rawText;
     if(text && A.MentalTTS) A.MentalTTS.speak(text);
   },[pi, started, running]);
 
@@ -467,38 +473,69 @@ function MentalPlayerPage(props) {
   }
 
   // DONE ─────────────────────────────────────────────────────────
-  if(done) return h('div',{style:{minHeight:'100dvh',background:'#0d1117',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:32}},
-    h('div',{style:{filter:'drop-shadow(0 0 24px rgba('+glow+',0.5))',marginBottom:16}},
-      h(TypeIcon,{type:type,color:color,size:64})
-    ),
-    h('h2',{style:{fontSize:24,fontWeight:800,color:'#f0fdf4',marginBottom:6}},'Session complete'),
-    h('p',{style:{fontSize:13,color:'#6b7280',marginBottom:14}},session.name),
-    h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 18px',borderRadius:99,background:color+'1a',border:'1px solid '+color+'35',fontSize:13,fontWeight:700,color:color,marginBottom:32}},A.Icon&&h(A.Icon,{n:'zap',cls:'',style:{width:14,height:14,color:color}}),'+'+session.xp+' XP'),
-    h('div',{style:{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:270}},
-      h('button',{onClick:function(){A.nav('Mental');},style:{padding:14,background:color,color:'#fff',border:'none',borderRadius:12,fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 20px rgba('+glow+',0.35)'}},'More Sessions'),
-      h('button',{onClick:shareSession,style:{padding:12,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:'#6b7280',cursor:'pointer',fontSize:13,fontFamily:'inherit'}},'Share this session')
-    )
-  );
+  if(done) {
+    var _doneUser = A.DB && A.DB.getUser ? A.DB.getUser() : {};
+    var _doneName = _doneUser && _doneUser.name ? _doneUser.name : null;
+    var _reflectPrompt = A.MentalPersonalizer ? A.MentalPersonalizer.getReflectionPrompt(type) : 'What did you take from this session?';
+    return h('div',{style:{minHeight:'100dvh',background:'#0d1117',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:32}},
+      h('div',{style:{filter:'drop-shadow(0 0 24px rgba('+glow+',0.5))',marginBottom:16}},
+        h(TypeIcon,{type:type,color:color,size:64})
+      ),
+      h('h2',{style:{fontSize:24,fontWeight:800,color:'#f0fdf4',marginBottom:4}},_doneName ? _doneName+', session complete.' : 'Session complete'),
+      h('p',{style:{fontSize:13,color:'#6b7280',marginBottom:6}},session.name),
+      h('p',{style:{fontSize:12,color:'#484f58',marginBottom:14}},(session.duration_minutes||5)+' minutes well spent.'),
+      h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 18px',borderRadius:99,background:color+'1a',border:'1px solid '+color+'35',fontSize:13,fontWeight:700,color:color,marginBottom:20}},A.Icon&&h(A.Icon,{n:'zap',cls:'',style:{width:14,height:14,color:color}}),'+'+session.xp+' XP'),
+      h('div',{style:{maxWidth:280,margin:'0 auto 28px',padding:'14px 16px',borderRadius:12,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}},
+        h('p',{style:{fontSize:12,color:'#9ca3af',margin:0,lineHeight:1.7,fontStyle:'italic'}},_reflectPrompt)
+      ),
+      h('div',{style:{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:270}},
+        h('button',{onClick:function(){A.nav('Mental');},style:{padding:14,background:color,color:'#fff',border:'none',borderRadius:12,fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 20px rgba('+glow+',0.35)'}},'More Sessions'),
+        h('button',{onClick:shareSession,style:{padding:12,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,color:'#6b7280',cursor:'pointer',fontSize:13,fontFamily:'inherit'}},'Share this session')
+      )
+    );
+  }
 
   // PRE-START ────────────────────────────────────────────────────
-  if(!started) return h('div',{style:{minHeight:'100dvh',background:'#0d1117',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:28}},
-    h('div',{style:{width:80,height:80,borderRadius:22,background:color+'14',border:'1px solid '+color+'28',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,filter:'drop-shadow(0 0 20px rgba('+glow+',0.3))'}},
-      h(TypeIcon,{type:type,color:color,size:46})
-    ),
-    h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 14px',borderRadius:99,background:color+'14',border:'1px solid '+color+'28',fontSize:11,fontWeight:700,color:color,marginBottom:12,letterSpacing:'0.07em',textTransform:'uppercase'}},sType.label),
-    h('h2',{style:{fontSize:20,fontWeight:800,color:'#f0fdf4',marginBottom:8,lineHeight:1.3}},session.name),
-    h('p',{style:{fontSize:12,color:'#6b7280',marginBottom:28}},
-      (session.duration_minutes||5)+' min · '+session.xp+' XP · '+phases.length+' phases'),
-    h('p',{style:{fontSize:13,color:'#484f58',maxWidth:280,lineHeight:1.75,marginBottom:32}},
-      'Find a comfortable position. You won\'t need to watch the screen — just listen.'),
-    h('button',{
-      onClick:function(){setStarted(true);setRunning(true);},
-      style:{padding:'16px 56px',background:'linear-gradient(135deg,'+color+','+color+'cc)',color:'#fff',border:'none',borderRadius:14,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 8px 28px rgba('+glow+',0.38)',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:9}
-    },A.Icon&&h(A.Icon,{n:'play',cls:'',style:{width:17,height:17,color:'#fff'}}),'Begin Session'),
-    h('button',{onClick:shareSession,style:{marginTop:14,background:'none',border:'none',color:'#374151',fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Share this session')
-  );
+  if(!started) {
+    var _user = A.DB && A.DB.getUser ? A.DB.getUser() : {};
+    var _userName = (_user && _user.name) ? _user.name : null;
+    var _ctxLine = A.MentalPersonalizer ? A.MentalPersonalizer.getSessionContext({type:type}, _user) : '';
+    var _drillCtx = _ctxLine && _ctxLine.indexOf('after your') !== -1 ? _ctxLine.split(' · ').pop() : '';
+    var ROLE_ICONS = {batsman:'bat',bowler:'ball',allrounder:'zap',wicketkeeper:'shield'};
+    var _roleIcon = _user && _user.role ? (ROLE_ICONS[_user.role]||'user') : null;
+    return h('div',{style:{minHeight:'100dvh',background:'#0d1117',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:28}},
+      h('div',{style:{width:80,height:80,borderRadius:22,background:color+'14',border:'1px solid '+color+'28',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,filter:'drop-shadow(0 0 20px rgba('+glow+',0.3))'}},
+        h(TypeIcon,{type:type,color:color,size:46})
+      ),
+      h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginBottom:10}},
+        h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'4px 14px',borderRadius:99,background:color+'14',border:'1px solid '+color+'28',fontSize:11,fontWeight:700,color:color,letterSpacing:'0.07em',textTransform:'uppercase'}},sType.label),
+        _roleIcon&&A.Icon&&h('div',{style:{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:99,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',fontSize:11,fontWeight:600,color:'#9ca3af'}},
+          h(A.Icon,{n:_roleIcon,cls:'',style:{width:12,height:12,color:'#9ca3af'}}),
+          'For '+(_user.role||'you')+'s')
+      ),
+      _userName&&h('p',{style:{fontSize:14,color:'#6b7280',marginBottom:4,fontWeight:500}},'Ready, '+_userName+'?'),
+      h('h2',{style:{fontSize:20,fontWeight:800,color:'#f0fdf4',marginBottom:8,lineHeight:1.3}},session.name),
+      h('p',{style:{fontSize:12,color:'#6b7280',marginBottom:_drillCtx?8:20}},
+        (session.duration_minutes||5)+' min · '+session.xp+' XP · '+phases.length+' phases'),
+      _drillCtx&&h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:99,background:'rgba(22,163,74,0.1)',border:'1px solid rgba(22,163,74,0.25)',fontSize:12,color:'#4ade80',marginBottom:16,maxWidth:300,textAlign:'left'}},
+        A.Icon&&h(A.Icon,{n:'check',cls:'',style:{width:12,height:12,color:'#4ade80',flexShrink:0}}),
+        'Great work '+_drillCtx+'. This session will lock it in mentally.'
+      ),
+      h('p',{style:{fontSize:13,color:'#484f58',maxWidth:280,lineHeight:1.75,marginBottom:28}},
+        'Find a comfortable position. You won\'t need to watch the screen — just listen.'),
+      h('button',{
+        onClick:function(){setStarted(true);setRunning(true);},
+        style:{padding:'16px 0',width:'100%',maxWidth:260,background:'linear-gradient(135deg,'+color+','+color+'cc)',color:'#fff',border:'none',borderRadius:14,fontSize:16,fontWeight:800,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 8px 28px rgba('+glow+',0.38)',display:'inline-flex',alignItems:'center',justifyContent:'center',gap:9}
+      },A.Icon&&h(A.Icon,{n:'play',cls:'',style:{width:17,height:17,color:'#fff'}}),'Begin Session'),
+      h('button',{onClick:shareSession,style:{marginTop:14,background:'none',border:'none',color:'#374151',fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Share this session')
+    );
+  }
 
   // ACTIVE ───────────────────────────────────────────────────────
+  var PHASE_LABELS = {settle:'SETTLE',breathe:'BREATHE',activate:'ACTIVATE',focus:'FOCUS',reflect:'REFLECT',recover:'RECOVER',pressure:'PRESSURE',integrate:'INTEGRATE',decompress:'DECOMPRESS',acknowledge:'REFLECT',reframe:'REFRAME',ready:'READY',core:'FOCUS'};
+  var PHASE_HINTS  = {settle:'Find stillness',breathe:'Breathe slowly',activate:'Feel the energy',focus:'Narrow your attention',reflect:'Be honest with yourself',recover:'Let it go',pressure:'Lean into it',integrate:'Let it land',decompress:'Release',acknowledge:'Feel it fully',reframe:'Choose your response',ready:'You are ready',core:'Be present'};
+  var phaseLabel = PHASE_LABELS[(curPhase&&curPhase.id)||'core'] || 'FOCUS';
+  var phaseHint  = PHASE_HINTS[(curPhase&&curPhase.id)||'core']  || 'Be present';
   return h('div',{style:{
     minHeight:'100dvh',
     background:'radial-gradient(ellipse at 50% 42%, rgba('+glow+',0.07) 0%, #080b0f 65%)',
@@ -506,6 +543,10 @@ function MentalPlayerPage(props) {
     paddingTop:'max(44px,calc(44px + env(safe-area-inset-top)))',
     paddingBottom:'calc(20px + env(safe-area-inset-bottom))',
   }},
+    // Full-width progress strip at very top
+    h('div',{style:{position:'fixed',top:0,left:0,right:0,height:3,background:'rgba(255,255,255,0.04)',zIndex:10}},
+      h('div',{style:{height:'100%',width:Math.min(100,sessProgress*100)+'%',background:'linear-gradient(to right,'+color+','+color+'99)',transition:'width 1.1s linear'}})
+    ),
     // Top bar
     h('div',{style:{width:'100%',padding:'0 18px',display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}},
       h('button',{onClick:function(){
@@ -514,9 +555,12 @@ function MentalPlayerPage(props) {
         if(A.MentalYouTube) A.MentalYouTube.stop();
         A.nav('Mental');
       },style:{background:'none',border:'none',color:'#374151',fontSize:13,cursor:'pointer',fontFamily:'inherit',display:'inline-flex',alignItems:'center',gap:5}},A.Icon&&h(A.Icon,{n:'arrowL',cls:'',style:{width:13,height:13,color:'#374151'}}),'Exit'),
-      h('div',{style:{fontSize:11,color:'#2d3748'}},fmt(te)+' / '+fmt(total))
+      h('div',{style:{display:'flex',alignItems:'center',gap:10}},
+        h('span',{style:{fontSize:10,fontWeight:800,letterSpacing:'0.14em',textTransform:'uppercase',color:color,opacity:0.85}},phaseLabel),
+        h('div',{style:{fontSize:11,color:'#2d3748'}},fmt(te)+' / '+fmt(total))
+      )
     ),
-    // Progress
+    // Secondary progress bar
     h('div',{style:{width:'100%',padding:'0 18px',marginBottom:28}},
       h(ProgBar,{pct:sessProgress*100,color:color})
     ),
@@ -529,6 +573,7 @@ function MentalPlayerPage(props) {
       type==='RECOVER'   && h(RecoverViz,{color:color,glow:glow,active:running,sg:sg}),
       type==='REFLECT'   && h(ReflectViz,{text:curPhase.text,active:running,sig:sg,glow:glow}),
       type==='PRESSURE'  && h(PressureViz,{active:running,prog:sessProgress,glow:glow}),
+      h('div',{style:{fontSize:11,color:color,opacity:0.55,letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,marginTop:-12}},phaseHint),
       (type!=='REFLECT'&&type!=='VISUALIZE'&&curPhase.text&&curPhase.id!=='breathe')&&h(PhaseText,{text:curPhase.text,color:color}),
     ),
     // Pause / resume
