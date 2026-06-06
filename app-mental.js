@@ -140,7 +140,6 @@ function MentalPage(){
   const pickIds=new Set(pickSessions.map(s=>s.id));
 
   return h('div',{style:{minHeight:'100dvh',background:'#0d1117',backgroundImage:'radial-gradient(ellipse at 30% -10%,rgba(109,40,217,0.08) 0%,transparent 50%)'}},
-    A.CrickTip ? h(A.CrickTip, { context: 'mental', trigger: 'first_visit' }) : null,
     h(PageHeader,{title:'Mental Training',subtitle:`${MENTAL_SESSIONS.length} sessions · ${MENTAL_ROUTINES.length} routines · 77 routines`,gradient:'linear-gradient(135deg,#5b21b6,#4f46e5)'}),
 
     h(ContentWrap,null,
@@ -289,14 +288,26 @@ function MentalPage(){
         ),
 
         // ── SmartCrick Picks for Mental ───────────────────────────────
-        pickSessions.length>0&&!search&&cat==='all'&&h('div',{style:{padding:'8px 16px 0'}},
+        pickSessions.length>0&&!search&&cat==='all'&&(function(){
+          var _hour = new Date().getHours();
+          var _tod = _hour < 12 ? 'morning' : _hour < 18 ? 'afternoon' : 'evening';
+          var _userName = user && user.name ? user.name : null;
+          var _roleLabel = user && user.role ? (user.role.charAt(0).toUpperCase()+user.role.slice(1)) : null;
+          var _greetLine = _userName
+            ? 'Good '+_tod+', '+_userName+'. Here\'s what your mind needs today.'
+            : 'Good '+_tod+'. Here\'s what your mind needs today.';
+          var _subLine = _roleLabel
+            ? 'AI-picked for '+_roleLabel+'s based on your recent activity'
+            : 'AI-picked based on your recent activity';
+          return h('div',{style:{padding:'8px 16px 0'}},
           h('style',null,
             '@keyframes sc-mental-pick{0%,100%{border-color:rgba(139,92,246,0.3)}50%{border-color:rgba(139,92,246,0.6)}}'
           ),
-          h('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
-            h('span',{style:{fontSize:11,fontWeight:800,color:'#a78bfa',letterSpacing:'0.08em',textTransform:'uppercase',display:'inline-flex',alignItems:'center',gap:5}},h(Icon,{n:'sparkles',cls:'',style:{width:13,height:13,color:'#a78bfa'}}),'SmartCrick Pick'),
-            h('div',{style:{flex:1,height:1,background:'linear-gradient(to right,rgba(167,139,250,0.3),transparent)'}}),
-            h('span',{style:{fontSize:10,color:'#6b7280',fontWeight:600}},'personalised for you')
+          h('div',{style:{marginBottom:12}},
+            h('p',{style:{fontSize:14,fontWeight:700,color:'#f0fdf4',margin:'0 0 3px',lineHeight:1.4}},_greetLine),
+            h('p',{style:{fontSize:11,color:'#6b7280',margin:0,display:'inline-flex',alignItems:'center',gap:4}},
+              h(Icon,{n:'sparkles',cls:'',style:{width:11,height:11,color:'#8b5cf6'}}),
+              _subLine)
           ),
           h('div',{style:{display:'flex',flexDirection:'column',gap:8}},
             pickSessions.map(s=>{
@@ -328,7 +339,7 @@ function MentalPage(){
               );
             })
           )
-        ),
+        );})(),
 
         // Session list
         h('div',{style:{padding:'4px 16px 0'}},
