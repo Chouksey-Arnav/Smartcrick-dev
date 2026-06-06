@@ -493,3 +493,34 @@ body.sc-light .sc-speech-bubble {
 body.sc-light .sc-speech-bubble::after {
   border-top-color: rgba(255,255,255,0.96);
 }
+
+/* ── CRICK MASCOT ANIMATIONS ─────────────────────────────────────── */
+@keyframes crickFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes crickBallSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes crickTapSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes crickCelebJump {
+  0%   { transform: translateY(0)    scale(1);    }
+  45%  { transform: translateY(-24px) scale(1.05); }
+  100% { transform: translateY(0)    scale(1);    }
+}
+@keyframes crickXPGlow {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(251,191,36,0)); }
+  40%       { filter: drop-shadow(0 0 18px rgba(251,191,36,0.8)); }
+}
+
+.crick-mascot-float { animation: crickFloat 3.2s ease-in-out infinite; }
+.crick-mascot-float.crick-spinning { animation: none; }
+.crick-ball-spin { transform-origin: center; animation: crickBallSpin 8s linear infinite; }
+.crick-mascot-xl .crick-ball-spin { animation-duration: 5s; }
+.crick-tap-spin { animation: crickTapSpin 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.crick-celeb-jump { animation: crickCelebJump 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+.crick-xp-glow { animation: crickXPGlow 0.9s ease-out forwards; }
