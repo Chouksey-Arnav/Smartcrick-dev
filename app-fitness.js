@@ -238,6 +238,7 @@ function FitnessPage() {
   ];
 
   return h('div', { style:{ paddingBottom:100, background:'#0a0f1e', minHeight:'100dvh' } },
+    A.CrickTip ? h(A.CrickTip, { context: 'fitness', trigger: 'first_visit' }) : null,
     h(PageHeader, { title:'Fitness Builder', subtitle:`${WORKOUTS.length} workouts · ${FE?FE.PROGRAMS.length:0} journeys · every level`, gradient:'linear-gradient(135deg,#c2410c,#dc2626)' }),
 
     (tab === 'programs' || tab === 'stats') && h(RankHeader, { stats }),
