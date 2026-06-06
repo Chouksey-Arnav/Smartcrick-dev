@@ -129,25 +129,35 @@
     ],
     MentalReadiness: [
       // Morning, good streak, high readiness
-      { input: { hour_norm:0.33, streak_health:0.8, weekly_xp_trend:0.7, recent_rating_avg:0.8, age_norm:0.4, role_norm:0.0, days_since_mental:0.5 }, output: { BREATH:0.5, GROUND:0.3, VISUALIZE:0.85, ACTIVATE:0.9, RECOVER:0.2, REFLECT:0.4, PRESSURE:0.7 } },
+      { input: { hour_norm:0.33, streak_health:0.8, weekly_xp_trend:0.7, recent_rating_avg:0.8, age_norm:0.4, role_norm:0.0, days_since_mental:0.5, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.5, GROUND:0.3, VISUALIZE:0.85, ACTIVATE:0.9, RECOVER:0.2, REFLECT:0.4, PRESSURE:0.7 } },
       // Evening, low streak, needs recovery
-      { input: { hour_norm:0.75, streak_health:0.2, weekly_xp_trend:0.3, recent_rating_avg:0.4, age_norm:0.4, role_norm:0.5, days_since_mental:0.8 }, output: { BREATH:0.85, GROUND:0.8, VISUALIZE:0.4, ACTIVATE:0.3, RECOVER:0.9, REFLECT:0.7, PRESSURE:0.3 } },
+      { input: { hour_norm:0.75, streak_health:0.2, weekly_xp_trend:0.3, recent_rating_avg:0.4, age_norm:0.4, role_norm:0.5, days_since_mental:0.8, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.85, GROUND:0.8, VISUALIZE:0.4, ACTIVATE:0.3, RECOVER:0.9, REFLECT:0.7, PRESSURE:0.3 } },
       // Pre-match pressure
-      { input: { hour_norm:0.4, streak_health:0.6, weekly_xp_trend:0.6, recent_rating_avg:0.7, age_norm:0.5, role_norm:0.0, days_since_mental:0.2 }, output: { BREATH:0.8, GROUND:0.75, VISUALIZE:0.9, ACTIVATE:0.8, RECOVER:0.2, REFLECT:0.3, PRESSURE:0.95 } },
+      { input: { hour_norm:0.4, streak_health:0.6, weekly_xp_trend:0.6, recent_rating_avg:0.7, age_norm:0.5, role_norm:0.0, days_since_mental:0.2, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.8, GROUND:0.75, VISUALIZE:0.9, ACTIVATE:0.8, RECOVER:0.2, REFLECT:0.3, PRESSURE:0.95 } },
       // Regular training day
-      { input: { hour_norm:0.5, streak_health:0.5, weekly_xp_trend:0.5, recent_rating_avg:0.6, age_norm:0.4, role_norm:0.33, days_since_mental:0.4 }, output: { BREATH:0.5, GROUND:0.5, VISUALIZE:0.6, ACTIVATE:0.6, RECOVER:0.4, REFLECT:0.5, PRESSURE:0.5 } },
+      { input: { hour_norm:0.5, streak_health:0.5, weekly_xp_trend:0.5, recent_rating_avg:0.6, age_norm:0.4, role_norm:0.33, days_since_mental:0.4, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0.25 }, output: { BREATH:0.5, GROUND:0.5, VISUALIZE:0.6, ACTIVATE:0.6, RECOVER:0.4, REFLECT:0.5, PRESSURE:0.5 } },
       // Young player, needs grounding
-      { input: { hour_norm:0.5, streak_health:0.3, weekly_xp_trend:0.4, recent_rating_avg:0.5, age_norm:0.1, role_norm:0.0, days_since_mental:0.9 }, output: { BREATH:0.7, GROUND:0.9, VISUALIZE:0.5, ACTIVATE:0.5, RECOVER:0.5, REFLECT:0.6, PRESSURE:0.4 } },
+      { input: { hour_norm:0.5, streak_health:0.3, weekly_xp_trend:0.4, recent_rating_avg:0.5, age_norm:0.1, role_norm:0.0, days_since_mental:0.9, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.7, GROUND:0.9, VISUALIZE:0.5, ACTIVATE:0.5, RECOVER:0.5, REFLECT:0.6, PRESSURE:0.4 } },
       // Late night, reflect mode
-      { input: { hour_norm:0.9, streak_health:0.7, weekly_xp_trend:0.6, recent_rating_avg:0.7, age_norm:0.5, role_norm:0.67, days_since_mental:0.3 }, output: { BREATH:0.6, GROUND:0.5, VISUALIZE:0.3, ACTIVATE:0.2, RECOVER:0.7, REFLECT:0.95, PRESSURE:0.3 } },
+      { input: { hour_norm:0.9, streak_health:0.7, weekly_xp_trend:0.6, recent_rating_avg:0.7, age_norm:0.5, role_norm:0.67, days_since_mental:0.3, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.6, GROUND:0.5, VISUALIZE:0.3, ACTIVATE:0.2, RECOVER:0.7, REFLECT:0.95, PRESSURE:0.3 } },
       // High performer: activate, visualize
-      { input: { hour_norm:0.45, streak_health:0.95, weekly_xp_trend:0.9, recent_rating_avg:0.9, age_norm:0.5, role_norm:0.33, days_since_mental:0.1 }, output: { BREATH:0.4, GROUND:0.3, VISUALIZE:0.9, ACTIVATE:0.95, RECOVER:0.2, REFLECT:0.5, PRESSURE:0.8 } },
+      { input: { hour_norm:0.45, streak_health:0.95, weekly_xp_trend:0.9, recent_rating_avg:0.9, age_norm:0.5, role_norm:0.33, days_since_mental:0.1, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.4, GROUND:0.3, VISUALIZE:0.9, ACTIVATE:0.95, RECOVER:0.2, REFLECT:0.5, PRESSURE:0.8 } },
       // Bowler under pressure
-      { input: { hour_norm:0.4, streak_health:0.5, weekly_xp_trend:0.5, recent_rating_avg:0.6, age_norm:0.4, role_norm:0.67, days_since_mental:0.5 }, output: { BREATH:0.75, GROUND:0.65, VISUALIZE:0.8, ACTIVATE:0.7, RECOVER:0.3, REFLECT:0.4, PRESSURE:0.9 } },
+      { input: { hour_norm:0.4, streak_health:0.5, weekly_xp_trend:0.5, recent_rating_avg:0.6, age_norm:0.4, role_norm:0.67, days_since_mental:0.5, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.75, GROUND:0.65, VISUALIZE:0.8, ACTIVATE:0.7, RECOVER:0.3, REFLECT:0.4, PRESSURE:0.9 } },
       // Post-loss: recovery, reflection
-      { input: { hour_norm:0.6, streak_health:0.2, weekly_xp_trend:0.2, recent_rating_avg:0.25, age_norm:0.4, role_norm:0.0, days_since_mental:0.6 }, output: { BREATH:0.9, GROUND:0.85, VISUALIZE:0.3, ACTIVATE:0.2, RECOVER:0.95, REFLECT:0.9, PRESSURE:0.2 } },
+      { input: { hour_norm:0.6, streak_health:0.2, weekly_xp_trend:0.2, recent_rating_avg:0.25, age_norm:0.4, role_norm:0.0, days_since_mental:0.6, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.9, GROUND:0.85, VISUALIZE:0.3, ACTIVATE:0.2, RECOVER:0.95, REFLECT:0.9, PRESSURE:0.2 } },
       // Keeper: balanced mental
-      { input: { hour_norm:0.45, streak_health:0.65, weekly_xp_trend:0.6, recent_rating_avg:0.65, age_norm:0.45, role_norm:1.0, days_since_mental:0.35 }, output: { BREATH:0.6, GROUND:0.65, VISUALIZE:0.7, ACTIVATE:0.65, RECOVER:0.4, REFLECT:0.55, PRESSURE:0.7 } }
+      { input: { hour_norm:0.45, streak_health:0.65, weekly_xp_trend:0.6, recent_rating_avg:0.65, age_norm:0.45, role_norm:1.0, days_since_mental:0.35, last_drill_batting:0, last_drill_bowling:0, drills_today_norm:0 }, output: { BREATH:0.6, GROUND:0.65, VISUALIZE:0.7, ACTIVATE:0.65, RECOVER:0.4, REFLECT:0.55, PRESSURE:0.7 } },
+      // After batting drill: bias toward VISUALIZE + GROUND
+      { input: { hour_norm:0.5, streak_health:0.6, weekly_xp_trend:0.6, recent_rating_avg:0.65, age_norm:0.4, role_norm:0.0, days_since_mental:0.4, last_drill_batting:1, last_drill_bowling:0, drills_today_norm:0.25 }, output: { BREATH:0.4, GROUND:0.85, VISUALIZE:0.9, ACTIVATE:0.6, RECOVER:0.3, REFLECT:0.4, PRESSURE:0.5 } },
+      // After bowling drill: bias toward PRESSURE + GROUND
+      { input: { hour_norm:0.5, streak_health:0.6, weekly_xp_trend:0.6, recent_rating_avg:0.65, age_norm:0.4, role_norm:0.67, days_since_mental:0.4, last_drill_batting:0, last_drill_bowling:1, drills_today_norm:0.25 }, output: { BREATH:0.5, GROUND:0.8, VISUALIZE:0.6, ACTIVATE:0.55, RECOVER:0.35, REFLECT:0.4, PRESSURE:0.85 } },
+      // Heavy drill day (4+ drills): strong RECOVER bias
+      { input: { hour_norm:0.7, streak_health:0.55, weekly_xp_trend:0.7, recent_rating_avg:0.7, age_norm:0.4, role_norm:0.33, days_since_mental:0.3, last_drill_batting:1, last_drill_bowling:0, drills_today_norm:1.0 }, output: { BREATH:0.8, GROUND:0.7, VISUALIZE:0.4, ACTIVATE:0.3, RECOVER:0.95, REFLECT:0.65, PRESSURE:0.4 } },
+      // Morning after batting drill: activation + visualization
+      { input: { hour_norm:0.35, streak_health:0.7, weekly_xp_trend:0.65, recent_rating_avg:0.75, age_norm:0.4, role_norm:0.0, days_since_mental:0.5, last_drill_batting:1, last_drill_bowling:0, drills_today_norm:0.5 }, output: { BREATH:0.45, GROUND:0.7, VISUALIZE:0.9, ACTIVATE:0.85, RECOVER:0.25, REFLECT:0.4, PRESSURE:0.6 } },
+      // Evening after bowling drill: reflect + pressure
+      { input: { hour_norm:0.8, streak_health:0.5, weekly_xp_trend:0.5, recent_rating_avg:0.6, age_norm:0.45, role_norm:0.67, days_since_mental:0.5, last_drill_batting:0, last_drill_bowling:1, drills_today_norm:0.5 }, output: { BREATH:0.65, GROUND:0.7, VISUALIZE:0.5, ACTIVATE:0.4, RECOVER:0.75, REFLECT:0.7, PRESSURE:0.85 } }
     ]
   };
 
@@ -243,7 +253,18 @@
     },
     MentalReadiness: function (input) {
       var base = _cap(((input.streak_health || 0.5) + (input.recent_rating_avg || 0.5)) / 2);
-      return { BREATH: base, GROUND: base, VISUALIZE: base, ACTIVATE: base, RECOVER: _cap(1 - base), REFLECT: base, PRESSURE: _cap(base * 0.8) };
+      var drillBoostViz  = (input.last_drill_batting  || 0) * 0.2;
+      var drillBoostPres = (input.last_drill_bowling   || 0) * 0.2;
+      var recovBoost     = _cap((input.drills_today_norm || 0) * 0.4);
+      return {
+        BREATH:    _cap(base + recovBoost * 0.5),
+        GROUND:    _cap(base + drillBoostViz * 0.3 + drillBoostPres * 0.3),
+        VISUALIZE: _cap(base + drillBoostViz),
+        ACTIVATE:  _cap(base - recovBoost * 0.3),
+        RECOVER:   _cap(_cap(1 - base) + recovBoost),
+        REFLECT:   base,
+        PRESSURE:  _cap(base * 0.8 + drillBoostPres)
+      };
     }
   };
 
@@ -414,14 +435,41 @@
         ? _cap(last5.reduce(function (s, r) { return s + r; }, 0) / last5.length / 5)
         : 0.6;
 
+      // Drill context: what was the most recent drill category and how many today?
+      var drillProgress = DB.getDrillProgress ? DB.getDrillProgress() : {};
+      var lastDrillCat = 'none';
+      var drillsToday  = 0;
+      var todayStart   = new Date(); todayStart.setHours(0,0,0,0); var todayTs = todayStart.getTime();
+      if (drillProgress && typeof drillProgress === 'object') {
+        var latestTs = 0;
+        Object.keys(drillProgress).forEach(function (id) {
+          var attempts = (drillProgress[id] && drillProgress[id].attempts) || [];
+          attempts.forEach(function (a) {
+            var ts = a.ts || 0;
+            if (ts > todayTs) drillsToday++;
+            if (ts > latestTs) {
+              latestTs = ts;
+              // Try to resolve category
+              var drills = (A.DRILLS_DATA || (A.Data && A.Data.drills) || []);
+              var drill = null;
+              for (var j = 0; j < drills.length; j++) { if (drills[j].id === id) { drill = drills[j]; break; } }
+              if (drill && drill.category) lastDrillCat = drill.category;
+            }
+          });
+        });
+      }
+
       return {
-        hour_norm:         _cap(new Date().getHours() / 24),
-        streak_health:     _cap((prog.current_streak || 0) / 14),
-        weekly_xp_trend:   _cap(xpTrend),
-        recent_rating_avg: avgRating,
-        age_norm:          _cap(((user.age || 16) - 10) / 30),
-        role_norm:         roleNorm,
-        days_since_mental: _cap(daysSinceMental / 7)
+        hour_norm:          _cap(new Date().getHours() / 24),
+        streak_health:      _cap((prog.current_streak || 0) / 14),
+        weekly_xp_trend:    _cap(xpTrend),
+        recent_rating_avg:  avgRating,
+        age_norm:           _cap(((user.age || 16) - 10) / 30),
+        role_norm:          roleNorm,
+        days_since_mental:  _cap(daysSinceMental / 7),
+        last_drill_batting: lastDrillCat === 'batting'  ? 1 : 0,
+        last_drill_bowling: lastDrillCat === 'bowling'  ? 1 : 0,
+        drills_today_norm:  _cap(drillsToday / 4)
       };
     },
 
