@@ -23,13 +23,20 @@ A.Vibe = SC_VIBE;
 // 1. HAPTICS — tactile feedback via Vibration API
 // ─────────────────────────────────────────────────────────────────
 var HAPTIC_PATTERNS = {
-  light:    8,
-  medium:   15,
-  heavy:    50,
-  success:  [50, 30, 100],
-  error:    [100, 50, 100],
-  select:   12,
-  tick:     6,
+  light:           8,
+  medium:          15,
+  heavy:           50,
+  success:         [50, 30, 100],
+  error:           [100, 50, 100],
+  select:          12,
+  tick:            6,
+  tap:             [4],
+  milestone:       [100, 50, 100, 50, 200],
+  unlock:          [30, 30, 80],
+  drill_complete:  [50, 30, 100, 30, 50],
+  mental_complete: [20, 20, 60],
+  xp_earn:         [10, 20, 40],
+  crick_tap:       [15, 10, 30],
 };
 
 SC_VIBE.haptic = function (type) {
@@ -237,6 +244,7 @@ var NAV_ICONS_FILLED = {
 
     var items = [
       { n: 'home',     label: 'Today',    pg: 'Home' },
+      { n: 'crick',    label: 'Crick',    pg: 'Crick' },
       { n: 'bat',      label: 'Train',    pg: 'Drills' },
       { n: 'barChart', label: 'Progress', pg: 'Progress' },
       { n: 'user',     label: 'You',      pg: 'Profile' },
@@ -267,6 +275,7 @@ var NAV_ICONS_FILLED = {
             key: item.pg,
             onPointerDown: function () {
               // Zero-latency: fire haptic + audio + nav simultaneously
+              if (A.Emotion && A.Emotion.haptic) A.Emotion.haptic('tap');
               SC_VIBE.haptic('medium');
               if (A.UIAudio) A.UIAudio.tick();
               setLastTapped(item.pg);
