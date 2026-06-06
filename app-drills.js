@@ -1275,6 +1275,7 @@ function DrillsPage() {
   var donePct = totalDrills > 0 ? Math.round((totalDone / totalDrills) * 100) : 0;
 
   return h('div', { style: s.page },
+    A.CrickTip ? h(A.CrickTip, { context: 'drills', trigger: 'first_visit' }) : null,
     h('div', { style: s.header },
       // Title block — professional training-platform header
       h('div', { style: { display: 'flex', alignItems: 'center', gap: 13, marginBottom: 14 } },
