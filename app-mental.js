@@ -140,6 +140,7 @@ function MentalPage(){
   const pickIds=new Set(pickSessions.map(s=>s.id));
 
   return h('div',{style:{minHeight:'100dvh',background:'#0d1117',backgroundImage:'radial-gradient(ellipse at 30% -10%,rgba(109,40,217,0.08) 0%,transparent 50%)'}},
+    A.CrickTip ? h(A.CrickTip, { context: 'mental', trigger: 'first_visit' }) : null,
     h(PageHeader,{title:'Mental Training',subtitle:`${MENTAL_SESSIONS.length} sessions · ${MENTAL_ROUTINES.length} routines · 77 routines`,gradient:'linear-gradient(135deg,#5b21b6,#4f46e5)'}),
 
     h(ContentWrap,null,
