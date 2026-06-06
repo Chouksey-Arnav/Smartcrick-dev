@@ -28,12 +28,12 @@ var nav           = A.nav;
 
 var CHROME_PAGES = new Set([
   'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
-  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger',
+  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
 ]);
 
 var STANDARD_PAGES = new Set([
   'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
-  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger',
+  'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
   'DrillDetail','MentalPlayer','MentalRoutines','MentalRoutinePlayer',
   'PracticeSession','WorkoutDetail','WorkoutPlayer','SkillPathDetail',
   'VideoAnalysis','Performance','ReactionDrill','NinetyDay','AIWorkout',
@@ -81,6 +81,7 @@ function getPage(name) {
     MiniMatch:P.MiniMatchPage, Quizzes:P.QuizzesPage,
     CricketDNA:P.CricketDNAPage, DailyNet:P.DailyNetPage,
     IntelligenceHub:P.IntelligenceHubPage,
+    Crick:P.CrickPage,
   };
   return map[name] || null;
 }
