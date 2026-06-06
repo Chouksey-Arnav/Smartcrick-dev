@@ -522,6 +522,7 @@ function BottomNav(props) {
 
   var items = [
     { n: 'home',     label: 'Today',    pg: 'Home' },
+    { n: 'crick',    label: 'Crick',    pg: 'Crick' },
     { n: 'bat',      label: 'Train',    pg: 'Drills' },
     { n: 'barChart', label: 'Progress', pg: 'Progress' },
     { n: 'user',     label: 'You',      pg: 'Profile' },
