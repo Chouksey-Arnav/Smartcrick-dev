@@ -47,8 +47,10 @@ function MascotSVG(props) {
   }, []);
   var col = CRICK_COLORS[colorKey] || CRICK_COLORS.classic;
 
+  var isXL = props.size === 'xl';
   return h('div', {
     id: rootId + '-wrap',
+    className: 'crick-mascot-float' + (isXL ? ' crick-mascot-xl' : ''),
     style: {
       width: size, height: size, flexShrink: 0,
       display: 'inline-block', userSelect: 'none',
@@ -62,24 +64,30 @@ function MascotSVG(props) {
       xmlns: 'http://www.w3.org/2000/svg',
       style: { overflow: 'visible', display: 'block' },
     },
-      // ── Body: cricket ball ──────────────────────────────────────
-      h('circle', {
-        id: rootId + '-body',
-        cx: 60, cy: 66, r: 42,
-        fill: col.fill, stroke: col.stroke, strokeWidth: 1.5,
-      }),
-      // Seam arc top
-      h('path', {
-        d: 'M60 24 Q82 46 60 66 Q38 46 60 24',
-        fill: 'none', stroke: col.seam, strokeWidth: 2, opacity: 0.7,
-      }),
-      // Seam arc bottom
-      h('path', {
-        d: 'M60 108 Q82 86 60 66 Q38 86 60 108',
-        fill: 'none', stroke: col.seam, strokeWidth: 2, opacity: 0.7,
-      }),
+      // ── Spinning ball group (body + seams) — eyes stay outside ──
+      h('g', {
+        id: rootId + '-ball-group',
+        className: 'crick-ball-spin',
+        style: { transformOrigin: '60px 66px' },
+      },
+        h('circle', {
+          id: rootId + '-body',
+          cx: 60, cy: 66, r: 42,
+          fill: col.fill, stroke: col.stroke, strokeWidth: 1.5,
+        }),
+        h('path', {
+          id: rootId + '-seam-top',
+          d: 'M60 24 Q82 46 60 66 Q38 46 60 24',
+          fill: 'none', stroke: col.seam, strokeWidth: 2, opacity: 0.7,
+        }),
+        h('path', {
+          id: rootId + '-seam-bot',
+          d: 'M60 108 Q82 86 60 66 Q38 86 60 108',
+          fill: 'none', stroke: col.seam, strokeWidth: 2, opacity: 0.7,
+        }),
+      ),
 
-      // ── Eyes: sclera ───────────────────────────────────────────
+      // ── Eyes: sclera (outside ball group — don't spin) ─────────
       h('ellipse', { id: rootId + '-eye-l', cx: 43, cy: 54, rx: 10, ry: 10, fill: '#fff' }),
       h('ellipse', { id: rootId + '-eye-r', cx: 77, cy: 54, rx: 10, ry: 10, fill: '#fff' }),
 
@@ -190,9 +198,14 @@ function MascotController() {
     if (host) {
       host.style.opacity = '1';
       host.style.transform = 'scale(1.15)';
+      host.classList.add('crick-celeb-jump', 'crick-xp-glow');
       setTimeout(function () {
-        if (host) { host.style.opacity = '0.7'; host.style.transform = 'scale(1)'; }
-      }, 2400);
+        if (host) {
+          host.style.opacity = '0.7';
+          host.style.transform = 'scale(1)';
+          host.classList.remove('crick-celeb-jump', 'crick-xp-glow');
+        }
+      }, 900);
     }
 
     var gsap = window.gsap;
@@ -275,12 +288,47 @@ function MascotController() {
     // Public API for imperative calls (e.g. onboarding "Let's Start!")
     A.Emotion.cheerMascot = startCheer;
 
+    // ── Eye tracking — pupils follow cursor ──────────────────────
+    function onMouseMove(e) {
+      var gsap = window.gsap;
+      if (!gsap || stateRef.current !== 'idle') return;
+      var vw = window.innerWidth;
+      var dx = (e.clientX - vw / 2) / (vw / 2);
+      var offsetX = dx * 5;
+      gsap.to([rootId('pupil-l'), rootId('shine-l')], {
+        attr: { cx: 43 + offsetX }, duration: 0.4, ease: 'power2.out', overwrite: 'auto',
+      });
+      gsap.to([rootId('pupil-r'), rootId('shine-r')], {
+        attr: { cx: 77 + offsetX }, duration: 0.4, ease: 'power2.out', overwrite: 'auto',
+      });
+    }
+    function onTouchMove(e) {
+      if (e.touches && e.touches[0]) onMouseMove(e.touches[0]);
+    }
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+
+    // ── Tap spin API ─────────────────────────────────────────────
+    A.Emotion.tapSpinMascot = function(wrapId) {
+      var wrap = document.getElementById((wrapId || 'em-mascot-main') + '-wrap');
+      if (!wrap) wrap = document.getElementById('em-mascot-fixed-host');
+      if (!wrap) return;
+      wrap.classList.add('crick-spinning', 'crick-tap-spin');
+      if (A.Emotion.haptic) A.Emotion.haptic('crick_tap');
+      wrap.addEventListener('animationend', function handler() {
+        wrap.classList.remove('crick-spinning', 'crick-tap-spin');
+        wrap.removeEventListener('animationend', handler);
+      }, { once: true });
+    };
+
     return function () {
       clearTimeout(initTimer);
       killAll();
       A.Emotion.off('sc_badge_unlock',         onCheer);
       A.Emotion.off('sc_daily_reward_claimed', onCheer);
       A.Emotion.off('sc_first_session',        onCheer);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('touchmove', onTouchMove);
     };
   }, []);
 
