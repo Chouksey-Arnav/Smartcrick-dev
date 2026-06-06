@@ -59,14 +59,23 @@ A.Emotion.runSpring = function (fromVal, toVal, springFn, onFrame, onDone) {
 
 // ── Typed Haptic Feedback ─────────────────────────────────────────
 var HAPTIC_PATTERNS = {
-  light:    [6],
-  medium:   [10],
-  success:  [15, 30, 25],
-  badge:    [20, 15, 20, 15, 30],
-  complete: [50],
-  paywall:  [15],
-  spin:     [20, 20, 20, 20, 50],
-  streak:   [80],
+  light:           [6],
+  medium:          [10],
+  success:         [15, 30, 25],
+  badge:           [20, 15, 20, 15, 30],
+  complete:        [50],
+  paywall:         [15],
+  spin:            [20, 20, 20, 20, 50],
+  streak:          [80],
+  tap:             [4],
+  select:          [8, 4, 8],
+  error:           [30, 20, 30, 20, 30],
+  milestone:       [100, 50, 100, 50, 200],
+  unlock:          [30, 30, 80],
+  drill_complete:  [50, 30, 100, 30, 50],
+  mental_complete: [20, 20, 60],
+  xp_earn:         [10, 20, 40],
+  crick_tap:       [15, 10, 30],
 };
 A.Emotion.haptic = function(type) {
   if (!navigator.vibrate || A.Emotion.prefersReducedMotion()) return;
