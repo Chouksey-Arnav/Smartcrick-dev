@@ -4,10 +4,10 @@
 // Every same-origin asset the app loads is precached so the WHOLE app
 // works fully offline after the first visit.
 // ================================================================
-const CACHE_V       = 'sc-v5';
-const CDN_CACHE     = 'sc-cdn-v5';
-const RUNTIME_CACHE = 'sc-runtime-v5';
-const CACHE_VERSION = '5.0.0';
+const CACHE_V       = 'sc-v6';
+const CDN_CACHE     = 'sc-cdn-v6';
+const RUNTIME_CACHE = 'sc-runtime-v6';
+const CACHE_VERSION = '6.0.0';
 
 // ── All same-origin app files (mirrors index.html script order) ──
 const APP_SHELL = [
@@ -78,6 +78,8 @@ const APP_SHELL = [
   '/app-performance.js',
   '/app-quizzes.js',
   '/app-daily-reward.js',
+  '/app-crick.js',
+  '/app-crick-notifications.js',
   '/app-root.js',
   '/app-vibe.js',
 ];
@@ -271,9 +273,13 @@ self.addEventListener('fetch', function(event) {
   }
 });
 
-// ── MESSAGE FROM APP (training reminders) ───────────────────────
+// ── MESSAGE FROM APP (training reminders + Crick notifications) ─
 self.addEventListener('message', function(event) {
   if (!event.data) return;
+  if (event.data.type === 'SKIP_WAITING' || event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
   if (event.data.type === 'SC_REMINDER') {
     event.waitUntil(
       self.registration.showNotification(event.data.title || 'SmartCrick 🏏', {
@@ -284,6 +290,20 @@ self.addEventListener('message', function(event) {
         renotify: true,
         requireInteraction: false,
         data: { url: event.data.url || '/#/Schedule' },
+      })
+    );
+  }
+  if (event.data.type === 'SC_CRICK_NOTIF') {
+    event.waitUntil(
+      self.registration.showNotification(event.data.title || 'SmartCrick 🏏', {
+        body: event.data.body || "Crick has a message for you!",
+        icon: '/icon.svg',
+        badge: '/icon.svg',
+        tag: 'sc-crick-' + (event.data.category || 'general'),
+        renotify: true,
+        requireInteraction: false,
+        data: { url: event.data.url || '/#/Crick' },
+        vibrate: [100, 50, 100],
       })
     );
   }
