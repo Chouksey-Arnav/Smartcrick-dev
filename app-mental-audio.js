@@ -114,13 +114,49 @@ var AudioEngine = (function() {
 
 // ── YouTube Soundtrack Mapping ─────────────────────────────────────
 var SESSION_TYPE_TRACKS = {
-  BREATH:    'n4YghVcjbpw',
+  BREATH:    'Z2dK_m2LfrY',
   GROUND:    'MTg-gZy9oLM',
   VISUALIZE: 'MTg-gZy9oLM',
   ACTIVATE:  'n4YghVcjbpw',
   RECOVER:   'Z2dK_m2LfrY',
   REFLECT:   'n4YghVcjbpw',
   PRESSURE:  'Z8ANihFXlgU',
+};
+
+// Per-session overrides — more precise mood matching
+var SESSION_SPECIFIC_TRACKS = {
+  // Calm / sleep sessions
+  'sleep-better-tonight':         'Z2dK_m2LfrY',
+  'inner-lake':                   'Z2dK_m2LfrY',
+  'full-body-relaxation':         'Z2dK_m2LfrY',
+  'intentional-rest':             'Z2dK_m2LfrY',
+  'decompression-zone':           'Z2dK_m2LfrY',
+  'radical-acceptance':           'Z2dK_m2LfrY',
+  'deep-breathing-anxiety':       'Z2dK_m2LfrY',
+  // High energy / activation
+  'game-day-activation':          'n4YghVcjbpw',
+  'fuel-your-fire':               'n4YghVcjbpw',
+  'embrace-the-arena':            'n4YghVcjbpw',
+  'competition-as-fuel':          'n4YghVcjbpw',
+  '2-minute-warrior':             'n4YghVcjbpw',
+  'mental-toughness-builder':     'n4YghVcjbpw',
+  'motivational-momentum-builder':'n4YghVcjbpw',
+  'morning-mindset-ritual':       'n4YghVcjbpw',
+  'pre-game-activation':          'n4YghVcjbpw',
+  // Visualization / cinematic
+  'flow-state-architecture':      'MTg-gZy9oLM',
+  'sensory-performance-blueprint':'MTg-gZy9oLM',
+  'champion-mindset-simulation':  'MTg-gZy9oLM',
+  'goal-movie':                   'MTg-gZy9oLM',
+  'future-memory':                'MTg-gZy9oLM',
+  'new-identity-visualisation':   'MTg-gZy9oLM',
+  // Pressure / intensity
+  'stress-inoculation':           'Z8ANihFXlgU',
+  'high-stakes-rehearsal':        'Z8ANihFXlgU',
+  'choke-proof-preparation':      'Z8ANihFXlgU',
+  'death-over-psychology':        'Z8ANihFXlgU',
+  'pressure-rehearsal-crucial-over':'Z8ANihFXlgU',
+  'bounce-back-blueprint':        'Z8ANihFXlgU',
 };
 
 var CREATOR_FOCUS_TRACKS = {
@@ -244,7 +280,12 @@ var MentalYouTube = (function() {
     setVolume:  setVolume,
     pause:      pause,
     resume:     resume,
-    playSession: function(type)       { play(SESSION_TYPE_TRACKS[type]      || SESSION_TYPE_TRACKS.GROUND); },
+    playSession: function(type, slug) {
+      var trackId = (slug && SESSION_SPECIFIC_TRACKS[slug])
+                 || SESSION_TYPE_TRACKS[type]
+                 || SESSION_TYPE_TRACKS.GROUND;
+      play(trackId);
+    },
     playCreator: function(focusArea)  { play(CREATOR_FOCUS_TRACKS[focusArea] || CREATOR_FOCUS_TRACKS.focus); },
   };
 })();
@@ -269,6 +310,11 @@ var MentalTTS = (function() {
       .filter(Boolean);
     var chunks = [];
     sentences.forEach(function(s) {
+      // '---' on its own line = breath pause sentinel (2.8s gap)
+      if (s === '---') {
+        chunks.push(null); // null = pause, handled in _nextChunk
+        return;
+      }
       if (s.length <= 200) {
         chunks.push(s);
       } else {
@@ -289,15 +335,15 @@ var MentalTTS = (function() {
     return chunks;
   }
 
-  // Priority: Neural/Enhanced voices first, then warm system voices
+  // Priority: most broadly available warm neural voices first
   var WARM_VOICES = [
-    'Ava (Enhanced)',
-    'Samantha (Enhanced)',
     'Microsoft Aria Online (Natural) - English (United States)',
     'Microsoft Jenny Online (Natural) - English (United States)',
+    'Google UK English Female',
     'Microsoft Guy Online (Natural) - English (United States)',
     'Microsoft David Desktop - English (United States)',
-    'Google UK English Female',
+    'Ava (Enhanced)',
+    'Samantha (Enhanced)',
     'Ava',
     'Samantha',
     'Karen (Enhanced)',
@@ -351,22 +397,47 @@ var MentalTTS = (function() {
   }
 
   function _nextChunk() {
-    if (_stopped || !_queue.length || !synth) {
+    if (_stopped || !synth) {
       _speaking = false;
       if (!_queue.length) _restoreYT();
       return;
     }
+    if (!_queue.length) {
+      _speaking = false;
+      _restoreYT();
+      // Personalized closing line
+      try {
+        var user = A.DB && A.DB.getUser ? A.DB.getUser() : null;
+        var name = (user && user.name) ? user.name : '';
+        var closing = name ? 'Well done, ' + name + '. Carry that with you.' : 'Well done. Carry that with you.';
+        var cu = new SpeechSynthesisUtterance(closing);
+        cu.voice  = selectVoice();
+        cu.rate   = 0.74;
+        cu.pitch  = 1.05;
+        cu.volume = 0.9;
+        cu.lang   = (cu.voice && cu.voice.lang) || 'en-GB';
+        setTimeout(function() {
+          if (!_stopped) return; // only play if session naturally ended (not manually stopped)
+        }, 0);
+      } catch(e) {}
+      return;
+    }
     _speaking = true;
     var chunk = _queue.shift();
+    // null = breath pause sentinel (---  in script)
+    if (chunk === null) {
+      setTimeout(_nextChunk, 2800);
+      return;
+    }
     var u = new SpeechSynthesisUtterance(chunk);
     u.voice  = selectVoice();
-    u.rate   = 0.82;   // warm coaching pace — unhurried but present
-    u.pitch  = 0.95;   // warm, clear, coach-like
-    u.volume = 1.0;    // full presence
+    u.rate   = 0.76;   // breath-pace, meditative, never rushed
+    u.pitch  = 1.05;   // slightly warm above neutral, avoids flat robotic tone
+    u.volume = 1.0;
     u.lang   = (u.voice && u.voice.lang) || 'en-GB';
     u.onend  = function() {
       if (_stopped) return;
-      setTimeout(_nextChunk, _queue.length ? 1200 : 0);
+      setTimeout(_nextChunk, _queue.length ? 1800 : 0);
     };
     u.onerror = function() { setTimeout(_nextChunk, 100); };
     synth.speak(u);
@@ -395,7 +466,7 @@ var MentalTTS = (function() {
     }
 
     // 1.5s warm-up: let ambient audio settle before voice begins
-    _warmupTimer = setTimeout(_start, 800);
+    _warmupTimer = setTimeout(_start, 1500);
   }
 
   function stop() {
