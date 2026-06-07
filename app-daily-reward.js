@@ -86,7 +86,7 @@ function checkDailyReward() {
   saveRewardState(newState);
 
   // Award XP
-  if (A.awardXP) { A.awardXP(reward.xp, 0, 'daily_login', null, null); }
+  if (A.awardXP) { A.awardXP(reward.xp, 0, 'daily_login', null, null, false); }
   // Confetti on perfect week
   if (reward.isWeekComplete && A.fireConfetti) {
     setTimeout(function () { A.fireConfetti(); }, 700);
