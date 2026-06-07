@@ -4,10 +4,10 @@
 // Every same-origin asset the app loads is precached so the WHOLE app
 // works fully offline after the first visit.
 // ================================================================
-const CACHE_V       = 'sc-v6';
-const CDN_CACHE     = 'sc-cdn-v6';
-const RUNTIME_CACHE = 'sc-runtime-v6';
-const CACHE_VERSION = '6.0.0';
+const CACHE_V       = 'sc-v7';
+const CDN_CACHE     = 'sc-cdn-v7';
+const RUNTIME_CACHE = 'sc-runtime-v7';
+const CACHE_VERSION = '7.0.0';
 
 // ── All same-origin app files (mirrors index.html script order) ──
 const APP_SHELL = [
@@ -47,6 +47,8 @@ const APP_SHELL = [
   // Mental
   '/app-ui-audio.js',
   '/app-mental-audio.js',
+  '/app-mental-personalization.js',
+  '/app-mental-scripts.js',
   '/app-mental-routine-creator.js',
   '/app-mental.js',
   '/app-mental-player-v4.js',
@@ -80,8 +82,17 @@ const APP_SHELL = [
   '/app-daily-reward.js',
   '/app-crick.js',
   '/app-crick-notifications.js',
+  '/app-crick-messages.js',
+  '/app-spinwheel-patch.js',
+  '/app-sidebar-patch.js',
   '/app-root.js',
+  '/app-root-patch.js',
   '/app-vibe.js',
+  '/app_daily_challenge.js',
+  '/app-drills-v2.js',
+  '/app-drills-extra.js',
+  '/app-drills-ui-patch.js',
+  '/app-drill-videos.js',
 ];
 
 // External CDN libraries to cache (versioned = immutable)
