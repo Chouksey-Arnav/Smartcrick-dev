@@ -507,5 +507,40 @@ function fire(notifId, userData) {
 }
 A.CrickNotif.fire = fire;
 
+// ── Permission request + scheduling toggle ───────────────────────
+A.CrickNotif.isEnabled = function() {
+  return !!(A.DB && A.DB.get('crick_notif_enabled'));
+};
+
+A.CrickNotif.requestPermission = function() {
+  return new Promise(function(resolve) {
+    if (!('Notification' in window)) { resolve(false); return; }
+    Notification.requestPermission().then(function(perm) {
+      var granted = perm === 'granted';
+      if (A.DB) A.DB.set('crick_notif_enabled', granted);
+      if (granted) {
+        if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            if (reg.pushManager && reg.pushManager.subscribe) {
+              reg.pushManager.getSubscription().then(function(existing) {
+                if (existing) { if (A.DB) A.DB.set('crick_push_subscription', existing.toJSON ? existing.toJSON() : existing); return; }
+                reg.pushManager.subscribe({ userVisibleOnly: true }).then(function(sub) {
+                  if (A.DB) A.DB.set('crick_push_subscription', sub.toJSON ? sub.toJSON() : sub);
+                }).catch(function() {});
+              }).catch(function() {});
+            }
+          }).catch(function() {});
+        }
+        schedule(buildUserData());
+      }
+      resolve(granted);
+    }).catch(function() { resolve(false); });
+  });
+};
+
+A.CrickNotif.disable = function() {
+  if (A.DB) A.DB.set('crick_notif_enabled', false);
+};
+
 console.log('[SC] app-crick-notifications.js v1.0 — 310 notifications ready');
 })();
