@@ -395,11 +395,11 @@ A.DB = DB;
 
 // ── XP & Level System ────────────────────────────────────────────
 const XP_LEVELS = [
-  {level:1,name:'Rookie',min:0,max:500},{level:2,name:'Club Player',min:500,max:1200},
-  {level:3,name:'District Star',min:1200,max:2500},{level:4,name:'State Performer',min:2500,max:5000},
-  {level:5,name:'National Prospect',min:5000,max:9000},{level:6,name:'Elite Player',min:9000,max:15000},
-  {level:7,name:'International',min:15000,max:25000},{level:8,name:'Pro Cricketer',min:25000,max:40000},
-  {level:9,name:'World Class',min:40000,max:60000},{level:10,name:'Legend',min:60000,max:Infinity},
+  {level:1,name:'Rookie',min:0,max:800},{level:2,name:'Club Player',min:800,max:2000},
+  {level:3,name:'District Star',min:2000,max:4500},{level:4,name:'State Performer',min:4500,max:9000},
+  {level:5,name:'National Prospect',min:9000,max:16000},{level:6,name:'Elite Player',min:16000,max:27000},
+  {level:7,name:'International',min:27000,max:44000},{level:8,name:'Pro Cricketer',min:44000,max:70000},
+  {level:9,name:'World Class',min:70000,max:110000},{level:10,name:'Legend',min:110000,max:Infinity},
 ];
 function getLevelInfo(totalXP) {
   var xp=totalXP||0, lv=XP_LEVELS[0];
@@ -646,8 +646,9 @@ function generateTodaysMission() {
 A.generateTodaysMission = generateTodaysMission;
 
 // ── awardXP ───────────────────────────────────────────────────────
-function awardXP(xp,minutes,source,completedKey,itemId) {
+function awardXP(xp,minutes,source,completedKey,itemId,meaningful) {
   var mins=minutes||0, src=source||'general', ck=completedKey||null, iid=itemId||null;
+  var isMeaningful=meaningful===true||(ck==='drill'||ck==='mental'||ck==='workout'||src==='practice_session');
   try {
     var p=DB.getProgress(), today=new Date().toISOString().slice(0,10), yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
     if(src==='checkin'){if(p.last_checkin_date===today){console.log('SC:checkin dup');return p;} p.last_checkin_date=today;}
@@ -656,22 +657,23 @@ function awardXP(xp,minutes,source,completedKey,itemId) {
     // Agile Streak: check pause window and auto-consume token
     var _pause=DB.getStreakPause();
     var _isPaused=_pause.pausedUntil&&today<=_pause.pausedUntil;
-    if(!_isPaused){
+    if(!_isPaused&&isMeaningful){
       if(p.last_active_date===today){}
       else if(p.last_active_date===yesterday){p.current_streak=(p.current_streak||0)+1;p.longest_streak=Math.max(p.longest_streak||0,p.current_streak);}
       else{
         var _tokens=DB.getStreakTokens();
         if(_tokens>0&&p.last_active_date&&p.last_active_date!==today){
-          DB.setStreakTokens(_tokens-1);
+          DB.setStreakTokens(Math.max(0,_tokens-1));
           p.current_streak=(p.current_streak||0)+1;p.longest_streak=Math.max(p.longest_streak||0,p.current_streak);
           window.dispatchEvent(new CustomEvent('sc_streak_token_used',{detail:{remaining:_tokens-1}}));
         } else {p.current_streak=1;p.longest_streak=Math.max(p.longest_streak||0,1);}
       }
       p.last_active_date=today;
     }
-    // Award streak token every 7-day milestone (once per day)
-    if(wasNewDay&&p.current_streak>0&&p.current_streak%7===0){
-      DB.setStreakTokens(DB.getStreakTokens()+1);
+    // Award streak token every 14-day milestone (once per day), max 2 tokens
+    if(wasNewDay&&isMeaningful&&p.current_streak>0&&p.current_streak%14===0){
+      var _curTokens=DB.getStreakTokens();
+      if(_curTokens<2) DB.setStreakTokens(_curTokens+1);
     }
     // ── Streak XP multiplier (P5-H) ──────────────────────────────
     var streak=p.current_streak||0;
