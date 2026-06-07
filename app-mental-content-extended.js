@@ -12,10 +12,8 @@
 (function() {
 'use strict';
 var A = window.SC_APP;
-if (!A || !A.MENTAL_CONTENT) {
-  console.error('[SC] app-mental-content-extended: load AFTER app-mental-content.js');
-  return;
-}
+if (!A) { return; }
+A.MENTAL_CONTENT = A.MENTAL_CONTENT || {};
 
 // ================================================================
 // PER-SESSION VISUAL CONFIG
