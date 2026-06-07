@@ -81,9 +81,10 @@ function getPage(name) {
     MiniMatch:P.MiniMatchPage, Quizzes:P.QuizzesPage,
     CricketDNA:P.CricketDNAPage, DailyNet:P.DailyNetPage,
     IntelligenceHub:P.IntelligenceHubPage,
-    Crick:P.CrickPage,
+    Crick:P.CrickPage || window.SC_APP.CrickPage,
   };
-  return map[name] || null;
+  // Defensive: also try direct window.SC_APP lookup (guards against stale closure)
+  return map[name] || window.SC_APP[name + 'Page'] || null;
 }
 
 function NotFound(props) {
