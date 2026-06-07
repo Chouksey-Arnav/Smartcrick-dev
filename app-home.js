@@ -42,14 +42,11 @@ function getAvgWeeklyXP(log){
 
 // ── 8 Spin prizes ─────────────────────────────────────────────────
 var SPIN_PRIZES=[
-  {xp:15,  weight:25,label:'+15 XP',    color:'#6366f1'},
-  {xp:30,  weight:22,label:'+30 XP',    color:'#10b981'},
-  {xp:75,  weight:18,label:'+75 XP!',   color:'#3b82f6'},
-  {xp:10,  weight:12,label:'+10 XP',    color:'#6b7280'},
-  {xp:150, weight:10,label:'+150 XP!!', color:'#f59e0b'},
-  {xp:300, weight:7, label:'+300 XP!!!',color:'#ef4444'},
-  {xp:500, weight:4, label:'+500 XP!',  color:'#ec4899'},
-  {xp:1000,weight:2, label:'JACKPOT!',  color:'#ffd700'},
+  {xp:5,  weight:45,label:'+5 XP',  color:'#6b7280'},
+  {xp:10, weight:30,label:'+10 XP', color:'#6366f1'},
+  {xp:20, weight:18,label:'+20 XP', color:'#10b981'},
+  {xp:35, weight:5, label:'+35 XP', color:'#3b82f6'},
+  {xp:50, weight:2, label:'+50 XP!',color:'#f59e0b'},
 ];
 function weightedRandom(prizes){
   var tot=prizes.reduce(function(s,p){return s+p.weight;},0), r=Math.random()*tot, c=0;
@@ -103,7 +100,7 @@ function SpinWheelWidget(){
         rotRef.current=final; setRotation(final);
         setSpinning(false); setResult(winner); setSpunToday(true); setTodayPrize(winner);
         DB.set('last_spin_date',today); DB.set('last_spin_prize',winner);
-        if(A.awardXP) A.awardXP(winner.xp,0,'spin_wheel',null,null);
+        if(A.awardXP) A.awardXP(winner.xp,0,'spin_wheel',null,null,false);
         if(winner.xp>=200&&A.fireConfetti) A.fireConfetti();
         setFloatWin(true); setTimeout(function(){setFloatWin(false);},2500);
         window.dispatchEvent(new CustomEvent('sc_update'));
