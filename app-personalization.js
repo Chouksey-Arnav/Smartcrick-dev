@@ -266,16 +266,42 @@ function getPickSessions(allSessions, user, completedIds) {
 
   scored.sort(function(a, b) { return b.score - a.score; });
 
-  var picks = [], usedTypes = {};
-  for (var i = 0; i < scored.length && picks.length < 3; i++) {
-    var t = scored[i].type;
-    if (!usedTypes[t]) { picks.push(scored[i].session); usedTypes[t] = true; }
-  }
-  for (var j = 0; j < scored.length && picks.length < 3; j++) {
-    if (picks.indexOf(scored[j].session) === -1) picks.push(scored[j].session);
+  // ── "Why picked" label — derived from recent drill activity + type ──
+  var recentDrills = [];
+  try {
+    var p = A.DB && A.DB.getProgress ? A.DB.getProgress() : {};
+    recentDrills = (p && p.completed_drills) || [];
+  } catch(e) {}
+  var hadBattingDrill  = recentDrills.some(function(id){ return /bat/i.test(id||''); });
+  var hadBowlingDrill  = recentDrills.some(function(id){ return /bowl/i.test(id||''); });
+
+  function whyPickedLabel(type) {
+    if (type === 'PRESSURE' && hadBowlingDrill) return 'After your bowling drills — pressure prep';
+    if (type === 'ACTIVATE' && hadBattingDrill) return 'After your batting drills — energy builder';
+    if (type === 'BREATH')    return 'Matched to your role — calm before the crease';
+    if (type === 'VISUALIZE') return 'Built for your playing style';
+    if (type === 'RECOVER')   return 'Recommended for recovery today';
+    if (type === 'GROUND')    return 'Picked to sharpen your focus';
+    if (type === 'REFLECT')   return 'Picked for deeper self-awareness';
+    return 'Picked for you today';
   }
 
-  return picks.slice(0, 3);
+  var picks = [], usedTypes = {};
+  for (var i = 0; i < scored.length && picks.length < 5; i++) {
+    var t = scored[i].type;
+    if (!usedTypes[t]) {
+      var sess = Object.assign({}, scored[i].session, { whyPicked: whyPickedLabel(t) });
+      picks.push(sess); usedTypes[t] = true;
+    }
+  }
+  for (var j = 0; j < scored.length && picks.length < 5; j++) {
+    var s2 = scored[j].session;
+    if (!picks.some(function(p){ return p.id === s2.id; })) {
+      picks.push(Object.assign({}, s2, { whyPicked: whyPickedLabel(scored[j].type) }));
+    }
+  }
+
+  return picks.slice(0, 5);
 }
 
 // ── PersonalisationEngine singleton ──────────────────────────────
