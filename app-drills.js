@@ -760,14 +760,14 @@ function DrillDetailPage(props) {
     if (DB.saveProgress) DB.saveProgress(prog);
 
     // Award XP
-    var baseXP = drill.xp;
+    var baseXP = Math.round(drill.xp * 1.25);
     var bonusXP = Math.round(baseXP * (rating >= 4 ? 0.2 : rating >= 3 ? 0.1 : 0)); // rating bonus
     var finalXP = baseXP + bonusXP;
     var mult = 1.0;
     if (awardXP) {
       try {
         // awardXP returns or updates XP with streak — get current streak for display
-        awardXP(finalXP, 0, 'drill:' + drill.id);
+        awardXP(finalXP, 0, 'drill:' + drill.id, 'drill', drill.id, true);
         var freshProg = DB.getProgress ? DB.getProgress() : {};
         mult = freshProg.streak_multiplier || 1.0;
         var earnedFinal = Math.round(finalXP * mult);
