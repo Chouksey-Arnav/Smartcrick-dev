@@ -331,6 +331,7 @@ function MentalPage(){
                     h('span',{style:{fontSize:8,fontWeight:800,color:'#8b5cf6',background:'rgba(139,92,246,0.12)',padding:'2px 5px',borderRadius:3,border:'1px solid rgba(139,92,246,0.25)',letterSpacing:'0.06em',textTransform:'uppercase',display:'inline-flex',alignItems:'center',gap:3}},h(Icon,{n:'sparkles',cls:'',style:{width:9,height:9,color:'#8b5cf6'}}),'Pick'),
                     h('span',{style:{fontSize:13,fontWeight:700,color:'#f0fdf4',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},s.title)
                   ),
+                  s.whyPicked&&h('div',{style:{fontSize:10,color:'#8b5cf6',marginBottom:3,opacity:0.85}},s.whyPicked),
                   h('div',{style:{display:'flex',alignItems:'center',gap:8}},
                     h('span',{style:{fontSize:11,color:'#6b7280'}},mins+' min'),
                     h(XPBadge,{xp:s.xp_value}))
@@ -498,7 +499,7 @@ function EmbeddedSessionPlayer({session,routineTitle,sessionNum,totalSessions,on
     intRef.current=setInterval(()=>setTimeLeft(t=>{
       if(t<=1){clearInterval(intRef.current);
         if(step<session.steps.length-1){setStep(s=>s+1);}
-        else{if(!awardedRef.current){awardedRef.current=true;awardXP(session.xp_value,Math.floor(session.duration_seconds/60),'mental','mental',session.id);setDone(true);}}
+        else{if(!awardedRef.current){awardedRef.current=true;awardXP(Math.round(session.xp_value*1.25),Math.floor(session.duration_seconds/60),'mental','mental',session.id,true);setDone(true);}}
         return 0;}
       return t-1;
     }),1000);
@@ -523,7 +524,7 @@ function EmbeddedSessionPlayer({session,routineTitle,sessionNum,totalSessions,on
     h('div',{style:{textAlign:'center',maxWidth:340,flex:1,display:'flex',alignItems:'center',justifyContent:'center',padding:'1.25rem 0'}},
       h('p',{style:{fontSize:'1.075rem',color:'#e2d9f3',lineHeight:1.8,fontWeight:500}},cur?.instruction)),
     h('div',{style:{width:'100%',maxWidth:380,display:'flex',flexDirection:'column',gap:9}},
-      h('button',{onClick:()=>{clearInterval(intRef.current);if(step<session.steps.length-1){setStep(s=>s+1);}else{if(!awardedRef.current){awardedRef.current=true;awardXP(session.xp_value,Math.floor(session.duration_seconds/60),'mental','mental',session.id);setDone(true);}}},
+      h('button',{onClick:()=>{clearInterval(intRef.current);if(step<session.steps.length-1){setStep(s=>s+1);}else{if(!awardedRef.current){awardedRef.current=true;awardXP(Math.round(session.xp_value*1.25),Math.floor(session.duration_seconds/60),'mental','mental',session.id,true);setDone(true);}}},
         style:{flex:1,padding:'14px',border:'none',cursor:'pointer',fontSize:14,fontWeight:700,borderRadius:10,color:'#fff',fontFamily:'inherit',background:isLastEmbedStep?'#16a34a':'linear-gradient(135deg,#5b21b6,#4338ca)',display:'flex',alignItems:'center',justifyContent:'center',gap:7}},
         isLastEmbedStep?[h('span',{key:'l'},'Complete Session'),h(Icon,{key:'i',n:'check',cls:'',style:{width:16,height:16,color:'#fff'}})]:[h('span',{key:'l'},'Next Step'),h(Icon,{key:'i',n:'chevR',cls:'',style:{width:16,height:16,color:'#fff'}})]),
       h('button',{onClick:()=>setPaused(p=>!p),style:{padding:'10px',background:'transparent',color:'rgba(109,40,217,0.8)',borderRadius:10,fontWeight:600,border:'1px solid rgba(109,40,217,0.30)',cursor:'pointer',fontSize:13,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',gap:6}},
