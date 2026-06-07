@@ -56,6 +56,16 @@ SC_VIBE.wrapClick = function (fn, type) {
   };
 };
 
+// ── Nav haptics — light tick on every page change ─────────────────
+(function patchNavHaptics() {
+  if (!A.nav) return;
+  var _origNav = A.nav;
+  A.nav = function() {
+    SC_VIBE.haptic('tick');
+    return _origNav.apply(this, arguments);
+  };
+})();
+
 // Global haptic delegation — fires on all card/button presses
 document.addEventListener('pointerdown', function (e) {
   var card = e.target.closest('.sc-card, .stat-card, .pro-card');
@@ -276,7 +286,9 @@ var NAV_ICONS_FILLED = {
             onPointerDown: function () {
               // Zero-latency: fire haptic + audio + nav simultaneously
               if (A.Emotion && A.Emotion.haptic) A.Emotion.haptic('tap');
-              SC_VIBE.haptic('medium');
+              if (navigator.vibrate && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+                try { navigator.vibrate([4, 0, 4]); } catch(e) {}
+              }
               if (A.UIAudio) A.UIAudio.tick();
               setLastTapped(item.pg);
               setTimeout(function () { setLastTapped(null); }, 420);
