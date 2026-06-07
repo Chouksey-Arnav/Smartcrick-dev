@@ -151,8 +151,21 @@ function AppShell() {
       }
       // Schedule evening reminder if user has pending sessions
       if (A.scheduleEveningReminder) { try { A.scheduleEveningReminder(); } catch(e) {} }
+      // (Re)arm today's Crick daily-message notifications — re-armable so it
+      // recovers from page reloads/closed tabs and catches up missed slots
+      if (A.CrickNotif && A.CrickNotif.scheduleIfEnabled) { try { A.CrickNotif.scheduleIfEnabled(); } catch(e) {} }
     }, 800);
     return function() { clearTimeout(t); };
+  }, []);
+
+  useEffect(function() {
+    function onVisible() {
+      if (document.visibilityState === 'visible' && A.CrickNotif && A.CrickNotif.scheduleIfEnabled) {
+        try { A.CrickNotif.scheduleIfEnabled(); } catch(e) {}
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return function() { document.removeEventListener('visibilitychange', onVisible); };
   }, []);
 
   // ── Onboarding gate ───────────────────────────────────────────
