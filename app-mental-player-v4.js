@@ -415,12 +415,16 @@ function MentalPlayerPage(props) {
   var [running,setRunning]=useState(false);
   var [done,setDone]=useState(false);
   var [started,setStarted]=useState(false);
+  var [journal,setJournal]=useState(['','','']);
+  var [journalSaved,setJournalSaved]=useState(false);
   var doneRef=useRef(false);
   var prevPiRef=useRef(-1);
 
   useEffect(function(){
     if(!started) return;
     if(A.MentalYouTube) A.MentalYouTube.playSession(type, slug);
+    // Set voice profile for this session type before speaking
+    if(A.MentalTTS && A.MentalTTS.setSessionType) A.MentalTTS.setSessionType(type);
     var rawFirst = phases[0] && phases[0].text;
     var firstText = (A.MentalPersonalizer && rawFirst)
       ? A.MentalPersonalizer.personalizePhase(phases[0], A.DB.getUser())
@@ -442,7 +446,7 @@ function MentalPlayerPage(props) {
     setRunning(false); setDone(true);
     if(A.MentalTTS) A.MentalTTS.stop();
     if(A.MentalYouTube) A.MentalYouTube.fadeOut(5000);
-    if(A.awardXP) A.awardXP(session.xp||50,session.duration_minutes||5,'mental','mental',slug);
+    if(A.awardXP) A.awardXP(Math.round((session.xp||50)*1.25),session.duration_minutes||5,'mental','mental',slug,true);
     if(A.fireConfetti) A.fireConfetti();
     window.dispatchEvent(new CustomEvent('sc_update'));
   }
@@ -485,8 +489,32 @@ function MentalPlayerPage(props) {
       h('p',{style:{fontSize:13,color:'#6b7280',marginBottom:6}},session.name),
       h('p',{style:{fontSize:12,color:'#484f58',marginBottom:14}},(session.duration_minutes||5)+' minutes well spent.'),
       h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'7px 18px',borderRadius:99,background:color+'1a',border:'1px solid '+color+'35',fontSize:13,fontWeight:700,color:color,marginBottom:20}},A.Icon&&h(A.Icon,{n:'zap',cls:'',style:{width:14,height:14,color:color}}),'+'+session.xp+' XP'),
-      h('div',{style:{maxWidth:280,margin:'0 auto 28px',padding:'14px 16px',borderRadius:12,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}},
+      h('div',{style:{maxWidth:280,margin:'0 auto 16px',padding:'14px 16px',borderRadius:12,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)'}},
         h('p',{style:{fontSize:12,color:'#9ca3af',margin:0,lineHeight:1.7,fontStyle:'italic'}},_reflectPrompt)
+      ),
+      h('div',{style:{maxWidth:300,margin:'0 auto 28px',padding:'14px 16px',borderRadius:12,background:'rgba(255,255,255,0.025)',border:'1px solid rgba(255,255,255,0.06)',textAlign:'left'}},
+        h('p',{style:{fontSize:11,fontWeight:800,color:'#6b7280',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}},'Quick Journal'),
+        ['What went well today?','What will you work on next?','One word for how you feel:'].map(function(ph,i){
+          return h('input',{
+            key:i, type:'text', placeholder:ph, value:journal[i],
+            onChange:function(e){
+              var next=journal.slice(); next[i]=e.target.value; setJournal(next); setJournalSaved(false);
+            },
+            style:{width:'100%',marginBottom:8,padding:'9px 11px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,color:'#e5e7eb',fontSize:12,fontFamily:'inherit',outline:'none',boxSizing:'border-box'}
+          });
+        }),
+        h('button',{
+          onClick:function(){
+            try{
+              var key='sc_mental_journal';
+              var all=(A.DB&&A.DB.get(key))||[];
+              all.unshift({slug:slug,date:new Date().toISOString().slice(0,10),lines:journal});
+              if(A.DB) A.DB.set(key,all.slice(0,200));
+            }catch(e){}
+            setJournalSaved(true);
+          },
+          style:{marginTop:2,padding:'8px 16px',background:journalSaved?'rgba(74,222,128,0.12)':color+'1a',border:'1px solid '+(journalSaved?'rgba(74,222,128,0.35)':color+'35'),borderRadius:8,color:journalSaved?'#4ade80':color,fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}
+        }, journalSaved?'Saved ✓':'Save journal')
       ),
       h('div',{style:{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:270}},
         h('button',{onClick:function(){A.nav('Mental');},style:{padding:14,background:color,color:'#fff',border:'none',borderRadius:12,fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 20px rgba('+glow+',0.35)'}},'More Sessions'),
@@ -503,6 +531,14 @@ function MentalPlayerPage(props) {
     var _drillCtx = _ctxLine && _ctxLine.indexOf('after your') !== -1 ? _ctxLine.split(' · ').pop() : '';
     var ROLE_ICONS = {batsman:'bat',bowler:'ball',allrounder:'zap',wicketkeeper:'shield'};
     var _roleIcon = _user && _user.role ? (ROLE_ICONS[_user.role]||'user') : null;
+    var _trackMood = A.getTrackMood ? A.getTrackMood(slug) : null;
+    var ROLE_PREP_NOTES = {
+      batsman:'Batsmen: sit upright with your bat nearby as an anchor.',
+      bowler:'Bowlers: rest your bowling arm loosely, breathe from the shoulders down.',
+      allrounder:'All-rounders: settle into stillness — both sides of your game start here.',
+      wicketkeeper:'Keepers: relax your hands and wrists fully before you begin.',
+    };
+    var _prepNote = _user && _user.role ? ROLE_PREP_NOTES[_user.role] : null;
     return h('div',{style:{minHeight:'100dvh',background:'#0d1117',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',padding:28}},
       h('div',{style:{width:80,height:80,borderRadius:22,background:color+'14',border:'1px solid '+color+'28',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,filter:'drop-shadow(0 0 20px rgba('+glow+',0.3))'}},
         h(TypeIcon,{type:type,color:color,size:46})
@@ -513,10 +549,12 @@ function MentalPlayerPage(props) {
           h(A.Icon,{n:_roleIcon,cls:'',style:{width:12,height:12,color:'#9ca3af'}}),
           'For '+(_user.role||'you')+'s')
       ),
+      _trackMood&&h('div',{style:{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 11px',borderRadius:99,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',fontSize:10,fontWeight:600,color:'#6b7280',marginBottom:8}},'🎧 '+_trackMood),
       _userName&&h('p',{style:{fontSize:14,color:'#6b7280',marginBottom:4,fontWeight:500}},'Ready, '+_userName+'?'),
       h('h2',{style:{fontSize:20,fontWeight:800,color:'#f0fdf4',marginBottom:8,lineHeight:1.3}},session.name),
       h('p',{style:{fontSize:12,color:'#6b7280',marginBottom:_drillCtx?8:20}},
         (session.duration_minutes||5)+' min · '+session.xp+' XP · '+phases.length+' phases'),
+      _prepNote&&h('p',{style:{fontSize:12,color:'#4b5563',maxWidth:280,lineHeight:1.6,marginBottom:_drillCtx?10:16,fontStyle:'italic'}},_prepNote),
       _drillCtx&&h('div',{style:{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 14px',borderRadius:99,background:'rgba(22,163,74,0.1)',border:'1px solid rgba(22,163,74,0.25)',fontSize:12,color:'#4ade80',marginBottom:16,maxWidth:300,textAlign:'left'}},
         A.Icon&&h(A.Icon,{n:'check',cls:'',style:{width:12,height:12,color:'#4ade80',flexShrink:0}}),
         'Great work '+_drillCtx+'. This session will lock it in mentally.'
