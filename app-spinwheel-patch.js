@@ -31,12 +31,11 @@ var DB = A.DB;
 
 // Hard-mode distribution — expected value ~21 XP/spin
 var SPIN_PRIZES = [
-  { xp:10,  weight:50,  label:'+10',  color:'#475569', dark:'#1e293b' },
-  { xp:20,  weight:25,  label:'+20',  color:'#3b82f6', dark:'#1d4ed8' },
-  { xp:30,  weight:15,  label:'+30',  color:'#10b981', dark:'#059669' },
-  { xp:50,  weight:8,   label:'+50',  color:'#f59e0b', dark:'#d97706' },
-  { xp:100, weight:1.5, label:'+100', color:'#ef4444', dark:'#dc2626' },
-  { xp:200, weight:0.5, label:'+200', color:'#ffd700', dark:'#b45309' },
+  { xp:5,  weight:45,  label:'+5',  color:'#475569', dark:'#1e293b' },
+  { xp:10, weight:30,  label:'+10', color:'#3b82f6', dark:'#1d4ed8' },
+  { xp:20, weight:18,  label:'+20', color:'#10b981', dark:'#059669' },
+  { xp:35, weight:5,   label:'+35', color:'#f59e0b', dark:'#d97706' },
+  { xp:50, weight:2,   label:'+50', color:'#ef4444', dark:'#dc2626' },
 ];
 
 function weightedRandom(prizes) {
@@ -103,7 +102,7 @@ function WheelModal(props) {
         rotRef.current=final; setRotation(final);
         setSpinning(false); setResult(winner);
         DB.set('last_spin_date',today); DB.set('last_spin_prize',winner);
-        if(A.awardXP) A.awardXP(winner.xp,0,'spin_wheel',null,null);
+        if(A.awardXP) A.awardXP(winner.xp,0,'spin_wheel',null,null,false);
         if(winner.xp>=100 && A.fireConfetti) A.fireConfetti();
         setFloatWin(true); setTimeout(function(){setFloatWin(false);},2800);
         window.dispatchEvent(new CustomEvent('sc_update'));
@@ -300,7 +299,7 @@ function SpinWheelWidget() {
         h('div',{style:{fontSize:11,color:'#6b7280',marginTop:2}},
           alreadySpun
             ? (savedPrize?'Won +'+savedPrize.xp+' XP  ·  Resets in '+timeLeft():'Resets in '+timeLeft())
-            : 'Spin once a day — win 10 to 200 bonus XP')
+            : 'Spin once a day — win 5 to 50 bonus XP')
       ),
       !alreadySpun && h('span',{style:{fontSize:13,fontWeight:700,color:'#f59e0b',flexShrink:0}},'SPIN →')
     ),
