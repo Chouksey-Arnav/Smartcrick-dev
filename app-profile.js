@@ -5,6 +5,53 @@ const A = window.SC_APP;
 const { DB, nav, awardXP } = A;
 const { Icon, XPBadge, PageHeader, BottomNav, TopBar } = A;
 
+// ===== Crick Notifications Toggle =====
+function CrickNotifToggle() {
+  var [enabled, setEnabled] = useState(function() {
+    return !!(A.CrickNotif && A.CrickNotif.isEnabled && A.CrickNotif.isEnabled());
+  });
+  var [busy, setBusy] = useState(false);
+
+  function handleToggle() {
+    if (busy) return;
+    if (enabled) {
+      if (A.CrickNotif && A.CrickNotif.disable) A.CrickNotif.disable();
+      setEnabled(false);
+      return;
+    }
+    setBusy(true);
+    if (A.CrickNotif && A.CrickNotif.requestPermission) {
+      A.CrickNotif.requestPermission().then(function(granted) {
+        setEnabled(granted);
+        setBusy(false);
+      });
+    } else {
+      setBusy(false);
+    }
+  }
+
+  return h('div', { style: { background: 'rgba(16,22,36,0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+    h('div', null,
+      h('div', { style: { fontSize: 13, fontWeight: 800, color: '#f0fdf4' } }, 'Daily Crick Notifications'),
+      h('div', { style: { fontSize: 11, color: '#94a3b8', marginTop: 2 } }, 'Get 1-5 personalized cricket messages a day'),
+    ),
+    h('button', {
+      onClick: handleToggle,
+      disabled: busy,
+      style: {
+        width: 48, height: 28, borderRadius: 99, border: 'none', cursor: busy ? 'wait' : 'pointer',
+        background: enabled ? '#16a34a' : 'rgba(255,255,255,0.12)',
+        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+      },
+    },
+      h('div', { style: {
+        position: 'absolute', top: 3, left: enabled ? 23 : 3, width: 22, height: 22, borderRadius: '50%',
+        background: '#fff', transition: 'left 0.2s',
+      } })
+    )
+  );
+}
+
 // ===== jsPDF TRAINING REPORT (P5-G) =====
 function generateTrainingReport() {
   try {
@@ -971,6 +1018,8 @@ function ProfilePage(props) {
       activeTab === 'settings' && h('div', { style: { paddingBottom: 24 } },
         h('div', { style: { fontSize: 16, fontWeight: 800, color: '#f0fdf4', marginBottom: 16 } }, 'Training Settings'),
         A.MinimalistToggle ? h(A.MinimalistToggle, null) : null,
+        h('div', { style: { height: 16 } }),
+        h(CrickNotifToggle, null),
         h('div', { style: { height: 16 } }),
         // ELO ratings display
         (function() {
