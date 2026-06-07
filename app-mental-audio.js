@@ -159,6 +159,19 @@ var SESSION_SPECIFIC_TRACKS = {
   'bounce-back-blueprint':        'Z8ANihFXlgU',
 };
 
+// ── Track mood labels — shown as a subtle badge in the player UI ──
+var TRACK_MOODS = {
+  'Z2dK_m2LfrY': 'Rainstorm calm',
+  'n4YghVcjbpw': 'Epic orchestral',
+  'MTg-gZy9oLM': 'Cinematic ambient',
+  'Z8ANihFXlgU': 'Binaural focus',
+};
+function getTrackMoodForSlug(slug) {
+  var trackId = slug && SESSION_SPECIFIC_TRACKS[slug];
+  return trackId ? (TRACK_MOODS[trackId] || null) : null;
+}
+A.getTrackMood = getTrackMoodForSlug;
+
 var CREATOR_FOCUS_TRACKS = {
   match_anxiety:        'n4YghVcjbpw',
   confidence:           'MTg-gZy9oLM',
@@ -341,9 +354,13 @@ var MentalTTS = (function() {
     'Microsoft Jenny Online (Natural) - English (United States)',
     'Google UK English Female',
     'Microsoft Guy Online (Natural) - English (United States)',
+    'Microsoft Ryan Online (Natural) - English (United Kingdom)',
+    'Microsoft Sonia Online (Natural) - English (United Kingdom)',
+    'Microsoft Clara Online (Natural) - English (Canada)',
     'Microsoft David Desktop - English (United States)',
     'Ava (Enhanced)',
     'Samantha (Enhanced)',
+    'Kate (Enhanced)',
     'Ava',
     'Samantha',
     'Karen (Enhanced)',
@@ -351,11 +368,34 @@ var MentalTTS = (function() {
     'Victoria (Enhanced)',
     'Victoria',
     'Moira',
+    'Tessa',
     'Daniel (Enhanced)',
     'Daniel',
     'Microsoft Zira Desktop - English (United States)',
+    'Google UK English Male',
     'Google US English',
   ];
+
+  // Per-session-type voice profiles — warmth tuned to emotional register
+  var VOICE_PROFILES = {
+    BREATH:    { rate: 0.68, pitch: 0.90, pause: 2200 }, // very slow, low, deeply calming
+    RECOVER:   { rate: 0.70, pitch: 0.91, pause: 2100 }, // slow and gentle
+    REFLECT:   { rate: 0.73, pitch: 0.93, pause: 1900 }, // thoughtful pace
+    GROUND:    { rate: 0.74, pitch: 0.95, pause: 1800 }, // grounded, steady
+    VISUALIZE: { rate: 0.72, pitch: 0.93, pause: 2000 }, // immersive, flowing
+    ACTIVATE:  { rate: 0.82, pitch: 1.00, pause: 1400 }, // purposeful, energised
+    PRESSURE:  { rate: 0.80, pitch: 0.98, pause: 1500 }, // matter-of-fact, authoritative
+    DEFAULT:   { rate: 0.73, pitch: 0.93, pause: 1800 }, // general warm baseline
+  };
+  var _sessionType = 'DEFAULT';
+
+  function setSessionType(type) {
+    _sessionType = (type && VOICE_PROFILES[type]) ? type : 'DEFAULT';
+  }
+
+  function _getProfile() {
+    return VOICE_PROFILES[_sessionType] || VOICE_PROFILES.DEFAULT;
+  }
 
   function selectVoice() {
     if (_voice) return _voice;
@@ -412,8 +452,9 @@ var MentalTTS = (function() {
         var closing = name ? 'Well done, ' + name + '. Carry that with you.' : 'Well done. Carry that with you.';
         var cu = new SpeechSynthesisUtterance(closing);
         cu.voice  = selectVoice();
-        cu.rate   = 0.74;
-        cu.pitch  = 1.05;
+        var _cp = _getProfile();
+        cu.rate   = _cp.rate;
+        cu.pitch  = _cp.pitch;
         cu.volume = 0.9;
         cu.lang   = (cu.voice && cu.voice.lang) || 'en-GB';
         setTimeout(function() {
@@ -429,15 +470,16 @@ var MentalTTS = (function() {
       setTimeout(_nextChunk, 2800);
       return;
     }
+    var prof = _getProfile();
     var u = new SpeechSynthesisUtterance(chunk);
     u.voice  = selectVoice();
-    u.rate   = 0.76;   // breath-pace, meditative, never rushed
-    u.pitch  = 1.05;   // slightly warm above neutral, avoids flat robotic tone
+    u.rate   = prof.rate;   // per-type pace — warm and unhurried
+    u.pitch  = prof.pitch;  // lower pitch = warmer, less robotic
     u.volume = 1.0;
     u.lang   = (u.voice && u.voice.lang) || 'en-GB';
     u.onend  = function() {
       if (_stopped) return;
-      setTimeout(_nextChunk, _queue.length ? 1800 : 0);
+      setTimeout(_nextChunk, _queue.length ? prof.pause : 0);
     };
     u.onerror = function() { setTimeout(_nextChunk, 100); };
     synth.speak(u);
@@ -465,8 +507,8 @@ var MentalTTS = (function() {
       }
     }
 
-    // 1.5s warm-up: let ambient audio settle before voice begins
-    _warmupTimer = setTimeout(_start, 1500);
+    // 2.5s warm-up: let ambient audio settle before voice begins
+    _warmupTimer = setTimeout(_start, 2500);
   }
 
   function stop() {
@@ -484,7 +526,7 @@ var MentalTTS = (function() {
     else if (!_speaking && _queue.length) { _stopped = false; _nextChunk(); }
   }
 
-  return { speak: speak, stop: stop, pause: pause, resume: resume };
+  return { speak: speak, stop: stop, pause: pause, resume: resume, setSessionType: setSessionType };
 })();
 
 // ── Export ─────────────────────────────────────────────────────────
