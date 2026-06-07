@@ -324,7 +324,7 @@ function WorkoutPlayerPage(props) {
   handleDoneSetRef.current = handleDoneSet;
 
   var finishWorkout = function(difficulty) {
-    if (A.awardXP) A.awardXP(workout.xp_value, workout.duration_minutes, 'workout', 'workout', workout.id);
+    if (A.awardXP) A.awardXP(Math.round(workout.xp_value*1.25), workout.duration_minutes, 'workout', 'workout', workout.id, true);
     if (A.FitnessEngine && A.FitnessEngine.recordWorkout) {
       A.FitnessEngine.recordWorkout(workout, {
         minutes: Math.round(elapsedRef.current / 60) || workout.duration_minutes,
