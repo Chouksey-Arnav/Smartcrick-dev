@@ -43,6 +43,12 @@ var CRICK_MESSAGES = [
 ];
 
 function getTodaysCrickMessage() {
+  if (A.getCrickDailyMessages) {
+    try {
+      var picks = A.getCrickDailyMessages(1);
+      if (picks && picks.length && picks[0].text) return picks[0].text;
+    } catch(e) {}
+  }
   var d = new Date();
   var seed = d.getFullYear() * 1000 + d.getMonth() * 31 + d.getDate();
   return CRICK_MESSAGES[seed % CRICK_MESSAGES.length];
@@ -113,7 +119,7 @@ function CrickNetsCard() {
   function handleClaim() {
     if (data.claimed || claiming) return;
     setClaiming(true);
-    if (A.awardXP) A.awardXP(data.runs, 0, 'crick_nets', null, null);
+    if (A.awardXP) A.awardXP(data.runs, 0, 'crick_nets', null, null, false);
     var updated = {runs: data.runs, claimed: true, generated_at: data.generated_at};
     if (A.DB) A.DB.set('crick_nets_' + today, updated);
     if (A.Emotion) try { A.Emotion.cheerMascot && A.Emotion.cheerMascot(); } catch(e) {}
@@ -270,6 +276,16 @@ function spendXP(amount) {
 }
 
 // ── CrickPage — full dedicated page ─────────────────────────────
+var TIER_TABS = [
+  { id:'all',     label:'All' },
+  { id:1,         label:'Free' },
+  { id:2,         label:'Common' },
+  { id:3,         label:'Rare' },
+  { id:4,         label:'Epic' },
+  { id:5,         label:'Legendary' },
+  { id:6,         label:'Seasonal' },
+];
+
 function CrickPage() {
   var [colorKey, setColorKey] = useState(function(){
     return (A.DB && A.DB.get('crick_active_color')) || 'classic';
@@ -282,8 +298,21 @@ function CrickPage() {
     return p.total_xp || 0;
   });
   var [toast, setToast] = useState(null);
+  var [tierFilter, setTierFilter] = useState('all');
+  var [accessoryKey, setAccessoryKey] = useState(function(){
+    return {
+      hat:    (A.DB && A.DB.get('crick_accessory_hat'))    || 'none',
+      eyes:   (A.DB && A.DB.get('crick_accessory_eyes'))   || 'normal_eyes',
+      effect: (A.DB && A.DB.get('crick_accessory_effect')) || 'no_effect',
+    };
+  });
+  var [unlockedAcc, setUnlockedAcc] = useState(function(){
+    return (A.DB && A.DB.get('crick_unlocked_accessories')) || ['none','normal_eyes','no_effect'];
+  });
   var mood = getCrickMood();
-  var colors = Object.values(A.CRICK_COLORS || {});
+  var allColors = Object.values(A.CRICK_COLORS || {});
+  var colors = tierFilter === 'all' ? allColors : allColors.filter(function(c){ return c.tier === tierFilter; });
+  var allAccessories = Object.values(A.CRICK_ACCESSORIES || {});
 
   useEffect(function() {
     function onUpdate() {
@@ -327,6 +356,38 @@ function CrickPage() {
       if (A.Emotion) try { A.Emotion.cheerMascot && A.Emotion.cheerMascot(); } catch(e) {}
       if (navigator.vibrate) navigator.vibrate([50, 30, 100]);
       showToast('Unlocked ' + col.name + '! ' + col.cost + ' XP spent.', 'success');
+    }
+  }
+
+  function handleAccessory(acc) {
+    var isUnlocked = unlockedAcc.includes(acc.id);
+    if (isUnlocked) {
+      if (A.DB) A.DB.set('crick_accessory_' + acc.type, acc.id);
+      var next = Object.assign({}, accessoryKey);
+      next[acc.type] = acc.id;
+      setAccessoryKey(next);
+      window.dispatchEvent(new CustomEvent('sc_update'));
+      showToast('Equipped ' + acc.name + '!', 'success');
+      if (navigator.vibrate) navigator.vibrate(30);
+    } else {
+      if (xp < acc.cost) {
+        showToast('Need ' + acc.cost + ' XP to unlock — earn more first!', 'error');
+        if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+        return;
+      }
+      if (!spendXP(acc.cost)) return;
+      var newUnlocked = (unlockedAcc || []).concat([acc.id]);
+      if (A.DB) {
+        A.DB.set('crick_unlocked_accessories', newUnlocked);
+        A.DB.set('crick_accessory_' + acc.type, acc.id);
+      }
+      setUnlockedAcc(newUnlocked);
+      var next2 = Object.assign({}, accessoryKey);
+      next2[acc.type] = acc.id;
+      setAccessoryKey(next2);
+      if (A.Emotion) try { A.Emotion.cheerMascot && A.Emotion.cheerMascot(); } catch(e) {}
+      if (navigator.vibrate) navigator.vibrate([50, 30, 100]);
+      showToast('Unlocked ' + acc.name + '! ' + acc.cost + ' XP spent.', 'success');
     }
   }
 
@@ -398,7 +459,26 @@ function CrickPage() {
     // Color Shop
     h('div', {style:{padding:'0 16px 20px'}},
       h('div', {style:{fontSize:11, fontWeight:800, color:'#374151', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:14}},
-        'Color Shop'
+        'Color Shop  ·  ' + allColors.filter(function(c){return unlocked.includes(c.id);}).length + '/' + allColors.length + ' unlocked'
+      ),
+      // Tier filter tabs
+      h('div', {style:{display:'flex', gap:8, overflowX:'auto', marginBottom:14, paddingBottom:4}},
+        TIER_TABS.map(function(tab) {
+          var isActive = tierFilter === tab.id;
+          var lockedCount = tab.id === 'all' ? 0 : allColors.filter(function(c){ return c.tier === tab.id && !unlocked.includes(c.id); }).length;
+          return h('button', {
+            key: tab.id,
+            onClick: function(){ setTierFilter(tab.id); },
+            style:{
+              flexShrink:0, padding:'8px 14px', borderRadius:99,
+              background: isActive ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.04)',
+              border: '1px solid ' + (isActive ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.08)'),
+              color: isActive ? '#4ade80' : '#9ca3af',
+              fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+              whiteSpace:'nowrap',
+            }
+          }, tab.label + (lockedCount > 0 ? ' (' + lockedCount + ' 🔒)' : ''));
+        })
       ),
       h('div', {style:{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12}},
         colors.map(function(col) {
@@ -447,6 +527,52 @@ function CrickPage() {
               color: isActive ? '#4ade80' : isUnlocked ? '#10b981' : '#f59e0b',
             }},
               isActive ? 'Equipped ✓' : isUnlocked ? 'Equip' : col.cost + ' XP'
+            ),
+          );
+        })
+      ),
+    ),
+
+    // Accessories
+    h('div', {style:{padding:'0 16px 20px'}},
+      h('div', {style:{fontSize:11, fontWeight:800, color:'#374151', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:14}},
+        'Accessories'
+      ),
+      h('div', {style:{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12}},
+        allAccessories.map(function(acc) {
+          var isUnlocked = unlockedAcc.includes(acc.id);
+          var isActive   = accessoryKey[acc.type] === acc.id;
+          return h('button', {
+            key: acc.id,
+            onClick: function(){ handleAccessory(acc); },
+            style:{
+              display:'flex', flexDirection:'column', alignItems:'center', gap:8,
+              padding:'14px 10px',
+              background: isActive ? 'rgba(255,255,255,0.07)' : 'rgba(10,15,25,0.8)',
+              border: isActive ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.08)',
+              borderRadius:14, cursor:'pointer', fontFamily:'inherit',
+              transition:'all 0.2s',
+            }
+          },
+            h('div', {style:{
+              width:44, height:44, borderRadius:12,
+              background:'rgba(255,255,255,0.05)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:20, opacity: isUnlocked ? 1 : 0.4,
+            }},
+              acc.type === 'hat' ? '🎩' : acc.type === 'eyes' ? '👀' : '✨',
+              !isUnlocked && h('div', {style:{
+                position:'absolute', fontSize:14,
+              }}, '🔒')
+            ),
+            h('div', {style:{fontSize:10, fontWeight:800, color: isActive ? '#e5e7eb' : '#9ca3af', textAlign:'center', lineHeight:1.3}},
+              acc.name
+            ),
+            h('div', {style:{
+              fontSize:10, fontWeight:700,
+              color: isActive ? '#4ade80' : isUnlocked ? '#10b981' : '#f59e0b',
+            }},
+              isActive ? 'Equipped ✓' : isUnlocked ? 'Equip' : (acc.cost > 0 ? acc.cost + ' XP' : 'Free')
             ),
           );
         })
