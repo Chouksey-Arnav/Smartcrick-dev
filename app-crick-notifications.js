@@ -442,34 +442,83 @@ function pickForSlot(slot, pool, usedIds) {
 }
 
 // ── Main schedule function ────────────────────────────────────────
+// Re-armable & catch-up aware: safe to call on every app launch / resume.
+// - If today's queue doesn't exist yet, build a fresh 3-5 notif queue.
+// - If it exists, re-arm setTimeout for any future slots that haven't
+//   fired yet (their original timers die when the page/tab closes), and
+//   immediately fire (catch-up) any slot whose time has passed within
+//   the last CATCHUP_WINDOW_MS but was never delivered.
+var CATCHUP_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 hours
+var ARMED_TIMERS = {}; // notifId -> timeout handle, scoped to this page session
+
+function armTimer(notif, fireAtMs) {
+  if (ARMED_TIMERS[notif.id]) return; // already armed this session
+  var delay = Math.max(0, fireAtMs - Date.now());
+  ARMED_TIMERS[notif.id] = setTimeout(function() {
+    delete ARMED_TIMERS[notif.id];
+    fireAndMark(notif.id);
+  }, delay);
+}
+
+function fireAndMark(notifId) {
+  try {
+    var queueKey = 'crick_notif_queue';
+    var q = A.DB.get(queueKey);
+    if (!q || !q.queue) return;
+    var entry = q.queue.find(function(e) { return e.notifId === notifId; });
+    if (!entry || entry.fired) return;
+    entry.fired = true;
+    A.DB.set(queueKey, q);
+    fire(notifId, buildUserData());
+  } catch(e) {}
+}
+
 function schedule(userData) {
   try {
     if (!A.DB) return;
+    if (!A.CrickNotif.isEnabled()) return;
     var today = new Date().toISOString().slice(0, 10);
     var queueKey = 'crick_notif_queue';
     var existing = A.DB.get(queueKey);
-    if (existing && existing.date === today) return; // already scheduled today
+    var now = Date.now();
+
+    if (existing && existing.date === today && existing.queue && existing.queue.length) {
+      // Re-arm pending slots + catch-up missed ones from earlier today
+      existing.queue.forEach(function(entry) {
+        if (entry.fired) return;
+        var notif = NOTIFICATIONS.find(function(n) { return n.id === entry.notifId; });
+        if (!notif) return;
+        if (entry.fireAt > now) {
+          armTimer(notif, entry.fireAt);
+        } else if (now - entry.fireAt <= CATCHUP_WINDOW_MS) {
+          fireAndMark(notif.id);
+        }
+      });
+      return;
+    }
 
     var pool = eligibleNotifs(userData || buildUserData());
     var count = 3 + Math.floor(Math.random() * 3); // 3-5
     var queue = [];
     var usedIds = {};
+    var nowDate = new Date();
 
     for (var i = 0; i < Math.min(count, DAILY_SLOTS.length); i++) {
       var notif = pickForSlot(DAILY_SLOTS[i], pool, usedIds);
       if (notif) {
         usedIds[notif.id] = true;
-        var now = new Date();
         var slot = DAILY_SLOTS[i];
-        var fireAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), slot.hour, slot.minute, 0, 0);
-        if (fireAt.getTime() > Date.now() + 60000) { // only schedule future slots
-          queue.push({ notifId: notif.id, fireAt: fireAt.getTime() });
-          // Set timeout for this notification
-          (function(n, delay) {
-            setTimeout(function() {
-              A.CrickNotif.fire(n.id, A.CrickNotif._buildUserData());
-            }, delay);
-          })(notif, fireAt.getTime() - Date.now());
+        var fireAt = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), slot.hour, slot.minute, 0, 0);
+        var fireAtMs = fireAt.getTime();
+        var entry = { notifId: notif.id, fireAt: fireAtMs, fired: false };
+        if (fireAtMs > now + 60000) {
+          queue.push(entry);
+          armTimer(notif, fireAtMs);
+        } else if (now - fireAtMs <= CATCHUP_WINDOW_MS) {
+          // Slot already passed today (e.g. permission granted in the afternoon) — catch up
+          entry.fired = true;
+          queue.push(entry);
+          fire(notif.id, buildUserData());
         }
       }
     }
@@ -482,6 +531,14 @@ function schedule(userData) {
 }
 A.CrickNotif.schedule = schedule;
 
+// Convenience: only (re)schedules if the user has enabled Crick notifications.
+// Safe to call from app startup / visibility-change — fully idempotent.
+A.CrickNotif.scheduleIfEnabled = function() {
+  if (A.CrickNotif.isEnabled()) {
+    try { schedule(buildUserData()); } catch(e) {}
+  }
+};
+
 // ── Fire a notification ───────────────────────────────────────────
 function fire(notifId, userData) {
   try {
@@ -491,7 +548,9 @@ function fire(notifId, userData) {
     var title = personalize(notif.title, ud);
     var body  = personalize(notif.body,  ud);
 
-    // Post to service worker
+    // Post to service worker (works whether the app is foreground or the
+    // tab is backgrounded — the SW keeps running and posts to the OS
+    // notification center / iOS Notification Center for installed PWAs)
     if (navigator.serviceWorker && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
         type:     'SC_CRICK_NOTIF',
@@ -500,6 +559,18 @@ function fire(notifId, userData) {
         category: notif.category,
         url:      '/#/Crick',
       });
+    } else if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(function(reg) {
+        if (reg.active) {
+          reg.active.postMessage({
+            type: 'SC_CRICK_NOTIF', title: title, body: body,
+            category: notif.category, url: '/#/Crick',
+          });
+        }
+      }).catch(function() {});
+    } else if ('Notification' in window && Notification.permission === 'granted') {
+      // Last-resort foreground fallback (no SW controller yet)
+      try { new Notification(title, { body: body, icon: '/icon.svg', tag: 'sc-crick-' + notif.category }); } catch(e2) {}
     }
   } catch(e) {
     console.warn('[CrickNotif] fire error:', e);
@@ -531,7 +602,7 @@ A.CrickNotif.requestPermission = function() {
             }
           }).catch(function() {});
         }
-        schedule(buildUserData());
+        A.CrickNotif.scheduleIfEnabled();
       }
       resolve(granted);
     }).catch(function() { resolve(false); });
