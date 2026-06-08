@@ -169,7 +169,7 @@ function AssessmentPage() {
   var axisLabels = ['Batting','Bowling','Fielding','Mental','Fitness','Consistency'];
   var axisKeys = ['batting','bowling','fielding','mental','fitness','consistency'];
   var axisColors = ['#3b82f6','#ef4444','#10b981','#8b5cf6','#f59e0b','#06b6d4'];
-  var axisEmojis = ['🏏','🎳','🤸','🧠','💪','🔥'];
+  var axisEmojis = ['🏏','🎯','🤸','🧠','💪','🔥'];
 
   var ratingColor = overall >= 85 ? '#f59e0b' : overall >= 70 ? '#3b82f6' : overall >= 55 ? '#16a34a' : overall >= 40 ? '#06b6d4' : '#6b7280';
 
