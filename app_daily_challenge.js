@@ -91,7 +91,7 @@ var CHALLENGE_BANK = [
   {
     id:'dc_07', type:'bowling_drill', label:'Wickets are earned, not given',
     desc:'A bowling drill today. Line, length, and craft win matches for your team.',
-    xpBonus:65, icon:'🎳', color:'#ef4444', nav:'Drills',
+    xpBonus:65, icon:'🎯', color:'#ef4444', nav:'Drills',
   },
   {
     id:'dc_08', type:'xp_target', target:150, label:'150 XP — push the pace',
@@ -141,7 +141,7 @@ var CHALLENGE_BANK = [
   {
     id:'dc_17', type:'bowling_drill', label:'Build the stock ball',
     desc:'A bowling drill. The best bowlers make the basics devastating through repetition.',
-    xpBonus:65, icon:'🎳', color:'#ef4444', nav:'Drills',
+    xpBonus:65, icon:'🎯', color:'#ef4444', nav:'Drills',
   },
   {
     id:'dc_18', type:'xp_target', target:120, label:'Above average is below elite',
