@@ -269,7 +269,7 @@ var PROFILES = [
     tip:'Mental training helps swing bowlers maintain focus across long spells.',
     score:function(s){ return cap(s.bwd*8+s.con*25+s.fc*1.5); } },
 
-  { id:'w02', name:'The Seam Machine', cat:'bowling', rarity:'common', icon:'🎳', clr:'#dc2626',
+  { id:'w02', name:'The Seam Machine', cat:'bowling', rarity:'common', icon:'🎯', clr:'#dc2626',
     tag:'Line and length, over after over',
     desc:'High bowling completion rate reveals a player obsessed with bowling mechanics. You hit the seam repeatedly and make batters earn every single run.',
     traits:['Accurate','Consistent','Methodical'],
