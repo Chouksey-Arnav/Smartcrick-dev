@@ -109,10 +109,12 @@ function getYesterdayNetsData() {
 }
 
 // ── CrickNetsCard — prominent home page card ─────────────────────
-function CrickNetsCard() {
+function CrickNetsCard(props) {
   var [data, setData]         = useState(function(){ return getCrickNetsData(); });
   var [claiming, setClaiming] = useState(false);
   var [justClaimed, setJustClaimed] = useState(false);
+  var [showInfo, setShowInfo] = useState(false);
+  var compact = !!props.compact;
   var yesterday = getYesterdayNetsData();
   var today = new Date().toISOString().slice(0, 10);
 
@@ -162,10 +164,32 @@ function CrickNetsCard() {
       h('div', {style:{display:'flex', alignItems:'center', gap:8, marginBottom:12}},
         h('div', {style:{fontSize:11, fontWeight:800, color:'#475569', textTransform:'uppercase', letterSpacing:'0.1em', flex:1}},
           'Crick\'s Daily Net'),
+        h('button', {
+          onClick: function(e){ e.stopPropagation && e.stopPropagation(); setShowInfo(!showInfo); },
+          'aria-label': 'What is this?',
+          style:{
+            width:20, height:20, borderRadius:'50%', flexShrink:0,
+            background: showInfo ? 'rgba(96,165,250,0.25)' : 'rgba(255,255,255,0.06)',
+            border:'1px solid rgba(255,255,255,0.12)', color:'#94a3b8',
+            fontSize:11, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
+            display:'flex', alignItems:'center', justifyContent:'center', padding:0,
+          }
+        }, '?'),
         data.claimed && h('div', {style:{
           fontSize:10, fontWeight:700, color:'#10b981',
           background:'rgba(16,185,129,0.12)', padding:'3px 8px', borderRadius:99,
         }}, 'Claimed ✓'),
+      ),
+
+      showInfo && h('div', {style:{
+        fontSize:11.5, color:'#94a3b8', lineHeight:1.5, marginBottom:12,
+        background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
+        borderRadius:10, padding:'10px 12px',
+      }},
+        'Every day, Crick "bats" in the nets and racks up a random number of runs. ' +
+        'Those runs convert 1:1 into real XP for you — just tap Claim to bank them. ' +
+        'It\'s a free daily top-up on top of whatever you earn from drills, mental sessions and workouts, ' +
+        'so check in once a day so Crick\'s knock doesn\'t go to waste!'
       ),
 
       // Main content row
@@ -299,16 +323,18 @@ function CrickPage() {
   });
   var [toast, setToast] = useState(null);
   var [tierFilter, setTierFilter] = useState('all');
-  var [accessoryKey, setAccessoryKey] = useState(function(){
-    return {
-      hat:    (A.DB && A.DB.get('crick_accessory_hat'))    || 'none',
-      eyes:   (A.DB && A.DB.get('crick_accessory_eyes'))   || 'normal_eyes',
-      effect: (A.DB && A.DB.get('crick_accessory_effect')) || 'no_effect',
-    };
-  });
+  function readAccKeys() {
+    var out = {};
+    (A.ACCESSORY_TYPES || ['hat','eyes','effect']).forEach(function(t){
+      out[t] = (A.DB && A.DB.get('crick_accessory_' + t)) || (A.ACCESSORY_DEFAULTS && A.ACCESSORY_DEFAULTS[t]) || 'none';
+    });
+    return out;
+  }
+  var [accessoryKey, setAccessoryKey] = useState(readAccKeys);
   var [unlockedAcc, setUnlockedAcc] = useState(function(){
-    return (A.DB && A.DB.get('crick_unlocked_accessories')) || ['none','normal_eyes','no_effect'];
+    return (A.DB && A.DB.get('crick_unlocked_accessories')) || (A.ACCESSORY_DEFAULTS ? Object.values(A.ACCESSORY_DEFAULTS) : ['none','normal_eyes','no_effect']);
   });
+  var [accTypeFilter, setAccTypeFilter] = useState('all');
   var mood = getCrickMood();
   var allColors = Object.values(A.CRICK_COLORS || {});
   var colors = tierFilter === 'all' ? allColors : allColors.filter(function(c){ return c.tier === tierFilter; });
@@ -536,12 +562,33 @@ function CrickPage() {
     // Accessories
     h('div', {style:{padding:'0 16px 20px'}},
       h('div', {style:{fontSize:11, fontWeight:800, color:'#374151', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:14}},
-        'Accessories'
+        'Accessories  ·  ' + allAccessories.filter(function(a){return unlockedAcc.includes(a.id);}).length + '/' + allAccessories.length + ' unlocked'
+      ),
+      // Type filter tabs
+      h('div', {style:{display:'flex', gap:8, overflowX:'auto', marginBottom:14, paddingBottom:4}},
+        [{id:'all',label:'All',icon:'🧰'},{id:'hat',label:'Hats',icon:'🎩'},{id:'eyes',label:'Eyes',icon:'👀'},
+         {id:'effect',label:'Auras',icon:'✨'},{id:'bat',label:'Bats',icon:'🏏'},{id:'badge',label:'Badges',icon:'🎖️'},
+         {id:'background',label:'Backdrops',icon:'🖼️'}].map(function(tab){
+          var isActive = accTypeFilter === tab.id;
+          return h('button', {
+            key: tab.id,
+            onClick: function(){ setAccTypeFilter(tab.id); },
+            style:{
+              flexShrink:0, padding:'8px 14px', borderRadius:99,
+              background: isActive ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.04)',
+              border: '1px solid ' + (isActive ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.08)'),
+              color: isActive ? '#4ade80' : '#9ca3af',
+              fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+              whiteSpace:'nowrap',
+            }
+          }, tab.icon + ' ' + tab.label);
+        })
       ),
       h('div', {style:{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:12}},
-        allAccessories.map(function(acc) {
+        allAccessories.filter(function(acc){ return accTypeFilter === 'all' || acc.type === accTypeFilter; }).map(function(acc) {
           var isUnlocked = unlockedAcc.includes(acc.id);
           var isActive   = accessoryKey[acc.type] === acc.id;
+          var TYPE_ICON = {hat:'🎩', eyes:'👀', effect:'✨', bat:'🏏', badge:'🎖️', background:'🖼️'};
           return h('button', {
             key: acc.id,
             onClick: function(){ handleAccessory(acc); },
@@ -551,16 +598,16 @@ function CrickPage() {
               background: isActive ? 'rgba(255,255,255,0.07)' : 'rgba(10,15,25,0.8)',
               border: isActive ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.08)',
               borderRadius:14, cursor:'pointer', fontFamily:'inherit',
-              transition:'all 0.2s',
+              transition:'all 0.2s', position:'relative',
             }
           },
             h('div', {style:{
               width:44, height:44, borderRadius:12,
               background:'rgba(255,255,255,0.05)',
               display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:20, opacity: isUnlocked ? 1 : 0.4,
+              fontSize:20, opacity: isUnlocked ? 1 : 0.4, position:'relative',
             }},
-              acc.type === 'hat' ? '🎩' : acc.type === 'eyes' ? '👀' : '✨',
+              TYPE_ICON[acc.type] || '✨',
               !isUnlocked && h('div', {style:{
                 position:'absolute', fontSize:14,
               }}, '🔒')
