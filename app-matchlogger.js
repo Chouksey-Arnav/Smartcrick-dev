@@ -237,7 +237,7 @@ function MatchForm(props) {
       // Tabs
       h('div', { style: { display: 'flex', gap: 0, marginBottom: 16, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(48,54,61,0.9)' } },
         ['bat', 'bowl', 'field', 'wheel'].map(function(t) {
-          var labels = { bat: '🏏 Bat', bowl: '🎳 Bowl', field: '🤸 Field', wheel: '🎯 Wheel' };
+          var labels = { bat: '🏏 Bat', bowl: '🔴 Bowl', field: '🤸 Field', wheel: '🎯 Wheel' };
           return h('button', { key: t, onPointerDown: function() { if(A.playTabClick) A.playTabClick(); setTab(t); }, style: { flex: 1, padding: '9px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: tab === t ? 'rgba(22,163,74,0.15)' : 'rgba(22,27,34,0.9)', color: tab === t ? '#4ade80' : '#6b7280', borderRight: t !== 'wheel' ? '1px solid rgba(48,54,61,0.9)' : 'none' } }, labels[t]);
         })
       ),
