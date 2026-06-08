@@ -283,7 +283,7 @@ function FocusCard(){
   if(!rec) return null;
   var CFG={
     batting:      {emoji:'🏏',color:'#3b82f6',label:'Batting', page:'Drills'},
-    bowling:      {emoji:'🎳',color:'#ef4444',label:'Bowling', page:'Drills'},
+    bowling:      {emoji:'🎯',color:'#ef4444',label:'Bowling', page:'Drills'},
     fielding:     {emoji:'🤸',color:'#10b981',label:'Fielding',page:'Drills'},
     fitness:      {emoji:'💪',color:'#f97316',label:'Fitness', page:'Fitness'},
     mental:       {emoji:'🧠',color:'#8b5cf6',label:'Mental',  page:'Mental'},
@@ -884,6 +884,11 @@ function HomePage(){
   return h('div',{style:{background:'#0d1117',minHeight:'100dvh',
     backgroundImage:'radial-gradient(ellipse at 20% -20%, rgba(34,197,94,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 60%, rgba(59,130,246,0.06) 0%, transparent 50%)'}},
     h('style',null,'@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}'),
+
+    // ── Crick's Daily Net (top of page — what Crick scored today) ──
+    A.CrickNetsCard ? h('div',{className:'sc-home-card-enter',style:{animationDelay:'0ms',paddingTop:14}},
+      h(A.CrickNetsCard,{})
+    ) : null,
 
     // ── Hero ───────────────────────────────────────────────────────
     h('div',{className:'sc-home-card-enter',style:{animationDelay:'0ms',padding:'16px 16px 12px',
