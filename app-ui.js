@@ -245,6 +245,7 @@ function SidebarNavContent({currentPage,onNavClick}){
     h(NavBtn,{...props('Mental Training','brain','Mental')}),
     h(NavBtn,{...props('30-Day Challenge','target','ThirtyDay')}),
     h(NavBtn,{...props('Fitness Builder','dumbbell','Fitness')}),
+    h(NavBtn,{...props('Fitness Builder 2','flask','FitnessBuilder2'),badge:'BETA'}),
     h(NavBtn,{...props('AI Workout','sparkles','AIWorkout')}),
     h(NavBtn,{...props('Timer','timer','Timer')}),
 
