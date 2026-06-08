@@ -27,12 +27,12 @@ var useRoute      = A.useRoute;
 var nav           = A.nav;
 
 var CHROME_PAGES = new Set([
-  'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
+  'Home','Drills','Mental','Fitness','FitnessBuilder2','Progress','Profile','Schedule',
   'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
 ]);
 
 var STANDARD_PAGES = new Set([
-  'Home','Drills','Mental','Fitness','Progress','Profile','Schedule',
+  'Home','Drills','Mental','Fitness','FitnessBuilder2','Progress','Profile','Schedule',
   'ThirtyDay','SkillPaths','Leaderboard','Timer','Quizzes','MatchLogger','Crick',
   'DrillDetail','MentalPlayer','MentalRoutines','MentalRoutinePlayer',
   'PracticeSession','WorkoutDetail','WorkoutPlayer','SkillPathDetail',
@@ -57,6 +57,7 @@ var PAGE_LABELS = {
   NinetyDay:'90-Day Program', MatchTracker:'Match Tracker',
   MiniMatch:'MiniMatch IQ', DrillDetail:'Drill', WorkoutDetail:'Workout',
   VideoAnalysis:'ProVision™',
+  FitnessBuilder2:'Fitness Builder 2 (Beta)',
 };
 
 function getPage(name) {
@@ -82,6 +83,7 @@ function getPage(name) {
     CricketDNA:P.CricketDNAPage, DailyNet:P.DailyNetPage,
     IntelligenceHub:P.IntelligenceHubPage,
     Crick:P.CrickPage || window.SC_APP.CrickPage,
+    FitnessBuilder2:P.FitnessBuilder2Page,
   };
   // Defensive: also try direct window.SC_APP lookup (guards against stale closure)
   return map[name] || window.SC_APP[name + 'Page'] || null;
