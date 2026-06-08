@@ -4,7 +4,6 @@
 // ADD as <script src="app-drills-extra.js"></script>
 // AFTER app-drills.js in index.html
 //
-// Also fixes bowling icon: replaces 🎳 with cricket-appropriate 🏏
 // All drills have proper YouTube video IDs that open in-browser iframe
 // ================================================================
 (function() {
@@ -313,28 +312,9 @@ if (A.DRILLS && Array.isArray(A.DRILLS)) {
     }
   });
 
-  // Fix any 🎳 bowling pin emojis — replace with cricket bat 🏏
-  A.DRILLS.forEach(function(d) {
-    if (d.icon === '🎳') d.icon = '🏏';
-    if (d.category === 'bowling' && d.icon === '🎳') d.icon = '🏏';
-  });
-
   console.log('[SC] app-drills-extra: total drills now ' + A.DRILLS.length + ' (added '+
-    EXTRA_DRILLS.length + ' new, fixed bowling icons)');
+    EXTRA_DRILLS.length + ' new)');
 } else {
   console.warn('[SC] app-drills-extra: A.DRILLS not found — load after app-drills.js');
-}
-
-// Also fix the DrillsPage CATS config if bowling uses 🎳 emoji anywhere
-if (window._fixBowlingIcon !== true) {
-  window._fixBowlingIcon = true;
-  // Patch any existing rendered category chips
-  setTimeout(function() {
-    document.querySelectorAll('[aria-label*="Bowling"], [data-cat="bowling"]').forEach(function(el) {
-      if (el.textContent && el.textContent.includes('🎳')) {
-        el.textContent = el.textContent.replace('🎳','🏏');
-      }
-    });
-  }, 2000);
 }
 })();
