@@ -828,7 +828,7 @@ var MONTHLY_CHALLENGES = [
     title: 'Bowling Month',
     theme: 'Perfect Line & Length',
     color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)',
-    emoji: '🎳',
+    emoji: '🎯',
     month: 6, // June
     tasks: [
       { id: 'bow1', type: 'drill',  drillId: 'w001', times: 5,  xp: 130, label: '5× Line & Length Precision sessions' },
