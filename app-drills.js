@@ -104,6 +104,7 @@ var CATS = {
   bowling:       { label: 'Bowling',  icon: 'ball',       color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
   fielding:      { label: 'Fielding', icon: 'field',      color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
   wicketkeeping: { label: 'Keeping',  icon: 'glove',      color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  partnership:   { label: 'Partnership', icon: 'user',    color: '#06b6d4', bg: 'rgba(6,182,212,0.12)' },
   fitness:       { label: 'Fitness',  icon: 'dumbbell',   color: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
   mental:        { label: 'Mental',   icon: 'brain',      color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
 };
@@ -140,6 +141,12 @@ var COACH_MESSAGES = {
     'Glove work this clean is what separates district keepers from state keepers.',
     'Your reflexes are sharpening. The stumping you nearly missed will become instinct.',
     'Great keepers are built in practice. You just put one more brick in place.',
+  ],
+  partnership: [
+    'Partnerships win matches. The calls and trust you build here show up when it matters most.',
+    'Great pairs are made in practice, not in the middle. You just strengthened yours.',
+    'Running well together is a skill — and you just sharpened it.',
+    'The best partnerships talk constantly. You\'re building that habit right now.',
   ],
   fitness: [
     'Cricket fitness is an edge most players ignore. You\'re building an advantage.',
