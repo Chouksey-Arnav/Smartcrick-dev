@@ -90,8 +90,8 @@ function recordDismissal() {
 }
 
 // ── React Component ────────────────────────────────────────────────
-var CAT_EMOJI = { batting:'🏏', bowling:'🎳', fielding:'🤸', fitness:'💪', mental:'🧠', wicketkeeping:'🧤' };
-var CAT_COLOR = { batting:'#3b82f6', bowling:'#ef4444', fielding:'#10b981', fitness:'#f97316', mental:'#8b5cf6', wicketkeeping:'#14b8a6' };
+var CAT_EMOJI = { batting:'🏏', bowling:'🎯', fielding:'🤸', fitness:'💪', mental:'🧠', wicketkeeping:'🧤', partnership:'🤝' };
+var CAT_COLOR = { batting:'#3b82f6', bowling:'#ef4444', fielding:'#10b981', fitness:'#f97316', mental:'#8b5cf6', wicketkeeping:'#14b8a6', partnership:'#06b6d4' };
 
 function DrillCard(props) {
   var d        = props.drill;
