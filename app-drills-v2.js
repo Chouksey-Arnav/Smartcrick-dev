@@ -733,9 +733,6 @@ A.DRILLS.forEach(function(d) {
     var isShot = shotKeywords.some(function(k) { return name.includes(k); });
     if (isShot) d.category = 'shots';
   }
-  // Fix bowling icon
-  if (d.emoji === '🎳') d.emoji = '⚾';
-  if (d.icon === '🎳') d.icon = '⚾';
 });
 
 // Append new drills (check for duplicate IDs)
@@ -752,7 +749,7 @@ A.DRILL_CATEGORIES_V2 = [
   { id: 'all',         label: 'All',           emoji: '🏏' },
   { id: 'shots',       label: 'Shots',         emoji: '🏏' },
   { id: 'decisions',   label: 'Decision Making', emoji: '🎯' },
-  { id: 'bowling',     label: 'Bowling Craft',   emoji: '⚾' },
+  { id: 'bowling',     label: 'Bowling Craft',   emoji: '🎯' },
   { id: 'fielding',    label: 'Fielding Elite',  emoji: '🏃' },
   { id: 'keeping',     label: 'Keeping',         emoji: '🧤' },
   { id: 'partnership', label: 'Partnership',     emoji: '🤝' },
