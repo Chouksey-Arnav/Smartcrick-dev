@@ -1,13 +1,20 @@
-// sw.js — SmartCrick Service Worker v2.0
-// Strategy: cache-first for app shell + CDN (offline-first),
-//           network-first for backend APIs (with offline JSON fallback).
-// Every same-origin asset the app loads is precached so the WHOLE app
-// works fully offline after the first visit.
+// sw.js — SmartCrick Service Worker v3.0
+// Strategy: NETWORK-FIRST for same-origin app files (HTML + JS + CSS) so a
+//           new deploy is always picked up immediately while online, with a
+//           cache fallback that keeps the whole app working offline.
+//           Cache-first for immutable CDN libraries; network-first (with
+//           offline JSON fallback) for backend APIs.
+//
+// WHY network-first for app files: the previous stale-while-revalidate
+// strategy served the OLD cached HTML/JS first and only refreshed in the
+// background — so freshly deployed changes did not appear until several
+// reloads later ("I updated the repo but nothing changed"). Network-first
+// fixes that class of bug for good without sacrificing offline support.
 // ================================================================
-const CACHE_V       = 'sc-v8';
-const CDN_CACHE     = 'sc-cdn-v8';
-const RUNTIME_CACHE = 'sc-runtime-v8';
-const CACHE_VERSION = '8.0.0';
+const CACHE_V       = 'sc-v9';
+const CDN_CACHE     = 'sc-cdn-v9';
+const RUNTIME_CACHE = 'sc-runtime-v9';
+const CACHE_VERSION = '9.0.0';
 
 // ── All same-origin app files (mirrors index.html script order) ──
 const APP_SHELL = [
@@ -60,6 +67,12 @@ const APP_SHELL = [
   '/app-fitness.js',
   '/app-workout-player.js',
   '/app-timer.js',
+  // Fitness Builder 2 (Beta)
+  '/app-fitness-builder-2-data.js',
+  '/app-fitness-builder-2-onboarding.js',
+  '/app-fitness-builder-2-library.js',
+  '/app-fitness-builder-2-session.js',
+  '/app-fitness-builder-2.js',
   '/app-schedule.js',
   '/app-skillpaths.js',
   '/app-progress.js',
@@ -258,18 +271,19 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // ── SAME-ORIGIN APP FILES: stale-while-revalidate ───────────
+  // ── SAME-ORIGIN APP FILES: network-first, cache fallback ─────
+  // Always try the network first so a fresh deploy shows immediately.
+  // On success we refresh the cache; on failure (offline) we serve the
+  // last-known-good cached copy, and navigations fall back to the shell.
   if (url.hostname === self.location.hostname) {
     event.respondWith(
       caches.open(CACHE_V).then(function(cache) {
-        return cache.match(req).then(function(cached) {
-          var fetchPromise = fetch(req).then(function(res) {
-            if (res.ok) cache.put(req, res.clone());
-            return res;
-          }).catch(function() { return null; });
-
-          return cached || fetchPromise.then(function(res) {
-            if (res) return res;
+        return fetch(req).then(function(res) {
+          if (res && res.ok) cache.put(req, res.clone());
+          return res;
+        }).catch(function() {
+          return cache.match(req).then(function(cached) {
+            if (cached) return cached;
             // Navigation requests fall back to the cached app shell
             if (req.mode === 'navigate') {
               return cache.match('/index.html').then(function(shell) {
@@ -348,4 +362,4 @@ self.addEventListener('notificationclick', function(event) {
   );
 });
 
-console.log('[SW] SmartCrick Service Worker v' + CACHE_VERSION + ' loaded');
+console.log('[SW] SmartCrick Service Worker v' + CACHE_VERSION + ' loaded (network-first app files)');
