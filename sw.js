@@ -4,10 +4,10 @@
 // Every same-origin asset the app loads is precached so the WHOLE app
 // works fully offline after the first visit.
 // ================================================================
-const CACHE_V       = 'sc-v7';
-const CDN_CACHE     = 'sc-cdn-v7';
-const RUNTIME_CACHE = 'sc-runtime-v7';
-const CACHE_VERSION = '7.0.0';
+const CACHE_V       = 'sc-v8';
+const CDN_CACHE     = 'sc-cdn-v8';
+const RUNTIME_CACHE = 'sc-runtime-v8';
+const CACHE_VERSION = '8.0.0';
 
 // ── All same-origin app files (mirrors index.html script order) ──
 const APP_SHELL = [
@@ -93,6 +93,7 @@ const APP_SHELL = [
   '/app-drills-extra.js',
   '/app-drills-ui-patch.js',
   '/app-drill-videos.js',
+  '/app-drills-steps-engine.js',
 ];
 
 // External CDN libraries to cache (versioned = immutable)
