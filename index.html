@@ -214,3 +214,119 @@
   <script src="app-fitness-builder-2-onboarding.js"></script>
   <script src="app-fitness-builder-2-library.js"></script>
   <script src="app-fitness-builder-2-session.js"></script>
+  <script src="app-fitness-builder-2.js"></script>
+  <script src="app-schedule.js"></script>
+  <script src="app-skillpaths.js"></script>
+  <script src="app-progress.js"></script>
+  <script src="app-challenges.js"></script>
+  <script src="app-profile.js"></script>
+  <!-- ProVision™ Video Analysis Engine (loaded before stubs so real page overrides stub) -->
+  <script src="app-video-data.js"></script>
+  <script src="app-video-engine.js"></script>
+  <script src="app-video-results.js"></script>
+  <script src="app-video-analysis.js"></script>
+  <script src="app-stubs.js"></script>
+  <script src="app-aicoach.js"></script>
+  <script src="app-daily-net.js"></script>
+  <script src="app-viral.js"></script>
+  <script src="app-cricket-dna.js"></script>
+  <script src="app-matchlogger.js"></script>
+  <script src="app-performance.js"></script>
+  <script src="app-quizzes.js"></script>
+  <script src="app-daily-reward.js"></script>
+  <script src="app_daily_challenge.js"></script>
+  <script src="app-spinwheel-patch.js"></script>
+  <script src="app-root.js"></script>
+  <script src="app-root-patch.js"></script>
+  <script src="app-vibe.js"></script>
+
+  <script>
+    // Remove splash when React renders content into #root
+    (function() {
+      var loader = document.getElementById('sc-loading');
+      if (!loader) return;
+      var ob = new MutationObserver(function() {
+        var r = document.getElementById('root');
+        if (r && r.children.length > 0) {
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.3s ease';
+          setTimeout(function() {
+            if (loader.parentNode) loader.parentNode.removeChild(loader);
+          }, 350);
+          ob.disconnect();
+        }
+      });
+      var root = document.getElementById('root');
+      if (root) ob.observe(root, { childList: true });
+      setTimeout(function() {
+        if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+      }, 8000);
+    })();
+  </script>
+
+  <!-- ── OFFLINE SUPPORT: register service worker + connectivity UI ── -->
+  <script>
+    (function() {
+      // Register the service worker so the entire app is cached for offline use.
+      if ('serviceWorker' in navigator) {
+        // When a new service worker takes control (i.e. a fresh deploy was
+        // installed), reload ONCE so the page renders with the new assets.
+        // Without this, an updated app can keep showing the old UI until the
+        // user manually reloads again.
+        var scRefreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          if (scRefreshing) return;
+          scRefreshing = true;
+          window.location.reload();
+        });
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(reg) {
+              console.log('[SW] Registered —', reg.scope);
+              // When a new version is found, activate it immediately.
+              reg.addEventListener('updatefound', function() {
+                var sw = reg.installing;
+                if (!sw) return;
+                sw.addEventListener('statechange', function() {
+                  if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                    sw.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
+            })
+            .catch(function(e) { console.warn('[SW] Registration failed', e); });
+        });
+      }
+
+      // Connectivity indicator — slides in when offline, out when back online.
+      var bar = document.getElementById('sc-offline-bar');
+      var txt = document.getElementById('sc-offline-text');
+      function showBar(show, online) {
+        if (!bar) return;
+        if (show) {
+          bar.style.transform = 'translateX(-50%) translateY(0)';
+        } else {
+          bar.style.transform = 'translateX(-50%) translateY(120%)';
+        }
+        if (online && txt) {
+          bar.style.color = '#34d399';
+          bar.style.borderColor = 'rgba(52,211,153,0.4)';
+          txt.textContent = "Back online — you're all synced.";
+        }
+      }
+      function handleOffline() { showBar(true, false); }
+      function handleOnline() {
+        showBar(true, true);
+        setTimeout(function() { showBar(false, false);
+          // reset styling for next offline event
+          if (bar) { bar.style.color = '#fbbf24'; bar.style.borderColor = 'rgba(251,191,36,0.35)'; }
+          if (txt) { txt.textContent = "You're offline — training continues, progress is saved on this device."; }
+        }, 2600);
+      }
+      window.addEventListener('offline', handleOffline);
+      window.addEventListener('online', handleOnline);
+      if (!navigator.onLine) handleOffline();
+    })();
+  </script>
+</body>
+</html>
