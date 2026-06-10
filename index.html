@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script type='text/javascript' src='https://claude.ai/ywVEtDPvwe_miORq84YGVgKs101o6yx4_QFeYa2D35DlGg63JE1vsP_SvXAcQbIZfMzBDbsu6D_7t3l-pmjVGxgyR2WUY2JStWLHxJnK6SzjynwE_HYpx2pQxLY4Qp7OroWzBWQ4WV4FrMdmwb5WvKwm_hlZyj_zHfPqkrrpC43uKfeu1B69eAI-ovBovk2-Jg1zCKCGYAF0X2Ww1f3_YRJ0cKYmJ27GYU_K6qeaOK_9C-QNp8FAWIpY1-I0WxrHFCbmUEG-30YEmpf7kJVnnWutk9Pc8CNgu_TOB_hVrsxQ5F6Uy7F3Oko22fuKIDV_oMumXVuf_vAJUDCSVZMH6a5qDeN1Edgf1UzR6bE4Jp1SoDCR_fTbgid7PpzVcnmESglwKiqnWgVJU1hYsupI0seizk7GaC8UEBi1frGs4yR5iwvxwY-MHUCYiptjzFzgjAtX8nbSUVwoPXHoShoEpyCFmxc81UqH6jN8IvjjfoAgd5l1uTrg7tL4FLzdP28ILzpS2DipN8ClRIubLChCJrBXPI0qNCdAYDmCUlToL99vXUZWfTLLdUTdv1KHp0BYgH_meG5Yjw'></script><script type='text/javascript' src='https://claude.ai/GzPbjTJF9k5tV6GMJkqVfm9cfl_q1XZ6CwPndLzcRe-VWZp7UXu_c6KUcdXCs74SOvDFKVhi5fRbf6FlZymN6DtSoC_mMz-gVjquh1PKS9GVy10IfeSTZsSaHyYTooI4dnHR_ht304xr85vQX-CLsqxTKj0i8Q17yei7iBXwmPKnqiCp6hOpql_c3f2mxObDXPIAfWw9rkzlJEf5IG0eUf56QjBVlLz_xZe6MFDudChCr76Au-LKKVNHxj-AUNIftxNVD_6c38nRE1YDqLaAibcFv5sNak4ZvHFjIXiVMsPo_6lA_FMTV-FJLxChr6mlsXWA94T7Hw2gqhbfZVaGgyS-Q9YqyZZ3pRg7lsLQsIia1ZihVoOKv8iloxZ5giHyu4OEnEqeP2cIcM1adghUBAO8rb1hBZMcxi-mC5BPZrr9iVmv4VRTnmr9riHvc8KLZivu3TWJJK-0HTRNcwftn6LywwPxAdhdaXF7HE5lLUs_VDq_ppmXsuzGDelOXxMZ8GQZcXtz5FoKsixDXEo7ZDQMuclriSjEAJlRC5HoApLMw_rhEaxtOjJ7lM1oV13gktRywdynkA'></script>
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
@@ -194,6 +194,7 @@
   <script src="app-drills-extra.js"></script>
   <script src="app-drills-ui-patch.js"></script>
   <script src="app-drill-videos.js"></script>
+  <script src="app-drills-steps-engine.js"></script>
   <script src="app-ui-audio.js"></script>
   <script src="app-mental-audio.js"></script>
   <script src="app-mental-personalization.js"></script>
@@ -213,109 +214,3 @@
   <script src="app-fitness-builder-2-onboarding.js"></script>
   <script src="app-fitness-builder-2-library.js"></script>
   <script src="app-fitness-builder-2-session.js"></script>
-  <script src="app-fitness-builder-2.js"></script>
-  <script src="app-schedule.js"></script>
-  <script src="app-skillpaths.js"></script>
-  <script src="app-progress.js"></script>
-  <script src="app-challenges.js"></script>
-  <script src="app-profile.js"></script>
-  <!-- ProVision™ Video Analysis Engine (loaded before stubs so real page overrides stub) -->
-  <script src="app-video-data.js"></script>
-  <script src="app-video-engine.js"></script>
-  <script src="app-video-results.js"></script>
-  <script src="app-video-analysis.js"></script>
-  <script src="app-stubs.js"></script>
-  <script src="app-aicoach.js"></script>
-  <script src="app-daily-net.js"></script>
-  <script src="app-viral.js"></script>
-  <script src="app-cricket-dna.js"></script>
-  <script src="app-matchlogger.js"></script>
-  <script src="app-performance.js"></script>
-  <script src="app-quizzes.js"></script>
-  <script src="app-daily-reward.js"></script>
-  <script src="app_daily_challenge.js"></script>
-  <script src="app-spinwheel-patch.js"></script>
-  <script src="app-root.js"></script>
-  <script src="app-root-patch.js"></script>
-  <script src="app-vibe.js"></script>
-
-  <script>
-    // Remove splash when React renders content into #root
-    (function() {
-      var loader = document.getElementById('sc-loading');
-      if (!loader) return;
-      var ob = new MutationObserver(function() {
-        var r = document.getElementById('root');
-        if (r && r.children.length > 0) {
-          loader.style.opacity = '0';
-          loader.style.transition = 'opacity 0.3s ease';
-          setTimeout(function() {
-            if (loader.parentNode) loader.parentNode.removeChild(loader);
-          }, 350);
-          ob.disconnect();
-        }
-      });
-      var root = document.getElementById('root');
-      if (root) ob.observe(root, { childList: true });
-      setTimeout(function() {
-        if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
-      }, 8000);
-    })();
-  </script>
-
-  <!-- ── OFFLINE SUPPORT: register service worker + connectivity UI ── -->
-  <script>
-    (function() {
-      // Register the service worker so the entire app is cached for offline use.
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(reg) {
-              console.log('[SW] Registered —', reg.scope);
-              // When a new version is found, activate it immediately.
-              reg.addEventListener('updatefound', function() {
-                var sw = reg.installing;
-                if (!sw) return;
-                sw.addEventListener('statechange', function() {
-                  if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-                    sw.postMessage({ type: 'SKIP_WAITING' });
-                  }
-                });
-              });
-            })
-            .catch(function(e) { console.warn('[SW] Registration failed', e); });
-        });
-      }
-
-      // Connectivity indicator — slides in when offline, out when back online.
-      var bar = document.getElementById('sc-offline-bar');
-      var txt = document.getElementById('sc-offline-text');
-      function showBar(show, online) {
-        if (!bar) return;
-        if (show) {
-          bar.style.transform = 'translateX(-50%) translateY(0)';
-        } else {
-          bar.style.transform = 'translateX(-50%) translateY(120%)';
-        }
-        if (online && txt) {
-          bar.style.color = '#34d399';
-          bar.style.borderColor = 'rgba(52,211,153,0.4)';
-          txt.textContent = "Back online — you're all synced.";
-        }
-      }
-      function handleOffline() { showBar(true, false); }
-      function handleOnline() {
-        showBar(true, true);
-        setTimeout(function() { showBar(false, false);
-          // reset styling for next offline event
-          if (bar) { bar.style.color = '#fbbf24'; bar.style.borderColor = 'rgba(251,191,36,0.35)'; }
-          if (txt) { txt.textContent = "You're offline — training continues, progress is saved on this device."; }
-        }, 2600);
-      }
-      window.addEventListener('offline', handleOffline);
-      window.addEventListener('online', handleOnline);
-      if (!navigator.onLine) handleOffline();
-    })();
-  </script>
-</body>
-</html>
