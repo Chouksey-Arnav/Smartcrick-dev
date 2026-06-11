@@ -17,7 +17,8 @@ var MENU_ITEMS = [
   { id: 'Crick', icon: 'crick', label: 'Crick', section: 'TRAINING' },
   { id: 'Drills', icon: 'drills', label: 'Cricket Drills', section: 'TRAINING' },
   { id: 'Mental', icon: 'mental', label: 'Mental Training', section: 'TRAINING' },
-  { id: 'Challenges', icon: 'challenge', label: '30-Day Challenge', section: 'TRAINING' },
+  // ON HOLD: 30-Day Challenge temporarily hidden from nav (code kept for later re-enable)
+  // { id: 'Challenges', icon: 'challenge', label: '30-Day Challenge', section: 'TRAINING' },
   { id: 'Fitness', icon: 'fitness', label: 'Fitness Builder', section: 'TRAINING' },
   { id: 'Workouts', icon: 'aiworkout', label: 'AI Workout', section: 'TRAINING' },
   { id: 'Timer', icon: 'timer', label: 'Timer', section: 'TRAINING' },
