@@ -107,7 +107,8 @@ var CLEAN_NAV = [
   { label:'Crick',            icon:'crick',    pg:'Crick',      section:'TRAINING' },
   { label:'Cricket Drills',   icon:'bat',      pg:'Drills',     section:'TRAINING' },
   { label:'Mental Training',  icon:'brain',    pg:'Mental',     section:'TRAINING' },
-  { label:'30-Day Challenge', icon:'target',   pg:'ThirtyDay',  section:'TRAINING' },
+  // ON HOLD: 30-Day Challenge temporarily hidden from nav (code kept for later re-enable)
+  // { label:'30-Day Challenge', icon:'target',   pg:'ThirtyDay',  section:'TRAINING' },
   { label:'Fitness Builder',  icon:'dumbbell', pg:'Fitness',    section:'TRAINING' },
   { label:'Timer',            icon:'timer',    pg:'Timer',      section:'TRAINING' },
   // Performance
