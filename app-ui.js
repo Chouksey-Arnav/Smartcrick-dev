@@ -243,7 +243,8 @@ function SidebarNavContent({currentPage,onNavClick}){
     h(NavBtn,{...props('Crick','crick','Crick')}),
     h(NavBtn,{...props('Cricket Drills','bat','Drills')}),
     h(NavBtn,{...props('Mental Training','brain','Mental')}),
-    h(NavBtn,{...props('30-Day Challenge','target','ThirtyDay')}),
+    // ON HOLD: 30-Day Challenge temporarily hidden from nav (code kept for later re-enable)
+    // h(NavBtn,{...props('30-Day Challenge','target','ThirtyDay')}),
     h(NavBtn,{...props('Fitness Builder','dumbbell','Fitness')}),
     h(NavBtn,{...props('Fitness Builder 2','flask','FitnessBuilder2'),badge:'BETA'}),
     h(NavBtn,{...props('AI Workout','sparkles','AIWorkout')}),
