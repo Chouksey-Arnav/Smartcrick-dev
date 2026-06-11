@@ -76,13 +76,13 @@ A.getCrickMood = getCrickMood;
 
 // ── Daily Crick Nets Mechanic ────────────────────────────────────
 var NETS_WEIGHTS = [
-  {runs:5, w:14},{runs:8, w:15},{runs:12,w:14},{runs:15,w:12},
-  {runs:20,w:11},{runs:25,w:10},{runs:35,w:8}, {runs:42,w:6},
-  {runs:50,w:5}, {runs:60,w:3}, {runs:75,w:2},
+  {runs:1, w:14},{runs:2, w:15},{runs:3, w:14},{runs:4, w:12},
+  {runs:5, w:11},{runs:6, w:10},{runs:8, w:8}, {runs:10,w:6},
+  {runs:12,w:5}, {runs:15,w:3}, {runs:20,w:2},
 ];
 
 function getCrickNetsData() {
-  if (!A.DB) return {runs:20, claimed:false, generated_at:Date.now()};
+  if (!A.DB) return {runs:5, claimed:false, generated_at:Date.now()};
   var today = new Date().toISOString().slice(0, 10);
   var key   = 'crick_nets_' + today;
   var saved = A.DB.get(key);
