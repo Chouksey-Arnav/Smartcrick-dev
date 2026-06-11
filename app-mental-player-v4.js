@@ -422,7 +422,7 @@ function MentalPlayerPage(props) {
 
   useEffect(function(){
     if(!started) return;
-    if(A.MentalYouTube) A.MentalYouTube.playSession(type, slug);
+    if(A.MentalYouTube) A.MentalYouTube.playSession(type, slug, session.id);
     // Set voice profile for this session type before speaking
     if(A.MentalTTS && A.MentalTTS.setSessionType) A.MentalTTS.setSessionType(type);
     var rawFirst = phases[0] && phases[0].text;
@@ -531,7 +531,7 @@ function MentalPlayerPage(props) {
     var _drillCtx = _ctxLine && _ctxLine.indexOf('after your') !== -1 ? _ctxLine.split(' · ').pop() : '';
     var ROLE_ICONS = {batsman:'bat',bowler:'ball',allrounder:'zap',wicketkeeper:'shield'};
     var _roleIcon = _user && _user.role ? (ROLE_ICONS[_user.role]||'user') : null;
-    var _trackMood = A.getTrackMood ? A.getTrackMood(slug) : null;
+    var _trackMood = A.getTrackMood ? A.getTrackMood(slug, session.id) : null;
     var ROLE_PREP_NOTES = {
       batsman:'Batsmen: sit upright with your bat nearby as an anchor.',
       bowler:'Bowlers: rest your bowling arm loosely, breathe from the shoulders down.',
