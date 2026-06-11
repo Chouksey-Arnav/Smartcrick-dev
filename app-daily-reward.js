@@ -1,8 +1,8 @@
-// app-daily-reward.js v1.0
+// app-daily-reward.js v1.1
 // ================================================================
 // SmartCrick — Daily Login Reward System
-// Weekly streak: Day1=5, Day2=15, Day3=20, Day4=30,
-//               Day5=50, Day6=75, Day7=100 XP (total 295/week)
+// Weekly streak: Day1=2, Day2=3, Day3=4, Day4=6,
+//               Day5=8, Day6=10, Day7=20 XP (total 53/week)
 // Resets to Day 1 if a day is missed.
 // Exports: A.DailyRewardModal, A.DailyRewardMiniWidget,
 //          A.checkDailyReward, A.initDailyReward,
@@ -18,13 +18,13 @@ var DB        = A.DB;
 
 // ── Reward schedule ───────────────────────────────────────────────
 var WEEKLY_REWARDS = [
-  { day:1, xp:5,   emoji:'🌱', label:'Day 1', color:'#16a34a', bg:'rgba(22,163,74,0.12)',   border:'rgba(22,163,74,0.35)',   message:'Great to see you! Keep this streak alive.' },
-  { day:2, xp:15,  emoji:'⚡', label:'Day 2', color:'#3b82f6', bg:'rgba(59,130,246,0.12)',  border:'rgba(59,130,246,0.35)',  message:'Back again! Your consistency is building fast.' },
-  { day:3, xp:20,  emoji:'🔥', label:'Day 3', color:'#f97316', bg:'rgba(249,115,22,0.12)',  border:'rgba(249,115,22,0.35)',  message:'3 days straight! The habit is forming.' },
-  { day:4, xp:30,  emoji:'💪', label:'Day 4', color:'#8b5cf6', bg:'rgba(139,92,246,0.12)',  border:'rgba(139,92,246,0.35)',  message:"Halfway to the weekly bonus! Don't stop now." },
-  { day:5, xp:50,  emoji:'⭐', label:'Day 5', color:'#f59e0b', bg:'rgba(245,158,11,0.12)',  border:'rgba(245,158,11,0.35)',  message:'5 days strong! Almost at the jackpot.' },
-  { day:6, xp:75,  emoji:'🏏', label:'Day 6', color:'#14b8a6', bg:'rgba(20,184,166,0.12)',  border:'rgba(20,184,166,0.35)',  message:'One more day for the full 100 XP reward!' },
-  { day:7, xp:100, emoji:'🏆', label:'Day 7', color:'#f59e0b', bg:'rgba(245,158,11,0.12)',  border:'rgba(245,158,11,0.4)',   message:'PERFECT WEEK! You showed up every single day.', isWeekComplete:true },
+  { day:1, xp:2,   emoji:'🌱', label:'Day 1', color:'#16a34a', bg:'rgba(22,163,74,0.12)',   border:'rgba(22,163,74,0.35)',   message:'Great to see you! Keep this streak alive.' },
+  { day:2, xp:3,   emoji:'⚡', label:'Day 2', color:'#3b82f6', bg:'rgba(59,130,246,0.12)',  border:'rgba(59,130,246,0.35)',  message:'Back again! Your consistency is building fast.' },
+  { day:3, xp:4,   emoji:'🔥', label:'Day 3', color:'#f97316', bg:'rgba(249,115,22,0.12)',  border:'rgba(249,115,22,0.35)',  message:'3 days straight! The habit is forming.' },
+  { day:4, xp:6,   emoji:'💪', label:'Day 4', color:'#8b5cf6', bg:'rgba(139,92,246,0.12)',  border:'rgba(139,92,246,0.35)',  message:"Halfway to the weekly bonus! Don't stop now." },
+  { day:5, xp:8,   emoji:'⭐', label:'Day 5', color:'#f59e0b', bg:'rgba(245,158,11,0.12)',  border:'rgba(245,158,11,0.35)',  message:'5 days strong! Almost at the jackpot.' },
+  { day:6, xp:10,  emoji:'🏏', label:'Day 6', color:'#14b8a6', bg:'rgba(20,184,166,0.12)',  border:'rgba(20,184,166,0.35)',  message:'One more day for the full reward!' },
+  { day:7, xp:20,  emoji:'🏆', label:'Day 7', color:'#f59e0b', bg:'rgba(245,158,11,0.12)',  border:'rgba(245,158,11,0.4)',   message:'PERFECT WEEK! You showed up every single day.', isWeekComplete:true },
 ];
 
 // ── Local-time date helpers ───────────────────────────────────────
