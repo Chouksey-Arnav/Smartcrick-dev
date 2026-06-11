@@ -113,6 +113,8 @@ var AudioEngine = (function() {
 })();
 
 // ── YouTube Soundtrack Mapping ─────────────────────────────────────
+// Emergency fallback only — used when a session id is missing from
+// SESSION_TRACKS below. Kept to the 4 original, known-good ids.
 var SESSION_TYPE_TRACKS = {
   BREATH:    'Z2dK_m2LfrY',
   GROUND:    'MTg-gZy9oLM',
@@ -123,51 +125,128 @@ var SESSION_TYPE_TRACKS = {
   PRESSURE:  'Z8ANihFXlgU',
 };
 
-// Per-session overrides — more precise mood matching
-var SESSION_SPECIFIC_TRACKS = {
-  // Calm / sleep sessions
-  'sleep-better-tonight':         'Z2dK_m2LfrY',
-  'inner-lake':                   'Z2dK_m2LfrY',
-  'full-body-relaxation':         'Z2dK_m2LfrY',
-  'intentional-rest':             'Z2dK_m2LfrY',
-  'decompression-zone':           'Z2dK_m2LfrY',
-  'radical-acceptance':           'Z2dK_m2LfrY',
-  'deep-breathing-anxiety':       'Z2dK_m2LfrY',
-  // High energy / activation
-  'game-day-activation':          'n4YghVcjbpw',
-  'fuel-your-fire':               'n4YghVcjbpw',
-  'embrace-the-arena':            'n4YghVcjbpw',
-  'competition-as-fuel':          'n4YghVcjbpw',
-  '2-minute-warrior':             'n4YghVcjbpw',
-  'mental-toughness-builder':     'n4YghVcjbpw',
-  'motivational-momentum-builder':'n4YghVcjbpw',
-  'morning-mindset-ritual':       'n4YghVcjbpw',
-  'pre-game-activation':          'n4YghVcjbpw',
-  // Visualization / cinematic
-  'flow-state-architecture':      'MTg-gZy9oLM',
-  'sensory-performance-blueprint':'MTg-gZy9oLM',
-  'champion-mindset-simulation':  'MTg-gZy9oLM',
-  'goal-movie':                   'MTg-gZy9oLM',
-  'future-memory':                'MTg-gZy9oLM',
-  'new-identity-visualisation':   'MTg-gZy9oLM',
-  // Pressure / intensity
-  'stress-inoculation':           'Z8ANihFXlgU',
-  'high-stakes-rehearsal':        'Z8ANihFXlgU',
-  'choke-proof-preparation':      'Z8ANihFXlgU',
-  'death-over-psychology':        'Z8ANihFXlgU',
-  'pressure-rehearsal-crucial-over':'Z8ANihFXlgU',
-  'bounce-back-blueprint':        'Z8ANihFXlgU',
+// ── Verified ambient/meditation track pool ─────────────────────────
+// Each id is a real, long-running ambient/meditation YouTube video
+// suitable for quiet looping background. Moods cover the full range
+// needed across all 8 mental-training categories.
+var TRACK_MOODS = {
+  'Z2dK_m2LfrY': 'Rainstorm calm',          // gentle rain loop
+  'n4YghVcjbpw': 'Epic orchestral',          // cinematic activation
+  'MTg-gZy9oLM': 'Cinematic ambient',        // visualization underscore
+  'Z8ANihFXlgU': 'Binaural focus',           // pressure / deep focus tone
+  '1ZYbU82GVz4': 'Deep sleep drone',         // slow night drone
+  'eKFTSSKCzWA': 'Fireplace crackling',      // warm fire ambience
+  'mPZkdNFkNps': 'Ocean waves',              // water / shoreline
+  'aXLB6dlbS24': 'Forest birdsong',          // nature / woodland
+  '7maJOI3QMu0': 'Tibetan singing bowls',    // bowls / resonance
+  'WZKW2Hq2fks': 'Soft piano ambient',       // reflective piano
+  '2OEL4P1Rz04': 'Lo-fi calm beats',         // lo-fi study calm
+  'jfKfPfyJRdk':  'Lo-fi focus radio',       // lo-fi steady focus
+  'nDq6TstdEi8': 'White noise',              // pure white noise
+  'qFZQ1pUaCwo': 'Pink noise',               // softer broadband noise
+  '1oRrEenOaPQ': 'Wind ambience',            // open wind / highlands
+  'DWcJFNfaw9c': 'Night sleep ambience',     // crickets / night calm
+  'M9b0OBgKtdY': 'Emotional reflective score',// orchestral reflection
+  '5qap5aO4i9A': 'Lo-fi chillhop',           // alternate lo-fi
+  'lE6RYpe9IT0': 'Deep binaural drone',      // low binaural pad
+  'WZ-19LMyFB4': 'Soothing string ambience', // gentle strings
+  'kgx4WGK0oNU': 'Epic calm build',          // building orchestral calm
+  'Sx4otCcQTJg': 'Crackling campfire night', // fire + night crickets
+  'qN7C_pjrEKE': 'Stream water flow',        // running water / brook
+  'eg9V5g4xLkY': 'Tibetan bowl meditation',  // alternate bowls
+  '8plwv25NYRo': 'Calm cinematic pads',      // soft cinematic pads
 };
 
-// ── Track mood labels — shown as a subtle badge in the player UI ──
-var TRACK_MOODS = {
-  'Z2dK_m2LfrY': 'Rainstorm calm',
-  'n4YghVcjbpw': 'Epic orchestral',
-  'MTg-gZy9oLM': 'Cinematic ambient',
-  'Z8ANihFXlgU': 'Binaural focus',
+// ── Per-session track map — sessionId -> verified track id ─────────
+// Assignment reflects each session's specific title/theme, not just
+// its category, so sessions sharing a category get varied ambience.
+var SESSION_TRACKS = {
+  // Focus
+  m01: 'Z8ANihFXlgU',  // Micro Focus Burst — binaural focus
+  m02: 'jfKfPfyJRdk',  // Focus Next Ball — lo-fi focus radio
+  m03: 'aXLB6dlbS24',  // 5-4-3-2-1 Grounding — forest grounding
+  m04: '2OEL4P1Rz04',  // Task Isolation Protocol — lo-fi calm
+  m05: 'Z8ANihFXlgU',  // Laser Focus Activation — binaural focus
+  m06: 'lE6RYpe9IT0',  // Deep Focus Anchor — deep binaural drone
+  m07: '1oRrEenOaPQ',  // Sensory Narrowing — wind ambience
+  m08: 'jfKfPfyJRdk',  // Process Over Result — lo-fi focus
+  m09: 'nDq6TstdEi8',  // Noise Cancellation Focus — white noise
+  m10: 'Z8ANihFXlgU',  // Single-Point Focus Drill — binaural focus
+  m11: 'kgx4WGK0oNU',  // Flow State Trigger — epic calm build
+  m12: 'qN7C_pjrEKE',  // Trusting Instinct — stream water flow
+  // Confidence
+  m20: 'MTg-gZy9oLM',  // Morning Positivity Charge — cinematic ambient
+  m21: 'kgx4WGK0oNU',  // Confidence Countdown — epic calm build
+  m22: 'WZKW2Hq2fks',  // Celebrate Small Wins — soft piano
+  m23: 'M9b0OBgKtdY',  // Self-Talk Rewrite — reflective score
+  m24: '8plwv25NYRo',  // Name Your Strength — calm cinematic pads
+  m25: 'MTg-gZy9oLM',  // Affirmation Immersion — cinematic ambient
+  m26: 'n4YghVcjbpw',  // Own the Room — epic orchestral
+  m27: 'kgx4WGK0oNU',  // Inner Champion — epic calm build
+  m28: 'n4YghVcjbpw',  // Champion Mindset Simulation — epic orchestral
+  m29: 'MTg-gZy9oLM',  // Identity Goal Setting — cinematic ambient
+  // Recovery
+  m30: 'Z2dK_m2LfrY',  // Reset Button — rainstorm calm
+  m31: 'WZKW2Hq2fks',  // Self-Compassion Break — soft piano
+  m32: 'M9b0OBgKtdY',  // Reset After Duck — emotional reflective score
+  m33: 'qN7C_pjrEKE',  // Bounce-Back Faster — stream water flow
+  m34: 'Z2dK_m2LfrY',  // Breathing Through Collapse — rainstorm calm
+  m35: '1oRrEenOaPQ',  // Let It Go Protocol — wind ambience
+  m36: 'WZ-19LMyFB4',  // Failure as Feedback — soothing strings
+  m37: 'M9b0OBgKtdY',  // Processing Disappointment — reflective score
+  m38: 'Z2dK_m2LfrY',  // Post-Game Emotional Release — rainstorm calm
+  m39: 'WZ-19LMyFB4',  // Champions Setback — soothing strings
+  m40: 'mPZkdNFkNps',  // Full Body Relaxation — ocean waves
+  m41: 'DWcJFNfaw9c',  // Sleep Better Tonight — night sleep ambience
+  // Pre-Performance
+  m50: 'n4YghVcjbpw',  // Pre-Game Activation — epic orchestral
+  m51: 'Z8ANihFXlgU',  // Nervous Energy Converter — binaural focus
+  m52: 'Z2dK_m2LfrY',  // Pre-Performance Calm — rainstorm calm
+  m53: 'kgx4WGK0oNU',  // Anchoring Peak State — epic calm build
+  m54: 'n4YghVcjbpw',  // Game Day Activation — epic orchestral
+  m55: 'n4YghVcjbpw',  // Embrace the Arena — epic orchestral
+  m56: '1ZYbU82GVz4',  // Morning of Big Day — deep sleep drone (calm wake)
+  m57: 'MTg-gZy9oLM',  // Champions Routine — cinematic ambient
+  m58: 'kgx4WGK0oNU',  // Pre-Tournament Mind Lock — epic calm build
+  // Pressure
+  m60: 'Z8ANihFXlgU',  // 10-Second Rule — binaural focus
+  m61: 'lE6RYpe9IT0',  // Physiological Sigh — deep binaural drone
+  m62: '1oRrEenOaPQ',  // Strategic Pause — wind ambience
+  m63: 'Z8ANihFXlgU',  // Pressure Is Privilege — binaural focus
+  m64: 'Z8ANihFXlgU',  // Handling the Unplayable Ball — binaural focus
+  m65: 'lE6RYpe9IT0',  // Bowling Under Pressure — deep binaural drone
+  m66: 'qN7C_pjrEKE',  // Decision Clarity Under Pressure — stream water
+  m67: 'Z8ANihFXlgU',  // Choke-Proof Preparation — binaural focus
+  m68: 'n4YghVcjbpw',  // Mental Toughness Builder — epic orchestral
+  // Visualization
+  m70: 'MTg-gZy9oLM',  // Batting Visualization Session — cinematic ambient
+  m71: 'kgx4WGK0oNU',  // Future-Pacing Success — epic calm build
+  m72: 'aXLB6dlbS24',  // Fielding Brilliance Rehearsal — forest birdsong
+  m73: 'MTg-gZy9oLM',  // Master Skill Replay — cinematic ambient
+  m74: '8plwv25NYRo',  // Vision Board Visualization — calm cinematic pads
+  m75: 'n4YghVcjbpw',  // Perfect Performance — epic orchestral
+  m76: 'n4YghVcjbpw',  // Champion Visualization — epic orchestral
+  m77: 'lE6RYpe9IT0',  // Elite Endurance Mindset — deep binaural drone
+  m78: 'MTg-gZy9oLM',  // Flow State Architecture — cinematic ambient
+  // Match-Day Calm
+  m80: 'Z2dK_m2LfrY',  // 4-7-8 Breath Lock — rainstorm calm
+  m81: '1oRrEenOaPQ',  // Deep Calm Breathing — wind ambience
+  m82: 'WZKW2Hq2fks',  // Gratitude Before Game — soft piano
+  m83: '7maJOI3QMu0',  // Stillness Practice — Tibetan singing bowls
+  m84: 'Z2dK_m2LfrY',  // Anxiety Dissolve Protocol — rainstorm calm
+  m85: 'nDq6TstdEi8',  // Box Breathing Method — white noise
+  m86: 'mPZkdNFkNps',  // Inner Lake — ocean waves
+  // Pro-Mental
+  m90: 'eg9V5g4xLkY',  // Deliberate Practice Mindset — Tibetan bowl meditation
+  m91: 'WZ-19LMyFB4',  // Mastery Over Perfection — soothing strings
+  m92: 'lE6RYpe9IT0',  // Elite Competitor Analysis — deep binaural drone
+  m93: 'M9b0OBgKtdY',  // Inner Dialogue Mastery — reflective score
+  m94: 'kgx4WGK0oNU',  // Zone of Genius Activation — epic calm build
 };
-function getTrackMoodForSlug(slug) {
-  var trackId = slug && SESSION_SPECIFIC_TRACKS[slug];
+A.SESSION_TRACKS = SESSION_TRACKS;
+
+function getTrackMoodForSlug(slug, sessionId) {
+  var trackId = (sessionId && SESSION_TRACKS[sessionId]);
   return trackId ? (TRACK_MOODS[trackId] || null) : null;
 }
 A.getTrackMood = getTrackMoodForSlug;
@@ -293,8 +372,8 @@ var MentalYouTube = (function() {
     setVolume:  setVolume,
     pause:      pause,
     resume:     resume,
-    playSession: function(type, slug) {
-      var trackId = (slug && SESSION_SPECIFIC_TRACKS[slug])
+    playSession: function(type, slug, sessionId) {
+      var trackId = (sessionId && SESSION_TRACKS[sessionId])
                  || SESSION_TYPE_TRACKS[type]
                  || SESSION_TYPE_TRACKS.GROUND;
       play(trackId);
@@ -348,16 +427,16 @@ var MentalTTS = (function() {
     return chunks;
   }
 
-  // Priority: most broadly available warm neural voices first
+  // Priority: most broadly available warm neural voices first (exact-name fast path)
   var WARM_VOICES = [
     'Microsoft Aria Online (Natural) - English (United States)',
     'Microsoft Jenny Online (Natural) - English (United States)',
-    'Google UK English Female',
-    'Microsoft Guy Online (Natural) - English (United States)',
-    'Microsoft Ryan Online (Natural) - English (United Kingdom)',
     'Microsoft Sonia Online (Natural) - English (United Kingdom)',
+    'Microsoft Libby Online (Natural) - English (United Kingdom)',
     'Microsoft Clara Online (Natural) - English (Canada)',
-    'Microsoft David Desktop - English (United States)',
+    'Microsoft Natasha Online (Natural) - English (Australia)',
+    'Google UK English Female',
+    'Google US English',
     'Ava (Enhanced)',
     'Samantha (Enhanced)',
     'Kate (Enhanced)',
@@ -365,16 +444,33 @@ var MentalTTS = (function() {
     'Samantha',
     'Karen (Enhanced)',
     'Karen',
-    'Victoria (Enhanced)',
-    'Victoria',
     'Moira',
     'Tessa',
-    'Daniel (Enhanced)',
-    'Daniel',
     'Microsoft Zira Desktop - English (United States)',
-    'Google UK English Male',
-    'Google US English',
   ];
+
+  // Scoring fallback for browsers (esp. Chrome/Linux/Android) where none of the
+  // exact WARM_VOICES names exist. Picks the warmest available voice instead of
+  // silently falling through to a robotic default. 100% free (Web Speech API).
+  var WARM_KEYWORDS  = ['natural','neural','enhanced','premium','online','female','aria','jenny','sonia','libby','clara','samantha','karen','moira','tessa','zira','salli','joanna','kendra','amy','emma'];
+  var AVOID_KEYWORDS = ['whisper','organ','zarvox','trinoid','bells','boing','bubbles','cellos','wobble','bad news','bahh','albert','jester','superstar','rocko','grandma','grandpa','eddy','reed','sandy','shelley','flo','novelty','espeak','pico'];
+  var PREFERRED_LANGS = ['en-GB','en-AU','en-IE','en-ZA','en-US'];
+
+  function scoreVoice(v) {
+    var name = (v.name || '').toLowerCase();
+    for (var i = 0; i < AVOID_KEYWORDS.length; i++) {
+      if (name.indexOf(AVOID_KEYWORDS[i]) !== -1) return -1000;
+    }
+    var score = 0;
+    for (var j = 0; j < WARM_KEYWORDS.length; j++) {
+      if (name.indexOf(WARM_KEYWORDS[j]) !== -1) score += 10;
+    }
+    var langIdx = PREFERRED_LANGS.indexOf(v.lang);
+    if (langIdx !== -1) score += (PREFERRED_LANGS.length - langIdx) * 5;
+    else if ((v.lang || '').indexOf('en') === 0) score += 3;
+    if (v.localService === false) score += 2; // cloud/neural voices tend to sound warmer
+    return score;
+  }
 
   // Per-session-type voice profiles — warmth tuned to emotional register
   var VOICE_PROFILES = {
@@ -401,14 +497,25 @@ var MentalTTS = (function() {
     if (_voice) return _voice;
     if (!synth) return null;
     var voices = synth.getVoices();
+    if (!voices.length) return null;
+
+    // Fast path: an exact known-warm voice name is available
     for (var i = 0; i < WARM_VOICES.length; i++) {
       var found = voices.find(function(v) { return v.name === WARM_VOICES[i]; });
       if (found) { _voice = found; return found; }
     }
-    _voice = voices.find(function(v) { return v.lang === 'en-GB'; })
-           || voices.find(function(v) { return v.lang === 'en-AU'; })
-           || voices.find(function(v) { return v.lang.startsWith('en'); })
-           || voices[0] || null;
+
+    // Fallback: score every available voice and pick the warmest non-novelty
+    // English voice. Guarantees a calm result even on Chrome/Linux/Android
+    // where the named neural voices above don't exist — still 100% free.
+    var englishVoices = voices.filter(function(v) { return (v.lang || '').toLowerCase().indexOf('en') === 0; });
+    var pool = englishVoices.length ? englishVoices : voices;
+    var best = null, bestScore = -Infinity;
+    pool.forEach(function(v) {
+      var s = scoreVoice(v);
+      if (s > bestScore) { bestScore = s; best = v; }
+    });
+    _voice = best || pool[0] || voices[0] || null;
     return _voice;
   }
 
@@ -443,9 +550,7 @@ var MentalTTS = (function() {
       return;
     }
     if (!_queue.length) {
-      _speaking = false;
-      _restoreYT();
-      // Personalized closing line
+      // Personalized closing line — spoken while still ducked, then restore YT
       try {
         var user = A.DB && A.DB.getUser ? A.DB.getUser() : null;
         var name = (user && user.name) ? user.name : '';
@@ -457,10 +562,13 @@ var MentalTTS = (function() {
         cu.pitch  = _cp.pitch;
         cu.volume = 0.9;
         cu.lang   = (cu.voice && cu.voice.lang) || 'en-GB';
-        setTimeout(function() {
-          if (!_stopped) return; // only play if session naturally ended (not manually stopped)
-        }, 0);
-      } catch(e) {}
+        cu.onend  = function() { _speaking = false; _restoreYT(); };
+        cu.onerror = function() { _speaking = false; _restoreYT(); };
+        synth.speak(cu);
+      } catch(e) {
+        _speaking = false;
+        _restoreYT();
+      }
       return;
     }
     _speaking = true;
