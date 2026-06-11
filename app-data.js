@@ -189,6 +189,29 @@ function mkM(id,title,cat,dur,xp,premium) {
 }
 A.mkM = mkM;
 
+// Override a session's auto-generated steps with a hand-written script.
+// `texts` is an array of instruction strings (may include '---' breath
+// pause sentinels on their own entries) matching the session's step count.
+function wM(session, texts) {
+  var n = session.steps.length;
+  var instructions = [];
+  texts.forEach(function(t) {
+    if (t === '---') {
+      if (instructions.length) instructions[instructions.length-1] += '\n---';
+    } else {
+      instructions.push(t);
+    }
+  });
+  if (instructions.length !== n) {
+    console.warn('[SC] wM step count mismatch for', session.id, instructions.length, '!=', n);
+  }
+  session.steps = session.steps.map(function(step, i) {
+    return { instruction: instructions[i] || step.instruction, duration_seconds: step.duration_seconds };
+  });
+  return session;
+}
+A.wM = wM;
+
 const MENTAL_SESSIONS = [
   mkM('m01','Micro Focus Burst','focus',180,35), mkM('m02','Focus Next Ball','focus',240,45),
   mkM('m03','5-4-3-2-1 Grounding','focus',300,50), mkM('m04','Task Isolation Protocol','focus',300,50),
@@ -207,11 +230,75 @@ const MENTAL_SESSIONS = [
   mkM('m36','Failure as Feedback','recovery',420,60), mkM('m37','Processing Disappointment','recovery',480,70),
   mkM('m38','Post-Game Emotional Release','recovery',480,70), mkM('m39','Champions Setback','recovery',480,70),
   mkM('m40','Full Body Relaxation','recovery',540,65), mkM('m41','Sleep Better Tonight','recovery',480,60),
-  mkM('m50','Pre-Game Activation','pre-performance',300,50), mkM('m51','Nervous Energy Converter','pre-performance',360,55),
-  mkM('m52','Pre-Performance Calm','pre-performance',360,55), mkM('m53','Anchoring Peak State','pre-performance',360,65),
-  mkM('m54','Game Day Activation','pre-performance',420,65), mkM('m55','Embrace the Arena','pre-performance',420,65),
-  mkM('m56','Morning of Big Day','pre-performance',540,75), mkM('m57','Champions Routine','pre-performance',540,75),
-  mkM('m58','Pre-Tournament Mind Lock','pre-performance',600,80),
+  wM(mkM('m50','Pre-Game Activation','pre-performance',300,50), [
+    'Find a quiet corner of the changing room and let your shoulders drop.',
+    'Take a slow breath in through your nose, and feel your body begin to wake up for what is coming.',
+    'Picture the first few minutes of this game — your feet moving, your eyes sharp, your body responding before you even think.',
+    'Roll your neck gently, shake out your hands, and let a small smile arrive — you have wanted this moment.',
+  ]),
+  wM(mkM('m51','Nervous Energy Converter','pre-performance',360,55), [
+    'Notice the flutter in your stomach right now — that is not fear, that is fuel.',
+    'Breathe in for four counts, and as you exhale, picture that nervous energy turning into sharp, useful focus.',
+    '---',
+    'Say quietly to yourself: this feeling means I am ready, not that something is wrong.',
+    'Feel the energy settle into your hands and feet — light, alert, ready to move the instant the ball is bowled.',
+  ]),
+  wM(mkM('m52','Pre-Performance Calm','pre-performance',360,55), [
+    'Sit or stand comfortably and let your eyes soften, even if they stay open.',
+    'Breathe in slowly through your nose for a count of four, and out gently for a count of six.',
+    '---',
+    'With each exhale, let your shoulders drop a little further away from your ears.',
+    'Feel a calm settle over you — the kind of calm that lets your skills do the talking.',
+  ]),
+  wM(mkM('m53','Anchoring Peak State','pre-performance',360,65), [
+    'Bring to mind a moment when you played at your absolute best — see it clearly now.',
+    'Notice how your body felt in that moment: loose, balanced, completely sure of itself.',
+    'As that feeling grows, press your thumb and finger together gently — this is your anchor.',
+    'Take one more slow breath, holding that peak feeling, and know you can recall it with this same touch today.',
+  ]),
+  wM(mkM('m54','Game Day Activation','pre-performance',420,65), [
+    'Today is the day — let that thought land, and notice it without fighting it either way.',
+    'Take three full breaths, each one a little slower than the last, switching your body from waiting mode to ready mode.',
+    'Picture yourself walking onto the field, boots on the grass, completely present in this moment.',
+    'Run through your role today in simple terms — what you need to do, not what you need to prove.',
+    '---',
+    'Feel your energy rising — controlled, sharp, and entirely yours to direct.',
+  ]),
+  wM(mkM('m55','Embrace the Arena','pre-performance',420,65), [
+    'Picture the ground filling up — the noise, the colours, the weight of the occasion.',
+    'Instead of shrinking from it, breathe it in — this stage is exactly where you have trained to be.',
+    'Let the noise become background, like a wave behind you, while your focus stays on the ball.',
+    '---',
+    'Remind yourself: the crowd, the scoreboard, the occasion — they are the backdrop, not the task.',
+    'Feel your chest open and your stance widen slightly — you belong on this ground today.',
+  ]),
+  wM(mkM('m56','Morning of Big Day','pre-performance',540,75), [
+    'However you woke up feeling, let that be okay — there is plenty of time before the game begins.',
+    'Take a slow breath in, and as you exhale, let your body settle into the day ahead.',
+    'Picture your routine unfolding calmly — breakfast, kit, travel — each step bringing you closer, without rush.',
+    'Notice the hours ahead are simply a series of small, familiar steps — nothing to rush, nothing to fear.',
+    '---',
+    'Bring to mind one simple intention for today — not the result, just how you want to show up.',
+    'Carry that intention gently with you as the morning continues — you have time, and you are ready.',
+  ]),
+  wM(mkM('m57','Champions Routine','pre-performance',540,75), [
+    'Think of the routine you trust — the one that has carried you through big days before.',
+    'Walk through it now in your mind, step by step, exactly as you will do it today.',
+    'Notice how familiar it feels — your body already knows what to do.',
+    'There is no need to add anything new today — trust the routine that got you here.',
+    '---',
+    'See yourself moving through each step calmly, with no need to rush or skip ahead.',
+    'When your routine is complete, you will feel exactly as ready as you are right now — prepared.',
+  ]),
+  wM(mkM('m58','Pre-Tournament Mind Lock','pre-performance',600,80), [
+    'This tournament has been building for a while — let yourself acknowledge that, just for a moment.',
+    'Take a slow, deep breath, and as you exhale, set that build-up to one side.',
+    'Bring your focus down to today only — not the whole tournament, just this one game, this one innings.',
+    'Whatever has happened in earlier games is done — this is a clean page, starting now.',
+    '---',
+    'Picture your first contribution today — clear, simple, and within your control.',
+    'Lock that picture in, breathe once more, and feel your mind settle onto exactly what is in front of you.',
+  ]),
   mkM('m60','10-Second Rule','pressure',300,50), mkM('m61','Physiological Sigh','pressure',180,35),
   mkM('m62','Strategic Pause','pressure',360,60), mkM('m63','Pressure Is Privilege','pressure',420,65),
   mkM('m64','Handling the Unplayable Ball','pressure',420,70), mkM('m65','Bowling Under Pressure','pressure',420,65),
@@ -222,10 +309,57 @@ const MENTAL_SESSIONS = [
   mkM('m74','Vision Board Visualization','visualization',480,70), mkM('m75','Perfect Performance','visualization',540,75),
   mkM('m76','Champion Visualization','visualization',600,85),
   mkM('m77','Elite Endurance Mindset','visualization',720,110,true), mkM('m78','Flow State Architecture','visualization',900,120,true),
-  mkM('m80','4-7-8 Breath Lock','match-day-calm',360,50), mkM('m81','Deep Calm Breathing','match-day-calm',300,50),
-  mkM('m82','Gratitude Before Game','match-day-calm',300,50), mkM('m83','Stillness Practice','match-day-calm',360,55),
-  mkM('m84','Anxiety Dissolve Protocol','match-day-calm',420,65), mkM('m85','Box Breathing Method','match-day-calm',480,65),
-  mkM('m86','Inner Lake','match-day-calm',420,60),
+  wM(mkM('m80','4-7-8 Breath Lock','match-day-calm',360,50), [
+    'Get comfortable, and gently close your eyes if that feels right.',
+    'Breathe in quietly through your nose for four counts.',
+    'Hold that breath gently for seven counts — no strain, just stillness.',
+    'Now exhale slowly and completely through your mouth for eight counts, feeling your whole body soften.',
+  ]),
+  wM(mkM('m81','Deep Calm Breathing','match-day-calm',300,50), [
+    'Settle into your seat or your spot on the field, and let your hands rest loosely.',
+    'Breathe in slowly through your nose, filling your belly first, then your chest.',
+    '---',
+    'Exhale slowly, longer than your in-breath, and feel the noise of the day grow quieter.',
+    'Take one more slow round of this breathing, and let your whole body feel a touch heavier, a touch calmer.',
+  ]),
+  wM(mkM('m82','Gratitude Before Game','match-day-calm',300,50), [
+    'Before this game begins, take a moment to notice that you get to play it.',
+    'Bring to mind one person who helped you get here — a coach, a family member, a teammate.',
+    'Picture their face for a moment, and notice the gratitude that brings up in you.',
+    '---',
+    'Let a quiet thank you settle in your chest, and carry that lightness with you onto the field.',
+  ]),
+  wM(mkM('m83','Stillness Practice','match-day-calm',360,55), [
+    'Find a still position — feet planted, hands relaxed, spine tall.',
+    'Notice how much is moving around you, and let yourself be the one still point.',
+    'Let your eyes rest on one fixed spot, soft and unmoving.',
+    '---',
+    'Breathe slowly, and with each breath, let your stillness deepen just a little more.',
+  ]),
+  wM(mkM('m84','Anxiety Dissolve Protocol','match-day-calm',420,65), [
+    'Notice where in your body the anxiety sits right now — chest, stomach, shoulders.',
+    'Breathe gently into that exact spot, without trying to push the feeling away.',
+    'Name what you are feeling, quietly, in your own words — naming it loosens its grip.',
+    '---',
+    'With each slow exhale, imagine that tightness loosening, just slightly, like a knot easing.',
+    'Remind yourself: this feeling will pass through you — it always has before.',
+  ]),
+  wM(mkM('m85','Box Breathing Method','match-day-calm',480,65), [
+    'Picture a square in your mind — you are about to trace its sides with your breath.',
+    'Breathe in for four counts as you trace up the first side.',
+    'Hold for four counts across the top.',
+    'Exhale for four counts down the other side.',
+    'Hold for four counts along the bottom of the square, completely still.',
+    'Begin the square again — in, hold, out, hold — each lap a little smoother than the last.',
+  ]),
+  wM(mkM('m86','Inner Lake','match-day-calm',420,60), [
+    'Picture a still lake at dawn — flat, quiet, undisturbed.',
+    'Imagine this lake sitting calmly inside your chest, beneath all the pre-match noise.',
+    'Even if the surface ripples for a moment, notice how quickly it settles back to stillness.',
+    '---',
+    'Thoughts may pass overhead like birds — let them cross without disturbing the water below.',
+    'Feel that stillness settle through you — calm, clear, and ready to reflect whatever comes.',
+  ]),
   mkM('m90','Deliberate Practice Mindset','pro-mental',600,100,true), mkM('m91','Mastery Over Perfection','pro-mental',600,100,true),
   mkM('m92','Elite Competitor Analysis','pro-mental',720,110,true), mkM('m93','Inner Dialogue Mastery','pro-mental',720,110,true),
   mkM('m94','Zone of Genius Activation','pro-mental',720,110,true),
