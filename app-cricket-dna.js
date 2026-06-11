@@ -909,10 +909,60 @@ function getCachedDNA() {
   if (!_dnaCache) {
     _dnaCache = computeDNA();
     try { if (DB.set) DB.set('sc_dna_v1', _dnaCache); } catch(e) {}
+    try { recordDNAHistory(_dnaCache); } catch(e) {}
   }
   return _dnaCache;
 }
 window.addEventListener('sc_update', function() { _dnaCache = null; });
+
+// ── DNA History / Timeline ────────────────────────────────────────
+var DNA_HISTORY_KEY = 'sc_dna_history';
+var DNA_HISTORY_CAP = 180;
+
+function getDNAHistory() {
+  try { return (DB.get && DB.get(DNA_HISTORY_KEY)) || []; } catch(e) { return []; }
+}
+
+function recordDNAHistory(dna) {
+  if (!dna || !dna.hasEnoughData || !dna.primary) return;
+  var hist = getDNAHistory();
+  var today = getToday();
+  if (hist.length && hist[hist.length-1].date === today) return; // once per day
+  hist.push({
+    date: today,
+    primaryId:   dna.primary.id,
+    secondaryId: dna.secondary ? dna.secondary.id : null,
+    tertiaryId:  dna.tertiary  ? dna.tertiary.id  : null,
+  });
+  while (hist.length > DNA_HISTORY_CAP) hist.shift();
+  try { if (DB.set) DB.set(DNA_HISTORY_KEY, hist); } catch(e) {}
+}
+
+// ── Category breakdown (8 categories) ─────────────────────────────
+var ALL_CATS = ['batting','bowling','fielding','mental','fitness','format','training','legendary'];
+
+function getCategoryBreakdown(report) {
+  var signals = (report && report.layer1 && report.layer1.signals) || (report && report.signals);
+  if (!signals) {
+    try { signals = getCachedDNA().signals; } catch(e) { signals = extractSignals(); }
+  }
+  var groups = {};
+  ALL_CATS.forEach(function(c){ groups[c] = []; });
+  PROFILES.forEach(function(p) {
+    var sc = 0;
+    try { sc = p.score(signals); } catch(e) { sc = 0; }
+    if (groups[p.cat]) groups[p.cat].push(sc);
+  });
+  var out = {};
+  ALL_CATS.forEach(function(c) {
+    var arr = groups[c];
+    if (!arr.length) { out[c] = { avg:0, max:0, count:0 }; return; }
+    var sum = arr.reduce(function(s,x){ return s+x; }, 0);
+    var max = arr.reduce(function(m,x){ return Math.max(m,x); }, 0);
+    out[c] = { avg: Math.round(sum/arr.length), max: Math.round(max), count: arr.length };
+  });
+  return out;
+}
 
 // ── Layer 2-5: Multi-dimensional DNA analysis ─────────────────────
 var DNA_AXES = ['batting','bowling','fielding','fitness','mental','consistency'];
@@ -1106,6 +1156,287 @@ var CAT_LABELS = {
   training:'Training', legendary:'Legendary',
 };
 
+// ── Premium status ─────────────────────────────────────────────────
+function isUserPremium() {
+  try {
+    var u = DB.getUser ? DB.getUser() : (DB.get && DB.get('user')) || {};
+    return !!(u && (u.pro === true || u.is_premium === true || u.premium === true));
+  } catch(e) { return false; }
+}
+
+// ── Shareable DNA card (Canvas) ────────────────────────────────────
+function downloadDNAShareCard(profile) {
+  if (!profile) return;
+  try {
+    var W = 1080, H = 1350;
+    var canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    var ctx = canvas.getContext('2d');
+
+    // Background gradient using profile color
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, profile.clr || '#a855f7');
+    grad.addColorStop(1, '#0d1117');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Card panel
+    ctx.fillStyle = 'rgba(13,17,23,0.55)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Rarity label
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 32px sans-serif';
+    ctx.fillText((RARITY_LABELS[profile.rarity] || profile.rarity || '').toUpperCase() + ' · ' + (CAT_LABELS[profile.cat] || profile.cat || '').toUpperCase(), W/2, 110);
+
+    // Icon
+    ctx.font = '220px sans-serif';
+    ctx.fillText(profile.icon || '🏏', W/2, 380);
+
+    // Name
+    ctx.font = '900 64px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(profile.name || '', W/2, 500);
+
+    // Tag
+    ctx.font = 'italic 600 30px sans-serif';
+    ctx.fillStyle = '#fde68a';
+    ctx.fillText('"' + (profile.tag || '') + '"', W/2, 555);
+
+    // Description (wrapped)
+    ctx.font = '400 28px sans-serif';
+    ctx.fillStyle = '#e5e7eb';
+    var words = (profile.desc || '').split(' ');
+    var line = '', y = 650, lineHeight = 40, maxWidth = W - 140;
+    for (var i = 0; i < words.length; i++) {
+      var test = line + words[i] + ' ';
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line.trim(), W/2, y);
+        line = words[i] + ' ';
+        y += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line.trim(), W/2, y);
+
+    // Traits chips
+    y += 70;
+    ctx.font = '700 26px sans-serif';
+    var traits = profile.traits || [];
+    if (traits.length) {
+      var totalW = 0, gap = 24;
+      var widths = traits.map(function(t){ return ctx.measureText(t).width + 50; });
+      totalW = widths.reduce(function(s,w){return s+w;},0) + gap*(traits.length-1);
+      var startX = (W - totalW)/2;
+      traits.forEach(function(t, idx) {
+        var w = widths[idx];
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(startX, y-34, w, 48, 24); else ctx.rect(startX, y-34, w, 48);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(t, startX + w/2, y);
+        startX += w + gap;
+      });
+      y += 80;
+    }
+
+    // Footer branding
+    ctx.font = '700 30px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('🏏 SmartCrick — Cricket DNA', W/2, H - 60);
+    ctx.font = '400 20px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText('smartcricai.vercel.app', W/2, H - 28);
+
+    var dataUrl = canvas.toDataURL('image/png');
+    var a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'SmartCrick_DNA_' + (profile.name || 'profile').replace(/\s+/g,'_') + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch(e) { console.error('[SC] DNA share card failed:', e); }
+}
+
+// ── Full DNA Report PDF (jsPDF) ────────────────────────────────────
+function exportDNAReportPDF(report, premium) {
+  try {
+    if (!window.jspdf) { console.error('[SC] jsPDF not loaded'); alert('PDF library unavailable. Please try again later.'); return; }
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    var user = (DB.getUser && DB.getUser()) || {};
+    var playerName = user.name || 'SmartCrick Player';
+    var dateStr = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
+    var filename = 'SmartCrick_CricketDNA_' + playerName.replace(/\s+/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.pdf';
+
+    var W = 210, margin = 18;
+
+    var GREEN  = [22,163,74];
+    var DARK   = [13,17,23];
+    var GRAY   = [107,114,128];
+    var GOLD   = [245,158,11];
+    var PURPLE = [139,92,246];
+
+    function setColor(rgb){ doc.setTextColor(rgb[0],rgb[1],rgb[2]); }
+    function setFill(rgb){ doc.setFillColor(rgb[0],rgb[1],rgb[2]); }
+    function bold(size){ doc.setFont('helvetica','bold'); doc.setFontSize(size); }
+    function normal(size){ doc.setFont('helvetica','normal'); doc.setFontSize(size); }
+    function italic(size){ doc.setFont('helvetica','italic'); doc.setFontSize(size); }
+    function sectionHeader(text, y) {
+      setFill(PURPLE);
+      doc.roundedRect(margin, y, W - margin*2, 7, 1, 1, 'F');
+      bold(10); setColor([255,255,255]);
+      doc.text(text, margin+3, y+4.8);
+      return y+12;
+    }
+    function progressBar(x,y,w,hh,pct,fillRgb){
+      setFill([229,231,235]);
+      doc.roundedRect(x,y,w,hh,hh/2,hh/2,'F');
+      if (pct>0) { setFill(fillRgb||GREEN); doc.roundedRect(x,y,Math.max(w*Math.min(pct,1),1),hh,hh/2,hh/2,'F'); }
+    }
+
+    // ===== HEADER / PAGE 1 =====
+    setFill(DARK); doc.rect(0,0,W,45,'F');
+    setFill(PURPLE); doc.rect(0,40,W,3,'F');
+    bold(22); setColor(PURPLE); doc.text('SmartCrick', margin, 18);
+    bold(22); setColor([255,255,255]); doc.text(' Cricket DNA', margin+51, 18);
+    normal(9); setColor([156,163,175]);
+    doc.text('Cricket DNA Report — Generated ' + dateStr, margin, 31);
+    bold(14); setColor([255,255,255]); doc.text(playerName, W-margin, 18, {align:'right'});
+
+    var y = 55;
+    var l1 = report.layer1 || {};
+
+    y = sectionHeader('1. YOUR CRICKET DNA', y);
+    [
+      {label:'Primary',   p:l1.primary},
+      {label:'Secondary', p:l1.secondary},
+      {label:'Tertiary',  p:l1.tertiary},
+    ].forEach(function(row) {
+      if (!row.p) return;
+      bold(11); setColor(DARK);
+      doc.text(row.label + ': ' + row.p.icon + ' ' + row.p.name, margin, y);
+      normal(9); setColor(GRAY);
+      doc.text('"' + row.p.tag + '"', margin, y+5);
+      y += 12;
+    });
+
+    y += 2;
+    y = sectionHeader('2. 8-CATEGORY SKILL BREAKDOWN', y);
+    var breakdown = getCategoryBreakdown(report);
+    ALL_CATS.forEach(function(c) {
+      var v = breakdown[c] ? breakdown[c].avg : 0;
+      normal(9); setColor(DARK);
+      doc.text(CAT_LABELS[c] || c, margin, y+3);
+      progressBar(margin+45, y, W - margin*2 - 45 - 12, 4, v/100, PURPLE);
+      bold(9); setColor(PURPLE);
+      doc.text(v + '%', W-margin, y+3, {align:'right'});
+      y += 8;
+    });
+
+    if (!premium) {
+      y += 6;
+      setFill([245,245,245]);
+      doc.roundedRect(margin, y, W-margin*2, 30, 2, 2, 'F');
+      bold(11); setColor(GRAY);
+      doc.text('Unlock Pro-Player Comparisons & Growth Insights', margin+5, y+12);
+      normal(9);
+      doc.text('Upgrade to SmartCrick Premium to access layers 2-5 of your', margin+5, y+19);
+      doc.text('Cricket DNA: pro-player matches, technique analysis & trajectory.', margin+5, y+25);
+    } else {
+      // ===== PAGE 2 — PRO COMPARISONS =====
+      doc.addPage();
+      y = 18;
+      y = sectionHeader('3. SKILL-DNA PRO MATCHES', y);
+      var l2 = report.layer2;
+      if (l2 && l2.topMatches && l2.topMatches.length) {
+        l2.topMatches.slice(0,5).forEach(function(m) {
+          bold(10); setColor(DARK);
+          doc.text(m.pro.name + ' (' + m.pro.role + ', ' + m.pro.country + ')', margin, y);
+          bold(10); setColor(PURPLE);
+          doc.text(Math.round(m.score*100) + '% match', W-margin, y, {align:'right'});
+          y += 6;
+        });
+      } else {
+        normal(9); setColor(GRAY); doc.text('Not enough skill data yet.', margin, y); y += 6;
+      }
+
+      y += 6;
+      y = sectionHeader('4. MATCH-STAT PRO COMPARISONS', y);
+      var l3 = report.layer3;
+      if (l3 && !l3.insufficient && l3.stats) {
+        var st = l3.stats;
+        normal(9); setColor(DARK);
+        doc.text('Batting Avg: ' + st.battingAvg + '   Strike Rate: ' + st.battingSR, margin, y); y += 6;
+        doc.text('Wickets: ' + st.wickets + '   Economy: ' + (st.economy||'-'), margin, y); y += 8;
+        (l3.topMatches||[]).slice(0,3).forEach(function(m) {
+          bold(9); setColor(DARK);
+          doc.text(m.pro.name, margin, y);
+          setColor(PURPLE);
+          doc.text(Math.round(m.score*100)+'% similar', W-margin, y, {align:'right'});
+          y += 6;
+        });
+      } else {
+        normal(9); setColor(GRAY); doc.text('Log 3+ matches to unlock match-stat comparisons.', margin, y); y += 6;
+      }
+
+      y += 6;
+      y = sectionHeader('5. TECHNIQUE COMPARISONS', y);
+      var l4 = report.layer4;
+      if (l4 && l4.topMatches && l4.topMatches.length) {
+        (l4.tags||[]).length && (function(){ normal(9); setColor(GRAY); doc.text('Tags: ' + l4.tags.join(', ').replace(/_/g,' '), margin, y); y += 6; })();
+        l4.topMatches.slice(0,3).forEach(function(m) {
+          bold(9); setColor(DARK);
+          doc.text(m.pro.name, margin, y);
+          setColor(GOLD);
+          doc.text(m.overlap + ' tags match', W-margin, y, {align:'right'});
+          y += 6;
+        });
+      } else {
+        normal(9); setColor(GRAY); doc.text('Complete a video analysis to unlock technique comparisons.', margin, y); y += 6;
+      }
+
+      // ===== PAGE 3 — GROWTH / SYNTHESIS =====
+      doc.addPage();
+      y = 18;
+      y = sectionHeader('6. GROWTH TRAJECTORY', y);
+      var l5 = report.layer5;
+      if (l5) {
+        bold(12); setColor(PURPLE);
+        doc.text(l5.emoji + '  ' + l5.label + ' Trajectory', margin, y); y += 8;
+        normal(9); setColor(DARK);
+        doc.text('Active days (last 14): ' + l5.activeDays14, margin, y); y += 6;
+        doc.text('Recent XP: ' + l5.recent + '   Prior XP: ' + l5.prior, margin, y); y += 6;
+        if (l5.daysToNextLevel) { doc.text('Estimated days to next level: ' + l5.daysToNextLevel, margin, y); y += 6; }
+      }
+      y += 6;
+      y = sectionHeader('7. DNA SYNTHESIS', y);
+      normal(9); setColor(DARK);
+      var synthLines = doc.splitTextToSize(report.synthesis || 'Keep training to unlock your full synthesis.', W - margin*2);
+      doc.text(synthLines, margin, y);
+    }
+
+    // Footer
+    var pageCount = doc.getNumberOfPages();
+    for (var pg=1; pg<=pageCount; pg++) {
+      doc.setPage(pg);
+      normal(7); setColor(GRAY);
+      doc.text('SmartCrick AI · smartcricai.vercel.app · Page ' + pg + ' of ' + pageCount, W/2, 290, {align:'center'});
+      doc.text('Cricket DNA Report — ' + playerName + ' · Generated ' + dateStr, W/2, 294, {align:'center'});
+      setFill(PURPLE); doc.rect(0,297,W,2,'F');
+    }
+
+    doc.save(filename);
+  } catch(err) {
+    console.error('[SC] DNA report PDF generation failed:', err);
+    alert('Could not generate report. Please check console for details.');
+  }
+}
+
 // ── DNAOverview — compact widget for home/progress pages ──────────
 function DNAOverview() {
   var [dna, setDna] = useState(null);
@@ -1284,7 +1615,10 @@ function CricketDNAPage() {
     { id:'performance', label:'Stats', icon:'📊' },
     { id:'technique', label:'Technique', icon:'🎯' },
     { id:'growth', label:'Growth', icon:'📈' },
+    { id:'timeline', label:'Timeline', icon:'🕒' },
+    { id:'codex', label:'Codex', icon:'📖' },
   ];
+  var premium = isUserPremium();
 
   function renderProfilesTab() {
     return h('div',null,
@@ -1298,6 +1632,13 @@ function CricketDNAPage() {
           )
         : h('div',null,
             h('div',{style:{margin:'0 16px 12px'}}, h(PrimaryProfileCard, {profile:dna.primary})),
+            h('div',{style:{margin:'0 16px 12px'}},
+              h('button',{onClick:function(){ downloadDNAShareCard(dna.primary); },
+                style:{width:'100%',padding:'11px',borderRadius:10,border:'1px solid '+dna.primary.clr+'40',
+                  background:dna.primary.clr+'14',color:dna.primary.clr,fontWeight:700,fontSize:13,
+                  cursor:'pointer',fontFamily:'inherit'}},
+                '📤 Share My DNA')
+            ),
             h('div',{style:{display:'flex',gap:8,margin:'0 16px 12px'}},
               h(SmallProfileCard, {profile:dna.secondary, label:'Secondary DNA'}),
               h(SmallProfileCard, {profile:dna.tertiary,  label:'Tertiary DNA'})
@@ -1543,9 +1884,163 @@ function CricketDNAPage() {
           );
         })
       ),
-      fullReport&&fullReport.synthesis && h('div',{style:{padding:'14px',borderRadius:12,background:'rgba(168,85,247,0.07)',border:'1px solid rgba(168,85,247,0.2)'}},
+      fullReport&&fullReport.synthesis && h('div',{style:{padding:'14px',borderRadius:12,background:'rgba(168,85,247,0.07)',border:'1px solid rgba(168,85,247,0.2)',marginBottom:16}},
         h('div',{style:{fontSize:11,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}},'DNA Synthesis'),
         h('div',{style:{fontSize:13,color:'#e5e7eb',lineHeight:1.7}},fullReport.synthesis)
+      ),
+      renderCategoryBreakdown(),
+      renderReportExport()
+    );
+  }
+
+  function renderCategoryBreakdown() {
+    var breakdown = getCategoryBreakdown(fullReport || dna);
+    return h('div',{style:{marginBottom:16}},
+      h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:10}},'8-Category DNA Breakdown'),
+      ALL_CATS.map(function(c) {
+        var v = breakdown[c] ? breakdown[c].avg : 0;
+        var clr = '#a855f7';
+        return h('div',{key:c,style:{marginBottom:8}},
+          h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:3}},
+            h('span',{style:{fontSize:12,color:'#e5e7eb'}},CAT_LABELS[c]||c),
+            h('span',{style:{fontSize:12,fontWeight:700,color:clr}},v+'%')
+          ),
+          h('div',{style:{height:5,borderRadius:99,background:'rgba(48,54,61,0.5)',overflow:'hidden'}},
+            h('div',{style:{height:'100%',width:v+'%',background:clr,borderRadius:99}})
+          )
+        );
+      })
+    );
+  }
+
+  function renderReportExport() {
+    return h('div',{style:{marginBottom:16}},
+      h('button',{onClick:function(){
+          try { exportDNAReportPDF(fullReport || computeFullDNAReport(), premium); }
+          catch(e) { console.error(e); }
+        },
+        style:{width:'100%',padding:'12px',borderRadius:10,border:'none',
+          background:'#a855f7',color:'#fff',fontWeight:700,fontSize:13,
+          cursor:'pointer',fontFamily:'inherit',marginBottom:premium?0:10}},
+        '📄 Export Full DNA Report (PDF)' + (premium?'':' — Free Preview')
+      ),
+      !premium && h('div',{style:{padding:'14px',borderRadius:12,background:'rgba(168,85,247,0.06)',
+          border:'1px dashed rgba(168,85,247,0.3)',textAlign:'center',filter:'grayscale(0.3)'}},
+        h('div',{style:{fontSize:24,marginBottom:6}},'🔒'),
+        h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:4}},'Pro-Player Comparisons & Growth Pages'),
+        h('div',{style:{fontSize:11,color:'#9ca3af',marginBottom:10,lineHeight:1.6}},
+          'Unlock layers 2-5 of your Cricket DNA — skill/match/technique pro matches and your growth synthesis — in the exported PDF.'),
+        A.PremiumBadge ? h(A.PremiumBadge,{label:'PREMIUM'}) : null,
+        h('button',{onClick:function(){ if(nav) nav('Profile'); },
+          style:{display:'block',margin:'10px auto 0',padding:'9px 20px',borderRadius:99,
+            border:'1px solid rgba(168,85,247,0.4)',background:'rgba(168,85,247,0.15)',
+            color:'#c084fc',fontWeight:700,fontSize:12,cursor:'pointer',fontFamily:'inherit'}},
+          'Unlock Full Report')
+      )
+    );
+  }
+
+  function renderTimelineTab() {
+    var hist = getDNAHistory().slice().reverse();
+    if (!hist.length) {
+      return h('div',{style:{padding:16}},
+        h('div',{style:{padding:20,borderRadius:14,background:'rgba(168,85,247,0.07)',border:'1px solid rgba(168,85,247,0.2)',textAlign:'center'}},
+          h('div',{style:{fontSize:36,marginBottom:12}},'🕒'),
+          h('div',{style:{fontSize:15,fontWeight:700,color:'#f0fdf4',marginBottom:8}},'No DNA History Yet'),
+          h('div',{style:{fontSize:13,color:'#9ca3af',lineHeight:1.6}},'Your DNA snapshot is recorded once per day as you train. Check back tomorrow to see your timeline.')
+        )
+      );
+    }
+    var shifts = [];
+    for (var i = 0; i < hist.length - 1; i++) {
+      var cur = hist[i], prev = hist[i+1];
+      if (cur.primaryId !== prev.primaryId) {
+        var pNow = PROFILES.find(function(p){ return p.id===cur.primaryId; });
+        var pPrev = PROFILES.find(function(p){ return p.id===prev.primaryId; });
+        if (pNow && pPrev) shifts.push({ date:cur.date, from:pPrev, to:pNow });
+      }
+    }
+    return h('div',{style:{padding:'0 16px 16px'}},
+      shifts.length>0 && h('div',{style:{marginBottom:14}},
+        shifts.slice(0,5).map(function(sh, idx) {
+          return h('div',{key:idx,style:{marginBottom:8,padding:'12px',borderRadius:12,
+            background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.25)'}},
+            h('div',{style:{fontSize:12,color:'#fbbf24',fontWeight:700,marginBottom:2}},'⚡ DNA Shift'),
+            h('div',{style:{fontSize:13,color:'#e5e7eb'}},
+              'Your DNA shifted from ' + sh.from.icon + ' ' + sh.from.name + ' to ' + sh.to.icon + ' ' + sh.to.name + ' on ' + sh.date + '.')
+          );
+        })
+      ),
+      h('div',{style:{fontSize:13,fontWeight:700,color:'#e5e7eb',marginBottom:10}},'DNA Timeline'),
+      h('div',{style:{display:'flex',gap:8,overflowX:'auto',paddingBottom:8}},
+        hist.map(function(entry, idx) {
+          var p = PROFILES.find(function(pr){ return pr.id===entry.primaryId; });
+          if (!p) return null;
+          return h('div',{key:entry.date+idx,style:{flex:'0 0 auto',width:100,padding:'10px 8px',
+            borderRadius:12,textAlign:'center',background:'rgba(22,27,34,0.95)',
+            border:'1px solid '+p.clr+'30'}},
+            h('div',{style:{fontSize:24,marginBottom:4}},p.icon),
+            h('div',{style:{fontSize:10,fontWeight:700,color:p.clr,lineHeight:1.3,marginBottom:3}},p.name),
+            h('div',{style:{fontSize:9,color:'#484f58'}},entry.date)
+          );
+        })
+      )
+    );
+  }
+
+  function renderCodexTab() {
+    var allScores = (dna && dna.allScores) || PROFILES;
+    var scoreById = {};
+    allScores.forEach(function(p){ scoreById[p.id] = p.score || 0; });
+    var unlocked = PROFILES.filter(function(p){ return (scoreById[p.id]||0) >= 15; });
+    var unlockedCount = unlocked.length;
+
+    var firstLegendary = unlocked.some(function(p){ return p.rarity === 'legendary'; });
+    var categoryComplete = ALL_CATS.some(function(c) {
+      var inCat = PROFILES.filter(function(p){ return p.cat===c; });
+      return inCat.length>0 && inCat.every(function(p){ return (scoreById[p.id]||0) >= 15; });
+    });
+    var polymath = unlockedCount >= 50;
+
+    var badges = [
+      { id:'legendary', label:'First Legendary Unlocked', icon:'🌟', earned:firstLegendary },
+      { id:'category', label:'Category Complete', icon:'🏆', earned:categoryComplete },
+      { id:'polymath', label:'DNA Polymath', icon:'🧬', earned:polymath },
+    ];
+
+    return h('div',{style:{padding:'0 16px 16px'}},
+      h('div',{style:{marginBottom:12,padding:'14px',borderRadius:14,
+          background:'rgba(168,85,247,0.07)',border:'1px solid rgba(168,85,247,0.2)',textAlign:'center'}},
+        h('div',{style:{fontSize:20,fontWeight:900,color:'#c084fc'}},unlockedCount + ' / ' + PROFILES.length + ' archetypes unlocked'),
+        h('div',{style:{height:6,borderRadius:99,background:'rgba(48,54,61,0.5)',overflow:'hidden',marginTop:8}},
+          h('div',{style:{height:'100%',width:Math.round(unlockedCount/PROFILES.length*100)+'%',
+            background:'linear-gradient(to right,#a855f7,#c084fc)',borderRadius:99}})
+        )
+      ),
+      h('div',{style:{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}},
+        badges.map(function(b) {
+          return h('div',{key:b.id,style:{flex:'1 1 30%',padding:'10px 8px',borderRadius:12,textAlign:'center',
+            background:b.earned?'rgba(245,158,11,0.1)':'rgba(22,27,34,0.6)',
+            border:'1px solid '+(b.earned?'rgba(245,158,11,0.3)':'rgba(48,54,61,0.4)'),
+            opacity:b.earned?1:0.45}},
+            h('div',{style:{fontSize:22,marginBottom:4,filter:b.earned?'none':'grayscale(1)'}},b.icon),
+            h('div',{style:{fontSize:10,fontWeight:700,color:b.earned?'#fbbf24':'#6b7280',lineHeight:1.3}},b.label)
+          );
+        })
+      ),
+      h('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}},
+        PROFILES.map(function(p) {
+          var sc = scoreById[p.id]||0;
+          var locked = sc < 15;
+          return h('div',{key:p.id,style:{position:'relative',padding:'8px 6px',borderRadius:10,textAlign:'center',
+            background:locked?'rgba(13,17,23,0.6)':'rgba(22,27,34,0.9)',
+            border:'1px solid '+(locked?'rgba(48,54,61,0.3)':p.clr+'25'),opacity:locked?0.45:1}},
+            locked && h('div',{style:{position:'absolute',top:4,right:4,fontSize:11}},'🔒'),
+            h('div',{style:{fontSize:18,marginBottom:4,filter:locked?'grayscale(1)':'none'}},p.icon),
+            h('div',{style:{fontSize:9,fontWeight:700,color:locked?'#374151':p.clr,lineHeight:1.3,marginBottom:3}},p.name),
+            h('div',{style:{fontSize:8,color:'#484f58'}},RARITY_LABELS[p.rarity])
+          );
+        })
       )
     );
   }
@@ -1579,7 +2074,9 @@ function CricketDNAPage() {
     tab==='promatch'    && renderProMatchTab(),
     tab==='performance' && renderPerformanceTab(),
     tab==='technique'   && renderTechniqueTab(),
-    tab==='growth'      && renderGrowthTab()
+    tab==='growth'      && renderGrowthTab(),
+    tab==='timeline'    && renderTimelineTab(),
+    tab==='codex'       && renderCodexTab()
       );
       if (!_FM || !_AP || !_mDiv) return _tabEl;
       return h(_AP, { mode:'wait' },
@@ -1599,6 +2096,11 @@ A.computeFullDNAReport  = computeFullDNAReport;
 A.getFullDNAReport      = getFullDNAReport;
 A.computeSkillDNA       = computeSkillDNA;
 A.computeGrowthDNA      = computeGrowthDNA;
+A.getDNAHistory         = getDNAHistory;
+A.getCategoryBreakdown  = getCategoryBreakdown;
+A.downloadDNAShareCard  = downloadDNAShareCard;
+A.exportDNAReportPDF    = exportDNAReportPDF;
+A.isUserPremium         = isUserPremium;
 
 console.log('[SC] app-cricket-dna.js v2.0 — ' + PROFILES.length + ' profiles + 5-layer DNA engine ready');
 })();
