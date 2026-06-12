@@ -124,6 +124,12 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
   var workRef   = useRef(null);   // work phase interval
   var setsState = useState(1);
   var setNum = setsState[0], setSetNum = setsState[1];
+  var canCompleteState = useState(false);
+  var canComplete = canCompleteState[0], setCanComplete = canCompleteState[1];
+  var holdLeftState = useState(0);
+  var holdSecsLeft = holdLeftState[0], setHoldSecsLeft = holdLeftState[1];
+  var phaseStartRef = useRef(0);
+  var gateTimerRef = useRef(null);
 
   var ex = exercises[exIdx] || null;
   var totalSets = ex ? (ex.sets || 3) : 1;
@@ -184,6 +190,29 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
     return function() { clearInterval(timerRef.current); };
   }, [phase, exIdx, setNum, restSecs]);
 
+  // anti-cheat: minimum genuine-effort gate before Skip / Next set is live
+  useEffect(function() {
+    clearInterval(gateTimerRef.current);
+    var mcs = (ex && ex.min_complete_secs) || 0;
+    if (phase !== 'work' || mcs <= 0) {
+      setCanComplete(true); setHoldSecsLeft(0);
+      return;
+    }
+    phaseStartRef.current = Date.now();
+    setCanComplete(false);
+    setHoldSecsLeft(mcs);
+    gateTimerRef.current = setInterval(function() {
+      var left = mcs - Math.floor((Date.now() - phaseStartRef.current) / 1000);
+      if (left <= 0) {
+        setCanComplete(true); setHoldSecsLeft(0);
+        clearInterval(gateTimerRef.current);
+      } else {
+        setHoldSecsLeft(left);
+      }
+    }, 250);
+    return function() { clearInterval(gateTimerRef.current); };
+  }, [phase, exIdx, setNum]); // eslint-disable-line
+
   function advanceExercise() {
     if (exIdx + 1 < totalExercises) {
       setExIdx(function(i) { return i + 1; });
@@ -194,7 +223,10 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
     }
   }
 
-  function skipExercise() { advanceExercise(); }
+  function skipExercise() {
+    if (phase === 'work' && !canComplete) return;
+    advanceExercise();
+  }
 
   function handleEnd() {
     var sessionRecord = {
@@ -242,9 +274,16 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
   }
 
   return h('div', { style:{
-    minHeight:'100dvh', background:'linear-gradient(180deg,#0a0f14 0%,#0d1117 100%)',
+    position:'relative', minHeight:'100dvh', background:'#0a0f14', overflow:'hidden',
     display:'flex', flexDirection:'column', maxWidth:480, margin:'0 auto', width:'100%',
   }},
+    A.Backdrop ? h(A.Backdrop, { ex: ex, lvl: null }) : h('div', { style:{
+      position:'fixed', inset:0, zIndex:0,
+      background:'linear-gradient(180deg,#0a0f14 0%,#0d1117 100%)',
+    }}),
+    h('div', { style:{ position:'fixed', inset:0, zIndex:1,
+      background:'radial-gradient(ellipse at 50% 40%, rgba(10,15,20,0.35) 0%, rgba(10,15,20,0.88) 70%)' }}),
+    h('div', { style:{ position:'relative', zIndex:2, display:'flex', flexDirection:'column', flex:1, width:'100%' }},
     // Header
     h('div', { style:{
       display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -264,8 +303,9 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
       h('button', {
         onClick:skipExercise, 'aria-label':'Skip exercise',
         style:{ background:'rgba(22,27,34,0.8)', border:'1px solid rgba(48,54,61,0.8)',
-          borderRadius:10, padding:'8px 12px', cursor:'pointer', color:'#94a3b8', fontSize:12, fontWeight:700 }
-      }, 'Skip')
+          borderRadius:10, padding:'8px 12px', cursor: (phase==='work' && !canComplete) ? 'not-allowed' : 'pointer',
+          color: (phase==='work' && !canComplete) ? '#475569' : '#94a3b8', fontSize:12, fontWeight:700 }
+      }, (phase==='work' && !canComplete) ? holdSecsLeft+'s' : 'Skip')
     ),
     // Exercise progress bar
     h('div', { style:{ height:3, background:'rgba(48,54,61,0.5)', margin:'0 20px' }},
@@ -306,8 +346,8 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
         h('div', { style:{ fontSize:13, color:C.sub }},
           ex.sets + ' sets · ' + (ex.duration_secs ? ex.duration_secs+'s' : ex.reps+' reps') + ' · ' + (ex.rest_secs||30)+'s rest'
         ),
-        ex.tip && h('div', { style:{ fontSize:11.5, color:C.dim, marginTop:6, maxWidth:280, lineHeight:1.5, textAlign:'center' }},
-          '💡 ' + ex.tip
+        (ex.coaching_cue || ex.tip) && h('div', { style:{ fontSize:11.5, color:C.dim, marginTop:6, maxWidth:280, lineHeight:1.5, textAlign:'center' }},
+          '💡 ' + (ex.coaching_cue || ex.tip)
         )
       )
     ),
@@ -324,11 +364,12 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
         onClick:skipExercise,
         style:{
           flex:2, padding:'13px', border:'none', borderRadius:12,
-          background:'linear-gradient(135deg,#16a34a,#0d9488)', color:'#fff',
-          fontSize:14, fontWeight:800, cursor:'pointer', fontFamily:'inherit',
-          boxShadow:'0 4px 16px rgba(22,163,74,0.35)',
+          background: (phase==='work' && !canComplete) ? 'rgba(75,85,99,0.4)' : 'linear-gradient(135deg,#16a34a,#0d9488)',
+          color: (phase==='work' && !canComplete) ? '#94a3b8' : '#fff',
+          fontSize:14, fontWeight:800, cursor: (phase==='work' && !canComplete) ? 'not-allowed' : 'pointer', fontFamily:'inherit',
+          boxShadow: (phase==='work' && !canComplete) ? 'none' : '0 4px 16px rgba(22,163,74,0.35)',
         }
-      }, phase === 'rest' ? '⏭ Skip rest' : '→ Next set')
+      }, phase === 'rest' ? '⏭ Skip rest' : ((!canComplete) ? 'Hold on… '+holdSecsLeft+'s' : '→ Next set'))
     ),
     showSettings && h(SettingsOverlay, {
       onClose:function(){ setShowSettings(false); },
@@ -336,6 +377,7 @@ function FB2SessionScreen({ exercises, planId, onDone }) {
       restSecs:restSecs, setRestSecs:setRestSecs,
       soundOn:soundOn, setSoundOn:setSoundOn,
     })
+    )
   );
 }
 
