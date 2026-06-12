@@ -628,6 +628,33 @@ function ScrHonesty({ data, onNext, onBack, progress }) {
   );
 }
 
+// Screen — "Smart Tracking" explainer (Cal-AI Figma #21 analog).
+// PURPOSE: explains how Crick auto-tracks sessions/XP and adapts the
+// plan, so the user understands why the app feels personalized — and
+// so the daily Crick check-in habit doesn't feel confusing later.
+function ScrSmartTracking({ onNext, onBack, progress }) {
+  return h(InfoShell, { onNext: onNext, onBack: onBack, progress: progress, nextLabel: 'Got it' },
+    h(QHead, { title: 'Crick tracks your progress automatically', sub: 'Every drill, workout and mental session feeds your plan.' }),
+    h('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 }},
+      [
+        { e: '📊', t: 'Auto-logged sessions', d: 'Every drill, workout and mental session you complete is recorded — no manual logging.' },
+        { e: '🧠', t: 'Plan adapts to you', d: 'Crick adjusts your weekly plan based on what you\'ve done and what you\'ve missed.' },
+        { e: '🏏', t: 'Daily Crick check-ins', d: 'Crick checks in each day with a tip, a nudge, or a reward — keeping you on track without nagging.' },
+      ].map(function (r, i) {
+        return h('div', { key: i, style: { display: 'flex', gap: 14, padding: '14px 16px', borderRadius: 13, background: C.card, border: '1px solid ' + C.border, alignItems: 'center' }},
+          h('span', { 'aria-hidden': 'true', style: { fontSize: 24, flexShrink: 0 }}, r.e),
+          h('div', null,
+            h('div', { style: { fontSize: 14, fontWeight: 800, color: C.text, marginBottom: 2 }}, r.t),
+            h('div', { style: { fontSize: 12.5, color: C.sub, lineHeight: 1.6 }}, r.d)
+          )
+        );
+      })
+    ),
+    h('p', { style: { fontSize: 13, color: C.faint, lineHeight: 1.6, marginTop: 16, textAlign: 'center' }},
+      'The more you use SmartCrick, the smarter your plan gets.')
+  );
+}
+
 // Screen — notifications. PURPOSE: framed as a benefit ("reach your
 // goals"), drives daily re-engagement (retention).
 function ScrNotify({ data, setData, onNext, onBack, progress }) {
@@ -1129,6 +1156,15 @@ function ScrDiscount({ data, offer, onStart, onDecline }) {
 // ================================================================
 // Question specs (data-driven screens). Each maps to a QuestionScreen.
 var QSPECS = {
+  // Low-friction warm-up question (Cal-AI Figma #3 analog: "Choose your
+  // gender"). Trivial, easy to answer, builds trust that the app is
+  // "made for me" before any real personalization begins.
+  format: { field: 'format', kind: 'single', title: 'Which format do you play most?', sub: 'Just so we get a feel for your game.', options: [
+    { id: 't20', emoji: '⚡', label: 'T20 / Limited overs' },
+    { id: 'odi', emoji: '🏏', label: 'One Day' },
+    { id: 'test', emoji: '🛡️', label: 'Multi-day / Test' },
+    { id: 'fun', emoji: '😄', label: 'Just for fun' },
+  ]},
   // Free market research — feels like a normal question; used for
   // attribution + future marketing decisions.
   source: { field: 'source', kind: 'single', title: 'Where did you hear about SmartCrick?', sub: 'Helps us know what cricketers find useful.', options: [
@@ -1197,6 +1233,7 @@ var QSPECS = {
 // bar; the bar completes at 'thanks' (completion bias before paywall).
 var FLOW = [
   { id: 'welcome',    type: 'welcome' },
+  { id: 'format',     type: 'q', form: true },
   { id: 'source',     type: 'q', form: true },
   { id: 'switcher',   type: 'q', form: true },
   { id: 'name',       type: 'name', form: true },
@@ -1215,6 +1252,7 @@ var FLOW = [
   { id: 'proof2',     type: 'proof2', form: true },
   { id: 'honesty',    type: 'honesty', form: true },
   { id: 'days',       type: 'q', form: true },
+  { id: 'smarttrack', type: 'smarttrack', form: true },
   { id: 'notify',     type: 'notify', form: true },
   { id: 'reviews',    type: 'reviews', form: true },
   { id: 'referral',   type: 'referral', form: true },
@@ -1309,6 +1347,7 @@ function OnboardPage() {
     case 'affirm':   view = h(ScrAffirm, stepProps); break;
     case 'proof2':   view = h(ScrProof2, stepProps); break;
     case 'honesty':  view = h(ScrHonesty, stepProps); break;
+    case 'smarttrack': view = h(ScrSmartTracking, stepProps); break;
     case 'notify':   view = h(ScrNotify, stepProps); break;
     case 'reviews':  view = h(ScrReviews, stepProps); break;
     case 'thanks':   view = h(ScrThanks, stepProps); break;
