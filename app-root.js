@@ -167,7 +167,22 @@ function AppShell() {
       }
     }
     document.addEventListener('visibilitychange', onVisible);
-    return function() { document.removeEventListener('visibilitychange', onVisible); };
+
+    // Re-arm once per day even if the tab is left open across midnight —
+    // visibilitychange alone won't fire in that case.
+    var dayCheckTimer = setInterval(function() {
+      var lastArmDay = A.DB ? A.DB.get('crick_notif_last_arm_day') : null;
+      var today = new Date().toISOString().slice(0, 10);
+      if (lastArmDay !== today) {
+        if (A.DB) A.DB.set('crick_notif_last_arm_day', today);
+        if (A.CrickNotif && A.CrickNotif.scheduleIfEnabled) { try { A.CrickNotif.scheduleIfEnabled(); } catch(e) {} }
+      }
+    }, 30 * 60 * 1000);
+
+    return function() {
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(dayCheckTimer);
+    };
   }, []);
 
   // ── Onboarding gate ───────────────────────────────────────────
@@ -321,13 +336,20 @@ function AppShell() {
       // ── Mascot Controller singleton (renders null, drives GSAP) ──
       A.MascotController ? h(A.MascotController, null) : null,
 
+      // ── Crick Nudge — periodic "stay engaged" speech bubble ──────
+      A.CrickNudge ? h(A.CrickNudge, null) : null,
+
       // ── Persistent MascotSVG — always in DOM so GSAP has a target ─
-      // Sits fixed at bottom-right, subtle in idle, animated on cheer.
+      // Sits fixed at bottom-right, above the bottom nav and offline bar.
+      // zIndex 9000 keeps Crick above page-level fullscreen overlays
+      // (which use zIndex 200) while staying below true blocking modals
+      // (zIndex 9500), so Crick is never accidentally hidden behind
+      // ordinary page content.
       A.Mascot ? h('div', {
         id: 'em-mascot-fixed-host',
         style: {
-          position: 'fixed', bottom: 70, right: 12, zIndex: 200,
-          pointerEvents: 'none', opacity: 0.18,
+          position: 'fixed', bottom: 78, right: 12, zIndex: 9000,
+          pointerEvents: 'none', opacity: 0.45,
           transition: 'opacity 0.4s ease',
         },
       }, h(A.Mascot, { size: 'sm' })) : null
