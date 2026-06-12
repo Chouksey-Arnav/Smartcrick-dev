@@ -110,6 +110,7 @@ var CLEAN_NAV = [
   // ON HOLD: 30-Day Challenge temporarily hidden from nav (code kept for later re-enable)
   // { label:'30-Day Challenge', icon:'target',   pg:'ThirtyDay',  section:'TRAINING' },
   { label:'Fitness Builder',  icon:'dumbbell', pg:'Fitness',    section:'TRAINING' },
+  { label:'Fitness Builder 2',icon:'flask',    pg:'FitnessBuilder2', badge:'BETA', section:'TRAINING' },
   { label:'Timer',            icon:'timer',    pg:'Timer',      section:'TRAINING' },
   // Performance
   { label:'My Progress',      icon:'barChart', pg:'Progress',   section:'PERFORMANCE' },
