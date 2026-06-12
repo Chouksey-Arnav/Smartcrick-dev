@@ -128,6 +128,34 @@ function AthleticBg(props) {
   );
 }
 
+// ─── YouTube ambient video background ─────────────────────────
+function VideoBg(props) {
+  var id = props.id;
+  var src = 'https://www.youtube.com/embed/' + id +
+    '?autoplay=1&mute=1&loop=1&playlist=' + id +
+    '&controls=0&modestbranding=1&playsinline=1&rel=0';
+  return h('div', { style:{ position:'fixed', inset:0, zIndex:0, overflow:'hidden', background:'#000' } },
+    h('iframe', {
+      src: src, title:'background video', frameBorder:'0',
+      allow:'autoplay; encrypted-media; picture-in-picture',
+      style:{
+        position:'absolute', top:'50%', left:'50%',
+        width:'177.78vh', height:'56.25vw',
+        minWidth:'100%', minHeight:'100%',
+        transform:'translate(-50%,-50%)',
+        pointerEvents:'none', border:'none',
+      }
+    })
+  );
+}
+
+// ─── Backdrop dispatcher — video if available, else animated bg ──
+function Backdrop(props) {
+  var ex = props.ex;
+  if (ex && ex.youtube_id) return h(VideoBg, { id: ex.youtube_id });
+  return h(AthleticBg, { lvl: props.lvl });
+}
+
 // ─── SVG Ring Timer ───────────────────────────────────────────
 function RingTimer(props) {
   var secs  = props.secs  || 0;
@@ -190,6 +218,8 @@ function WorkoutPlayerPage(props) {
   var [prepSecs,  setPrepSecs]  = useState(0);
   var [prepTotal, setPrepTotal] = useState(0);
   var [showStop,  setShowStop]  = useState(false);
+  var [canComplete, setCanComplete] = useState(false);
+  var [holdSecsLeft, setHoldSecsLeft] = useState(0);
 
   var elapsedRef       = useRef(0);
   var restRef          = useRef(0);
@@ -198,6 +228,8 @@ function WorkoutPlayerPage(props) {
   var handleDoneSetRef = useRef(null);
   var startWorkRef     = useRef(null);
   var longestHoldRef   = useRef(0);
+  var setStartRef      = useRef(0);
+  var gateTimerRef     = useRef(null);
 
   var restLevel = (workout && REST[workout.level]) || REST.beginner;
   var lvl       = (workout && LVL[workout.level])  || LVL.beginner;
@@ -283,6 +315,28 @@ function WorkoutPlayerPage(props) {
       } else { playTick(); setPrepSecs(rem); }
     }, 1000);
     return function() { clearInterval(workTimerRef.current); };
+  }, [status, exIdx, setIdx]); // eslint-disable-line
+
+  // anti-cheat: minimum genuine-effort gate before a set can be marked done
+  useEffect(function() {
+    clearInterval(gateTimerRef.current);
+    if (status !== 'set_active') return;
+    var e = exercises[exIdx];
+    var mcs = (e && e.min_complete_secs) || 0;
+    setStartRef.current = Date.now();
+    if (mcs <= 0) { setCanComplete(true); setHoldSecsLeft(0); return; }
+    setCanComplete(false);
+    setHoldSecsLeft(mcs);
+    gateTimerRef.current = setInterval(function() {
+      var left = mcs - Math.floor((Date.now() - setStartRef.current) / 1000);
+      if (left <= 0) {
+        setCanComplete(true); setHoldSecsLeft(0);
+        clearInterval(gateTimerRef.current);
+      } else {
+        setHoldSecsLeft(left);
+      }
+    }, 250);
+    return function() { clearInterval(gateTimerRef.current); };
   }, [status, exIdx, setIdx]); // eslint-disable-line
 
   // not found
@@ -371,7 +425,7 @@ function WorkoutPlayerPage(props) {
   // ════════════════════════════════════════════════════════════
   if (status === 'preview') {
     return h('div', { style:{ position:'relative', minHeight:'100dvh', background:'#03060f', overflow:'hidden' } },
-      h(AthleticBg, { lvl: lvl }),
+      h(Backdrop, { lvl: lvl, ex: exercises[0] }),
       h('div', { style:{ position:'fixed', inset:0, zIndex:1, background:overlayPreview } }),
       h('div', { style:{ position:'relative', zIndex:2, display:'flex', flexDirection:'column', minHeight:'100dvh', padding:'env(safe-area-inset-top,20px) 20px 32px' } },
         h('button', { onClick:function(){A.nav('WorkoutDetail',{id:workout.id});}, style:{ alignSelf:'flex-start', background:'rgba(255,255,255,0.07)',
@@ -509,7 +563,7 @@ function WorkoutPlayerPage(props) {
                   : REST_QUOTES[exIdx % REST_QUOTES.length];
 
     return h('div', { style:{ position:'relative', minHeight:'100dvh', background:'#03060f', overflow:'hidden' } },
-      h(AthleticBg, { lvl: lvl }),
+      h(Backdrop, { lvl: lvl, ex: nextEx }),
       h('div', { style:{ position:'fixed', inset:0, zIndex:1, background:overlayRest } }),
       StopBtn,
       showStop && h(StopConfirm, { onConfirm:handleStop, onCancel:function(){setShowStop(false);} }),
@@ -538,7 +592,7 @@ function WorkoutPlayerPage(props) {
   var isTimed = ex.kind === 'hold' || ex.kind === 'cardio';
 
   return h('div', { style:{ position:'relative', minHeight:'100dvh', background:'#03060f', overflow:'hidden' } },
-    h(AthleticBg, { lvl: lvl }),
+    h(Backdrop, { lvl: lvl, ex: ex }),
     h('div', { style:{ position:'fixed', inset:0, zIndex:1, background:overlayActive } }),
     StopBtn,
     showStop && h(StopConfirm, { onConfirm:handleStop, onCancel:function(){setShowStop(false);} }),
@@ -597,9 +651,9 @@ function WorkoutPlayerPage(props) {
               h('span', { style:{ fontSize:17, fontWeight:700, color:'rgba(255,255,255,0.38)' } }, 'reps')
             ),
 
-        ex.tip && h('div', { style:{ padding:'13px 16px', borderRadius:13, background:'rgba(255,255,255,0.04)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.07)' } },
+        (ex.coaching_cue || ex.tip) && h('div', { style:{ padding:'13px 16px', borderRadius:13, background:'rgba(255,255,255,0.04)', backdropFilter:'blur(12px)', border:'1px solid rgba(255,255,255,0.07)' } },
           h('div', { style:{ fontSize:10, fontWeight:800, color:'rgba(255,255,255,0.25)', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 } }, '💡 Form Tip'),
-          h('p',   { style:{ fontSize:13, color:'rgba(255,255,255,0.55)', lineHeight:1.55, margin:0 } }, ex.tip)
+          h('p',   { style:{ fontSize:13, color:'rgba(255,255,255,0.55)', lineHeight:1.55, margin:0 } }, ex.coaching_cue || ex.tip)
         ),
 
         ex.cricket_benefit && h('div', { style:{ padding:'10px 16px', borderRadius:11, background:'rgba(251,191,36,0.04)', border:'1px solid rgba(251,191,36,0.10)' } },
@@ -615,14 +669,31 @@ function WorkoutPlayerPage(props) {
             width:'100%', padding:'19px', border:'none', borderRadius:16, fontFamily:'inherit', fontSize:17, fontWeight:900, cursor:'pointer',
             background:'linear-gradient(135deg,#b45309,#f59e0b)', color:'#fff', boxShadow:'0 8px 28px rgba(180,83,9,0.42)',
             display:'flex', alignItems:'center', justifyContent:'center', gap:10, letterSpacing:'0.03em', marginTop:16 } }, "I'm Ready  →")
-        : h('button', { onClick:handleDoneSet, style:{
-            width:'100%', padding:'19px', border:'none', borderRadius:16, fontFamily:'inherit', fontSize:17, fontWeight:900, cursor:'pointer',
-            background:'linear-gradient(135deg,#15803d,#22c55e)', color:'#fff', boxShadow:'0 8px 28px rgba(21,128,61,0.42)',
-            display:'flex', alignItems:'center', justifyContent:'center', gap:10, letterSpacing:'0.03em', marginTop:16 } }, isTimed ? '✓  Finish Early' : '✓  Done Set')
+        : h('button', { onClick: canComplete ? handleDoneSet : function(){}, style:{
+            width:'100%', padding:'19px', border:'none', borderRadius:16, fontFamily:'inherit', fontSize:17, fontWeight:900,
+            cursor: canComplete ? 'pointer' : 'not-allowed',
+            background: canComplete ? 'linear-gradient(135deg,#15803d,#22c55e)' : 'rgba(255,255,255,0.06)',
+            color: canComplete ? '#fff' : 'rgba(255,255,255,0.35)',
+            border: canComplete ? 'none' : '1px solid rgba(255,255,255,0.10)',
+            boxShadow: canComplete ? '0 8px 28px rgba(21,128,61,0.42)' : 'none',
+            position:'relative', overflow:'hidden',
+            display:'flex', alignItems:'center', justifyContent:'center', gap:10, letterSpacing:'0.03em', marginTop:16 } },
+            !canComplete && ex.min_complete_secs && h('div', { style:{
+              position:'absolute', left:0, top:0, bottom:0,
+              width: (100 - Math.min(100, Math.max(0, (holdSecsLeft / ex.min_complete_secs) * 100))) + '%',
+              background:'rgba(34,197,94,0.18)', transition:'width 0.25s linear', zIndex:0,
+            }}),
+            h('span', { style:{ position:'relative', zIndex:1 } },
+              canComplete ? (isTimed ? '✓  Finish Early' : '✓  Done Set') : ('Hold on… ' + holdSecsLeft + 's')
+            )
+          )
     )
   );
 }
 
 window.SC_APP.WorkoutPlayerPage = WorkoutPlayerPage;
+window.SC_APP.VideoBg = VideoBg;
+window.SC_APP.Backdrop = Backdrop;
+window.SC_APP.AthleticBg = AthleticBg;
 console.log('[SC] app-workout-player v6.0 — warm-up/cool-down, get-ready prep, pleasant audio, auto-regulation');
 })();
