@@ -40,6 +40,66 @@ var CRICK_MESSAGES = [
   "Study the game as hard as you play it.",
   "Stay humble in practice. Be ruthless in matches.",
   "The nets are where legends are quietly born.",
+  // ── Extended rotation (covers a full quarter before repeating) ──
+  "Footwork first. Everything else follows.",
+  "A quiet mind hits the ball cleaner.",
+  "You don't rise to the occasion — you fall to your training.",
+  "Watch the seam. Trust the hours.",
+  "Today's extra over is tomorrow's match-winning spell.",
+  "Comfort zones don't have scoreboards.",
+  "Small fixes today, big scores tomorrow.",
+  "Train like the next ball decides everything — because one day it will.",
+  "The strike rate of effort is always 100%.",
+  "Your shadow practice is someone else's match-winning shot.",
+  "Bowlers fear batters who never skip a session.",
+  "A bad net session beats a missed one. Always show up.",
+  "Greatness is repetition nobody sees.",
+  "Your last innings is history. Your next session is the future.",
+  "Sweat now, celebrate later.",
+  "Cricket rewards patience more than power.",
+  "Every legend started with a single throwdown.",
+  "You're not behind. You're building.",
+  "The ball doesn't know your excuses.",
+  "Form is temporary. Discipline is permanent.",
+  "Win the morning, win the match.",
+  "練習 — practice — is the only translation that matters.",
+  "Today's drill is tomorrow's instinct.",
+  "The crease respects consistency, not intensity alone.",
+  "Be the player bowlers prepare extra for.",
+  "Train your weakness until it becomes your weapon.",
+  "Champions review their own footage. Start today.",
+  "A calm head wins more matches than a strong arm.",
+  "Every great over was once a nervous first ball.",
+  "Practice the shot you're scared to play.",
+  "Your competition is training right now too. Are you?",
+  "Fitness wins close matches. Don't skip the running.",
+  "The best fielders make bowlers look like heroes.",
+  "Visualise the shot before you play it.",
+  "Confidence is built one rep at a time.",
+  "Today, be 1% better than yesterday.",
+  "Pressure reveals preparation.",
+  "The nets are honest. Match days are the reward.",
+  "Don't practice until you get it right. Practice until you can't get it wrong.",
+  "Your bat speed is a habit, not a gift.",
+  "Slow and correct beats fast and sloppy.",
+  "Every session adds a brick to your innings.",
+  "The mental game starts before you walk out.",
+  "Train your eyes as hard as your hands.",
+  "A disciplined warm-up prevents a rushed apology later.",
+  "Today's reps are deposits in tomorrow's confidence bank.",
+  "You can't fake fitness on day three of a match.",
+  "The best batters make bowling look easy — because they trained it that way.",
+  "Show up even on the days you don't feel like a cricketer.",
+  "Your technique is your signature. Sign it well.",
+  "One more drill. One more rep. One more reason to believe.",
+  "The scoreboard remembers preparation, not excuses.",
+  "Stay sharp. Stay hungry. Stay in the nets.",
+  "Great innings are written in quiet practice sessions.",
+  "Your future self is counting on today's effort.",
+  "Train hard, play easy.",
+  "The crease is calling. Answer it.",
+  "Today's grind is tomorrow's highlight reel.",
+  "Be relentless about the basics.",
 ];
 
 function getTodaysCrickMessage() {
@@ -55,22 +115,95 @@ function getTodaysCrickMessage() {
 }
 A.getTodaysCrickMessage = getTodaysCrickMessage;
 
+// ── Time-of-day greeting messages ────────────────────────────────
+var CRICK_TIME_MESSAGES = {
+  morning: [
+    "Morning! Best time to groove that technique before the day gets busy.",
+    "Rise and grind — the crease is waiting.",
+    "Early reps hit different. Let's get moving.",
+  ],
+  afternoon: [
+    "Midday check-in: have you put the bat in your hand yet today?",
+    "A quick session now beats a rushed one tonight.",
+    "Afternoon slump? A few drills will wake you right up.",
+  ],
+  evening: [
+    "Evening's a great time to review today's work and plan tomorrow's.",
+    "Wind down with some mental training before bed.",
+    "Last call for today's nets — finish strong.",
+  ],
+};
+
+// ── Weekend-mode messages ────────────────────────────────────────
+var CRICK_WEEKEND_MESSAGES = [
+  "Weekend = bonus reps. Most players rest, you can pull ahead.",
+  "No school, no excuses — extra net session today?",
+  "Weekends are where gaps between players are made or closed.",
+];
+
+function getTimeOfDayMood() {
+  var hour = new Date().getHours();
+  var bucket = hour < 12 ? 'morning' : (hour < 17 ? 'afternoon' : 'evening');
+  var list = CRICK_TIME_MESSAGES[bucket];
+  var seed = new Date().getDate() + hour;
+  return { bucket: bucket, msg: list[seed % list.length] };
+}
+A.getTimeOfDayMood = getTimeOfDayMood;
+
 // ── Crick Mood (Duolingo-style engagement) ───────────────────────
 function getCrickMood() {
   var p = (A.DB && A.DB.getProgress()) || {};
   var last    = p.last_active_date || null;
   var streak  = p.current_streak   || 0;
-  var today   = new Date().toISOString().slice(0, 10);
+  var today   = new Date();
+  var todayStr = today.toISOString().slice(0, 10);
   var yest    = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+  // How many days since the user was last active (if ever)
+  var daysSince = null;
+  if (last) {
+    var lastMs = new Date(last + 'T00:00:00').getTime();
+    daysSince = Math.round((Date.now() - lastMs) / 86400000);
+  }
+
+  // Long absence — escalating "comeback" tone (3-6 days)
+  if (daysSince !== null && daysSince >= 3 && daysSince <= 6) {
+    return { mood: 'comeback_after_break', msg: "It's been " + daysSince + " days. Your spot in the nets is still open — let's get back to it." };
+  }
+  if (daysSince !== null && daysSince > 6) {
+    return { mood: 'comeback_after_break', msg: "We miss you out here. One session today and you're back on track." };
+  }
 
   if (last && last < yest) {
     return { mood: 'disappointed', msg: "I went to the nets alone yesterday... where were you?" };
   }
+
+  // Personal-best callouts
+  if (p.last_pb_at && p.last_pb_at === todayStr) {
+    return { mood: 'post_pb', msg: "New personal best today. That's the standard now — let's keep raising it." };
+  }
+
   if (streak >= 30) return { mood: 'legendary', msg: "30 days. You've become the ball." };
   if (streak >= 14) return { mood: 'fired_up',   msg: "Fourteen days straight. Legends are made this way." };
   if (streak >= 7)  return { mood: 'hot',        msg: "Seven days in a row. The crease is yours." };
-  if (streak === 0) return { mood: 'waiting',    msg: "The crease is empty. Let's change that." };
-  return { mood: 'happy', msg: getTodaysCrickMessage() };
+
+  // Near a streak milestone (1 day away from 7/14/30)
+  if (streak === 6 || streak === 13 || streak === 29) {
+    return { mood: 'near_milestone', msg: "One more session and you hit a " + (streak + 1) + "-day streak. Don't stop now." };
+  }
+
+  if (streak === 0) return { mood: 'waiting', msg: "The crease is empty. Let's change that." };
+
+  // Weekend mode (Saturday=6, Sunday=0)
+  var dow = today.getDay();
+  if (dow === 0 || dow === 6) {
+    var seed = today.getFullYear() * 1000 + today.getMonth() * 31 + today.getDate();
+    return { mood: 'weekend_mode', msg: CRICK_WEEKEND_MESSAGES[seed % CRICK_WEEKEND_MESSAGES.length] };
+  }
+
+  // Time-of-day flavoured greeting, falling back to the daily quote
+  var tod = getTimeOfDayMood();
+  return { mood: 'happy_' + tod.bucket, msg: tod.msg, fallback: getTodaysCrickMessage() };
 }
 A.getCrickMood = getCrickMood;
 
@@ -274,9 +407,13 @@ function CrickHomeCard() {
           fontSize:11, fontWeight:700, color:'#475569',
           textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4,
         }},
-          mood.mood === 'disappointed' ? '😤 Crick is disappointed'
-          : mood.mood === 'legendary'  ? '🔥 Crick is on fire'
-          : mood.mood === 'fired_up'   ? '⚡ Crick is hyped'
+          mood.mood === 'disappointed'        ? '😤 Crick is disappointed'
+          : mood.mood === 'legendary'         ? '🔥 Crick is on fire'
+          : mood.mood === 'fired_up'          ? '⚡ Crick is hyped'
+          : mood.mood === 'near_milestone'    ? '🎯 So close!'
+          : mood.mood === 'post_pb'           ? '🏆 New PB!'
+          : mood.mood === 'comeback_after_break' ? '👋 Crick missed you'
+          : mood.mood === 'weekend_mode'      ? '🌤️ Weekend grind'
           : '🏏 Crick says'
         ),
         h('div', {style:{fontSize:13, color:'#cbd5e1', lineHeight:1.45, fontStyle:'italic'}},
@@ -463,9 +600,13 @@ function CrickPage() {
         boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
       }},
         h('div', {style:{fontSize:10, fontWeight:700, color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6}},
-          mood.mood === 'disappointed' ? '😤 Disappointed'
-          : mood.mood === 'legendary'  ? '🔥 Legendary Mood'
-          : mood.mood === 'fired_up'   ? '⚡ Fired Up'
+          mood.mood === 'disappointed'        ? '😤 Disappointed'
+          : mood.mood === 'legendary'         ? '🔥 Legendary Mood'
+          : mood.mood === 'fired_up'          ? '⚡ Fired Up'
+          : mood.mood === 'near_milestone'    ? '🎯 So Close!'
+          : mood.mood === 'post_pb'           ? '🏆 New PB'
+          : mood.mood === 'comeback_after_break' ? '👋 Welcome Back'
+          : mood.mood === 'weekend_mode'      ? '🌤️ Weekend Grind'
           : '💬 Daily Message'
         ),
         h('div', {style:{fontSize:14, color:'#cbd5e1', lineHeight:1.5, fontStyle:'italic'}},
@@ -646,6 +787,103 @@ function CrickPage() {
   );
 }
 A.CrickPage = CrickPage;
+
+// ── CrickNudge — global "stay engaged" speech-bubble banner ──────
+// Shows a brief Crick message when the user returns to the tab after
+// being away, or when they're close to a milestone / haven't done
+// today's session. Frequency-capped to avoid notification fatigue —
+// at most one nudge per cooldown window.
+var CRICK_NUDGE_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+var CRICK_NUDGE_AWAY_THRESHOLD_MS = 30 * 60 * 1000; // 30 min
+
+function getCrickNudgeMessage() {
+  var p = (A.DB && A.DB.getProgress()) || {};
+  var today = new Date().toISOString().slice(0, 10);
+  var netsKey = 'crick_nets_' + today;
+  var nets = A.DB ? A.DB.get(netsKey) : null;
+  var hour = new Date().getHours();
+
+  // Streak milestone close
+  var streak = p.current_streak || 0;
+  if (streak === 6 || streak === 13 || streak === 29) {
+    return "One more session and you hit a " + (streak + 1) + "-day streak. Don't stop now!";
+  }
+  // Unclaimed nets reward sitting around
+  if (nets && !nets.claimed) {
+    return "Crick scored " + nets.runs + " runs in the nets today — don't forget to claim your XP!";
+  }
+  // Late in the day, no session yet
+  if (hour >= 18 && (!p.last_active_date || p.last_active_date !== today)) {
+    return "Still time for today's session — even a short one keeps the streak alive.";
+  }
+  // Welcome back after time away
+  return "Welcome back! Ready to pick up where you left off?";
+}
+
+function CrickNudge() {
+  var [nudge, setNudge] = useState(null);
+
+  useEffect(function() {
+    if (!A.DB) return;
+    var lastSeenKey = 'crick_nudge_last_shown';
+    var lastAwayKey = 'crick_nudge_last_active_at';
+
+    function maybeShow(reason) {
+      var now = Date.now();
+      var lastShown = A.DB.get(lastSeenKey) || 0;
+      if (now - lastShown < CRICK_NUDGE_COOLDOWN_MS) return;
+      var msg = getCrickNudgeMessage();
+      if (!msg) return;
+      A.DB.set(lastSeenKey, now);
+      setNudge({ msg: msg });
+      if (A.Emotion && A.Emotion.cheerMascot) A.Emotion.cheerMascot();
+      setTimeout(function() { setNudge(null); }, 6000);
+    }
+
+    function onVisibility() {
+      if (document.visibilityState !== 'visible') {
+        A.DB.set(lastAwayKey, Date.now());
+        return;
+      }
+      var lastActive = A.DB.get(lastAwayKey) || 0;
+      if (Date.now() - lastActive >= CRICK_NUDGE_AWAY_THRESHOLD_MS) {
+        maybeShow('return');
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibility);
+    return function() { document.removeEventListener('visibilitychange', onVisibility); };
+  }, []);
+
+  if (!nudge) return null;
+
+  return h('div', {
+    role: 'status', 'aria-live': 'polite',
+    style: {
+      position: 'fixed', left: '50%', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 78px)',
+      transform: 'translateX(-50%)', zIndex: 8500,
+      display: 'flex', alignItems: 'center', gap: 10,
+      maxWidth: 'calc(100vw - 32px)', width: 360,
+      background: 'rgba(10,15,30,0.97)', border: '1px solid rgba(74,222,128,0.3)',
+      borderRadius: 14, padding: '10px 14px',
+      boxShadow: '0 8px 28px rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)',
+    }
+  },
+    h('div', {style:{flexShrink:0}},
+      A.Crick ? h(A.Crick, {size:'sm', id:'crick-nudge'}) : h('div',{style:{fontSize:28}},'🏏')
+    ),
+    h('div', {style:{flex:1, fontSize:13, color:'#cbd5e1', lineHeight:1.4}}, nudge.msg),
+    h('button', {
+      onClick: function() { setNudge(null); },
+      'aria-label': 'Dismiss',
+      style: {
+        flexShrink:0, background:'none', border:'none', color:'#6b7280',
+        fontSize:18, lineHeight:1, cursor:'pointer', padding:4,
+      }
+    }, '×')
+  );
+}
+A.CrickNudge = CrickNudge;
 
 // ── CRICK_TIPS data — contextual tips per page ───────────────────
 A.CRICK_TIPS = {
