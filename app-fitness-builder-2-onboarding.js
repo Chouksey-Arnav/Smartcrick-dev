@@ -56,7 +56,9 @@ function TopBar({ value, onBack }) {
           h('span', { style: { fontSize: 13, fontWeight: 800, color: C.accent } }, 'Fitness Builder 2')
         ),
     value !== null && value !== undefined && h('div', {
-      style: { flex: 1, height: 5, borderRadius: 99, background: 'rgba(48,54,61,0.7)', overflow: 'hidden' }},
+      style: { flex: 1, height: 5, borderRadius: 99, background: 'rgba(255,255,255,0.06)',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }},
       h('div', { style: {
         height: '100%', width: Math.max(4, value * 100) + '%', borderRadius: 99,
         background: 'linear-gradient(90deg,#16a34a,#34d399)',
@@ -67,6 +69,8 @@ function TopBar({ value, onBack }) {
 }
 
 function Shell({ onNext, onBack, nextLabel, nextDisabled, progress, children, footerNote, nextGradient }) {
+  var pressState = useState(false);
+  var pressed = pressState[0], setPressed = pressState[1];
   return h('div', {
     style: { minHeight: '100dvh', background: C.bg, display: 'flex', flexDirection: 'column',
       padding: 'env(safe-area-inset-top,12px) 0 env(safe-area-inset-bottom,20px)',
@@ -78,15 +82,24 @@ function Shell({ onNext, onBack, nextLabel, nextDisabled, progress, children, fo
     ),
     onNext && h('div', { style: { padding: '12px 20px 0' }},
       h('button', {
-        onClick: nextDisabled ? undefined : function() { haptic(); onNext(); },
+        onClick: nextDisabled ? function(){} : function() { haptic(); onNext(); },
+        onMouseDown: function() { setPressed(true); },
+        onMouseUp: function() { setPressed(false); },
+        onMouseLeave: function() { setPressed(false); },
+        onTouchStart: function() { setPressed(true); },
+        onTouchEnd: function() { setPressed(false); },
         disabled: !!nextDisabled,
         style: {
-          width: '100%', padding: '16px', border: 'none', borderRadius: 14,
+          width: '100%', padding: '16px', border: nextDisabled ? 'none' : '1px solid rgba(255,255,255,0.18)',
+          borderRadius: 14,
           fontSize: 16, fontWeight: 800, fontFamily: 'inherit', minHeight: 54, cursor: nextDisabled ? 'not-allowed' : 'pointer',
           background: nextDisabled ? 'rgba(48,54,61,0.5)' : (nextGradient || 'linear-gradient(135deg,#16a34a,#0d9488)'),
+          backdropFilter: nextDisabled ? 'none' : 'blur(10px)',
+          WebkitBackdropFilter: nextDisabled ? 'none' : 'blur(10px)',
           color: nextDisabled ? '#374151' : '#fff',
-          boxShadow: nextDisabled ? 'none' : '0 6px 24px rgba(22,163,74,0.35)',
-          transition: 'all 0.2s',
+          boxShadow: nextDisabled ? 'none' : '0 8px 32px rgba(22,163,74,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
+          transform: pressed && !nextDisabled ? 'scale(0.98)' : 'scale(1)',
+          transition: 'transform 0.12s cubic-bezier(0.16,1,0.3,1), background 0.2s, box-shadow 0.2s',
         }
       }, nextLabel || 'Continue'),
       footerNote && h('p', { style: { fontSize: 11, color: C.faint, textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}, footerNote)
@@ -110,10 +123,12 @@ function SelectList({ options, value, onChange }) {
         style: {
           display: 'flex', alignItems: 'center', gap: 13, width: '100%',
           padding: '14px 16px', borderRadius: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          background: sel ? 'rgba(22,163,74,0.1)' : C.card,
-          border: '2px solid ' + (sel ? C.accent : C.border),
-          boxShadow: sel ? '0 0 0 3px rgba(22,163,74,0.12)' : 'none',
-          transition: 'all 0.15s', minHeight: 54, outline: 'none',
+          background: sel ? 'rgba(22,163,74,0.14)' : 'rgba(22,27,34,0.55)',
+          backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid ' + (sel ? 'rgba(52,211,153,0.5)' : 'rgba(255,255,255,0.06)'),
+          boxShadow: sel ? '0 6px 20px rgba(22,163,74,0.25), inset 0 1px 0 rgba(255,255,255,0.08)' : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+          transform: sel ? 'scale(1.005)' : 'scale(1)',
+          transition: 'all 0.18s cubic-bezier(0.16,1,0.3,1)', minHeight: 54, outline: 'none',
         }
       },
         o.emoji && h('span', { style: { fontSize: 22, lineHeight: 1, flexShrink: 0 }}, o.emoji),
@@ -147,9 +162,12 @@ function MultiSelect({ options, values, onChange, max }) {
         style: {
           display: 'flex', alignItems: 'center', gap: 13, width: '100%',
           padding: '14px 16px', borderRadius: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          background: sel ? 'rgba(22,163,74,0.1)' : C.card,
-          border: '2px solid ' + (sel ? C.accent : C.border),
-          transition: 'all 0.15s', minHeight: 52, outline: 'none',
+          background: sel ? 'rgba(22,163,74,0.14)' : 'rgba(22,27,34,0.55)',
+          backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid ' + (sel ? 'rgba(52,211,153,0.5)' : 'rgba(255,255,255,0.06)'),
+          boxShadow: sel ? '0 6px 20px rgba(22,163,74,0.25), inset 0 1px 0 rgba(255,255,255,0.08)' : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+          transform: sel ? 'scale(1.005)' : 'scale(1)',
+          transition: 'all 0.18s cubic-bezier(0.16,1,0.3,1)', minHeight: 52, outline: 'none',
         }
       },
         o.emoji && h('span', { style: { fontSize: 20, lineHeight: 1, flexShrink: 0 }}, o.emoji),
