@@ -241,6 +241,7 @@ function FitnessBuilder2Page() {
     { id:'home',     label:'Plan',    icon:'🏠' },
     { id:'library',  label:'Library', icon:'📚' },
     { id:'progress', label:'Progress',icon:'📊' },
+    { id:'notepad',  label:'Calories',icon:'📝' },
   ];
 
   return h('div', { style:{ background:C.bg, minHeight:'100dvh', maxWidth:480, margin:'0 auto' }},
@@ -279,7 +280,9 @@ function FitnessBuilder2Page() {
         onStartSession:startSession,
       }),
       tab === 'library' && !A.FB2LibraryBrowser && h('div', {style:{textAlign:'center',padding:40,color:C.sub}}, 'Library loading…'),
-      tab === 'progress' && h(ProgressTab, { log:log, plan:plan })
+      tab === 'progress' && h(ProgressTab, { log:log, plan:plan }),
+      tab === 'notepad' && A.FB2CalorieNotepad && h(A.FB2CalorieNotepad, null),
+      tab === 'notepad' && !A.FB2CalorieNotepad && h('div', {style:{textAlign:'center',padding:40,color:C.sub}}, 'Calorie Notepad loading…')
     )
   );
 }
