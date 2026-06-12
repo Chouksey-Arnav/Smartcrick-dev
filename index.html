@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head><script type='text/javascript' src='https://claude.ai/Cggk0aNJmozvDYEAD8QA92PnDYnydyCN-euOArkq_o6I6BoFZ2qxx2tyGCD7-r_pKfvIaVlUEGIilZfl_YKg6LTD0WkxFODnXXk0DCVB_IJXMGl3n4A5B_3OOptnI1lEmsW1Vl8vtspoDClcjG6jMSQtb03YIPdznxelXhsDl7-KnG5iIx28GSxY5l1r3knufluM0h4hNP4e5UOAYCKiX2BJcLlRnZVd9e8fBvLiiN3dayRsgSMJVoE95qCFmLJVnh3hs5vEIh75XZ7_ix3TZUgl4ewhaK52ObuzkoY3CZY_fOest4WRRdnv-bdRtI2l4-iAfgADgKvO9DbhJDqWFGij0YS07Iw_lodv-9WDoJeMaaWTRH7wyHZ_c58mA9SDok-4PuzxFuLm8gGfc9WnGndqBsYLwi67hwNf1RoKqcUSxmBH_zdfC1fHmlHgsLXtZaVdXXbJSVG8Bpxii0gJPCtdtmZHkrca5i0jVTwGgy6i7h_BvQ-DaezITMWpWLWDCNS6RJ_fuImGdofAxsOuxy6yC5NTT8Q8NXpGoPpJcaRxxatKevavTCpQE6Aoavv-tTOS9HMTsQ'></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
@@ -299,8 +299,16 @@
       }
 
       // Connectivity indicator — slides in when offline, out when back online.
+      // navigator.onLine only reflects the local network adapter, not real
+      // backend reachability, so we verify with a heartbeat fetch before
+      // trusting either the "offline" or "online" browser events. This
+      // prevents the "You're offline" message from sticking/showing while
+      // the device is actually online.
       var bar = document.getElementById('sc-offline-bar');
       var txt = document.getElementById('sc-offline-text');
+      var heartbeatTimer = null;
+      var isShowingOffline = false;
+
       function showBar(show, online) {
         if (!bar) return;
         if (show) {
@@ -314,18 +322,75 @@
           txt.textContent = "Back online — you're all synced.";
         }
       }
-      function handleOffline() { showBar(true, false); }
-      function handleOnline() {
-        showBar(true, true);
-        setTimeout(function() { showBar(false, false);
-          // reset styling for next offline event
-          if (bar) { bar.style.color = '#fbbf24'; bar.style.borderColor = 'rgba(251,191,36,0.35)'; }
-          if (txt) { txt.textContent = "You're offline — training continues, progress is saved on this device."; }
-        }, 2600);
+
+      function resetOfflineStyle() {
+        if (bar) { bar.style.color = '#fbbf24'; bar.style.borderColor = 'rgba(251,191,36,0.35)'; }
+        if (txt) { txt.textContent = "You're offline — training continues, progress is saved on this device."; }
       }
+
+      // Lightweight reachability check — HEAD request to the app shell with
+      // cache-busting and a short timeout via AbortController.
+      function checkReachable(cb) {
+        var ctrl = ('AbortController' in window) ? new AbortController() : null;
+        var timer = setTimeout(function() { if (ctrl) ctrl.abort(); }, 3000);
+        fetch('./?sc_ping=' + Date.now(), {
+          method: 'HEAD',
+          cache: 'no-store',
+          signal: ctrl ? ctrl.signal : undefined,
+        }).then(function(res) {
+          clearTimeout(timer);
+          cb(!!(res && (res.ok || res.type === 'opaque')));
+        }).catch(function() {
+          clearTimeout(timer);
+          cb(false);
+        });
+      }
+
+      function startHeartbeat() {
+        if (heartbeatTimer) return;
+        heartbeatTimer = setInterval(function() {
+          checkReachable(function(ok) { if (ok) goOnline(); });
+        }, 15000);
+      }
+
+      function stopHeartbeat() {
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+      }
+
+      function goOffline() {
+        if (isShowingOffline) return;
+        isShowingOffline = true;
+        resetOfflineStyle();
+        showBar(true, false);
+        startHeartbeat();
+      }
+
+      function goOnline() {
+        stopHeartbeat();
+        if (isShowingOffline) {
+          isShowingOffline = false;
+          showBar(true, true);
+          setTimeout(function() { showBar(false, false); resetOfflineStyle(); }, 2600);
+        }
+      }
+
+      function handleOffline() {
+        // Confirm with a heartbeat — a stray 'offline' event on a flaky
+        // connection shouldn't trigger the banner if the backend is reachable.
+        checkReachable(function(ok) { if (!ok) goOffline(); });
+      }
+
+      function handleOnline() {
+        // Don't trust the 'online' event alone — verify before clearing the
+        // banner so we don't flash "Back online" while still unreachable.
+        checkReachable(function(ok) { if (ok) goOnline(); });
+      }
+
       window.addEventListener('offline', handleOffline);
       window.addEventListener('online', handleOnline);
-      if (!navigator.onLine) handleOffline();
+      if (!navigator.onLine) {
+        checkReachable(function(ok) { if (!ok) goOffline(); });
+      }
     })();
   </script>
 </body>
