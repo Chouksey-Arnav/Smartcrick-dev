@@ -13,6 +13,7 @@ var K_PROFILE = 'fitness2_profile';   // UserProfile analogue
 var K_PLAN    = 'fitness2_plan';      // WorkoutPlan analogue
 var K_LOG     = 'fitness2_log';       // ExerciseSession history
 var K_SESSION = 'fitness2_session';   // Ephemeral active session (cleared on End Workout)
+var K_NUTRITION = 'fitness2_nutrition_log'; // Calorie Notepad entries
 
 // ─── DB helpers ───────────────────────────────────────────────
 function getProfile2()  { try { return DB.get(K_PROFILE) || null; } catch(e) { return null; } }
@@ -26,6 +27,41 @@ function appendLog2(entry) {
 function getSession2()  { try { return DB.get(K_SESSION) || null; } catch(e) { return null; } }
 function saveSession2(s){ try { DB.set(K_SESSION, s); } catch(e) {} }
 function clearSession2(){ try { DB.del(K_SESSION); } catch(e) {} }
+
+// ─── Calorie Notepad helpers ───────────────────────────────────
+function getNutritionLog2() { try { return DB.get(K_NUTRITION) || []; } catch(e) { return []; } }
+function addNutritionEntry2(entry) {
+  try {
+    var log = getNutritionLog2();
+    var withMeta = Object.assign({
+      id: 'nut_' + Date.now() + '_' + Math.round(Math.random()*1e6),
+      date: new Date().toISOString(),
+    }, entry);
+    log.push(withMeta);
+    DB.set(K_NUTRITION, log.slice(-500));
+    return withMeta;
+  } catch(e) { return null; }
+}
+function removeNutritionEntry2(id) {
+  try {
+    var log = getNutritionLog2().filter(function(e){ return e.id !== id; });
+    DB.set(K_NUTRITION, log);
+  } catch(e) {}
+}
+function getNutritionTotalsToday2() {
+  var today = new Date().toDateString();
+  var log = getNutritionLog2().filter(function(e) {
+    return new Date(e.date).toDateString() === today;
+  });
+  return log.reduce(function(t, e) {
+    t.calories += e.calories || 0;
+    t.protein  += e.protein  || 0;
+    t.carbs    += e.carbs    || 0;
+    t.fat      += e.fat      || 0;
+    t.count++;
+    return t;
+  }, { calories:0, protein:0, carbs:0, fat:0, count:0 });
+}
 
 // ─── Option Constants ─────────────────────────────────────────
 var FB2_MOTIVATIONS = [
@@ -188,6 +224,9 @@ A.FB2 = {
   getPlan2: getPlan2, savePlan2: savePlan2,
   getLog2: getLog2, appendLog2: appendLog2,
   getSession2: getSession2, saveSession2: saveSession2, clearSession2: clearSession2,
+  K_NUTRITION: K_NUTRITION,
+  getNutritionLog2: getNutritionLog2, addNutritionEntry2: addNutritionEntry2,
+  removeNutritionEntry2: removeNutritionEntry2, getNutritionTotalsToday2: getNutritionTotalsToday2,
   FB2_MOTIVATIONS: FB2_MOTIVATIONS, FB2_GOALS: FB2_GOALS, FB2_LEVELS: FB2_LEVELS,
   FB2_BODY_FOCUS: FB2_BODY_FOCUS, FB2_PATHS: FB2_PATHS,
   FB2_SCHEDULE_OPTIONS: FB2_SCHEDULE_OPTIONS, FB2_DURATION_OPTIONS: FB2_DURATION_OPTIONS,
