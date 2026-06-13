@@ -11,10 +11,10 @@
 // reloads later ("I updated the repo but nothing changed"). Network-first
 // fixes that class of bug for good without sacrificing offline support.
 // ================================================================
-const CACHE_V       = 'sc-v9';
-const CDN_CACHE     = 'sc-cdn-v9';
-const RUNTIME_CACHE = 'sc-runtime-v9';
-const CACHE_VERSION = '9.0.0';
+const CACHE_V       = 'sc-v10';
+const CDN_CACHE     = 'sc-cdn-v10';
+const RUNTIME_CACHE = 'sc-runtime-v10';
+const CACHE_VERSION = '10.0.0';
 
 // ── All same-origin app files (mirrors index.html script order) ──
 const APP_SHELL = [
@@ -22,6 +22,8 @@ const APP_SHELL = [
   '/index.html',
   '/manifest.json',
   '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
   // Styles
   '/styles.css',
   '/styles-patch.css',
@@ -69,6 +71,7 @@ const APP_SHELL = [
   '/app-timer.js',
   // Fitness Builder 2 (Beta)
   '/app-fitness-builder-2-data.js',
+  '/app-fitness-builder-2-calorie-notepad.js',
   '/app-fitness-builder-2-onboarding.js',
   '/app-fitness-builder-2-library.js',
   '/app-fitness-builder-2-session.js',
@@ -237,7 +240,7 @@ self.addEventListener('fetch', function(event) {
   }
 
   // ── YouTube thumbnails: cache-first (works offline once seen) ─
-  if (url.hostname === 'img.youtube.com' || url.hostname === 'i.ytimg.com' || url.hostname === 'fav.farm') {
+  if (url.hostname === 'img.youtube.com' || url.hostname === 'i.ytimg.com') {
     event.respondWith(
       caches.open(RUNTIME_CACHE).then(function(cache) {
         return cache.match(req).then(function(cached) {
