@@ -44,7 +44,7 @@ function EarlyStartModal({ levelLabel, pathTitle, onConfirm, onCancel }) {
 }
 
 // ── Plan Hero Card ────────────────────────────────────────────────
-function PlanHeroCard({ plan, path, lv, totalActivities, doneActivities, user }) {
+function PlanHeroCard({ plan, path, lv, totalActivities, doneActivities, user, weekCount }) {
   var pct = totalActivities ? Math.round(doneActivities / totalActivities * 100) : 0;
   var R = 32, CIRC = 2 * Math.PI * R;
   var name = user && (user.name||'').split(' ')[0];
@@ -76,7 +76,7 @@ function PlanHeroCard({ plan, path, lv, totalActivities, doneActivities, user })
         )
       ),
       h('div', { style:{ flex:1,minWidth:0 } },
-        h('div', { style:{ fontSize:11,color:path.accent,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4 } }, 'Your 12-Week Journey'),
+        h('div', { style:{ fontSize:11,color:path.accent,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4 } }, 'Your '+(weekCount||5)+'-Week Journey'),
         h('div', { style:{ fontSize:15,fontWeight:900,color:'#f0fdf4',lineHeight:1.3,marginBottom:6 } }, plan.name || lv.label),
         h('div', { style:{ fontSize:11.5,color:'#64748b' } }, doneActivities + ' of ' + totalActivities + ' activities complete'),
         name && h('div', { style:{ fontSize:11,color:path.accent,fontWeight:600,marginTop:3 } }, '👤 ' + name + '\'s personalised plan')
@@ -116,16 +116,6 @@ function ActivityRow({ act, actIdx, weekIdx, dayIdx, pathId, levelId, planProgre
   var typeColors = { drill:'#3b82f6', fitness:'#ec4899', mental:'#8b5cf6' };
   var typeIcons  = { drill:'bat', fitness:'dumbbell', mental:'brain' };
   var color = typeColors[act.type] || '#64748b';
-
-  function handleComplete(e) {
-    e.stopPropagation();
-    if (done) return;
-    haptic('success');
-    setPlanActivityDone(pathId, levelId, key);
-    if (onComplete) onComplete(key);
-    // Award XP for manual completion
-    try { awardXP(act.xp || 20, 10, 'plan_activity'); } catch(e2) {}
-  }
 
   function handleStart(e) {
     e.stopPropagation();
@@ -170,12 +160,12 @@ function ActivityRow({ act, actIdx, weekIdx, dayIdx, pathId, levelId, planProgre
       onClick: handleStart,
       style:{ padding:'5px 10px',background:color+'15',border:'1px solid '+color+'35',borderRadius:8,color:color,fontSize:11,fontWeight:800,cursor:'pointer',fontFamily:'inherit',flexShrink:0,whiteSpace:'nowrap' }
     }, 'Start →'),
-    // Completion checkbox
-    h('button', {
-      onClick: handleComplete,
-      'aria-label': done ? 'Completed' : 'Mark complete',
+    // Completion status — only flips when the activity is genuinely completed
+    h('div', {
+      'aria-label': done ? 'Completed' : 'Not yet completed',
+      title: done ? 'Completed' : 'Complete this in the app to check it off automatically',
       style:{
-        width:28,height:28,borderRadius:'50%',flexShrink:0,cursor:done?'default':'pointer',
+        width:28,height:28,borderRadius:'50%',flexShrink:0,
         background: done ? '#10b981' : 'transparent',
         border:'2px solid '+(done ? '#10b981' : 'rgba(71,85,105,0.8)'),
         display:'flex',alignItems:'center',justifyContent:'center',
@@ -268,7 +258,7 @@ var PHASE_ICONS = {
   'Pro Standard':'flame', 'Elite Selection':'crown',
 };
 
-function PhaseCard({ week, weekIdx, pathId, levelId, planProgress, onActivityComplete, pathAccent }) {
+function PhaseCard({ week, weekIdx, pathId, levelId, planProgress, onActivityComplete, pathAccent, onAddToSchedule, added }) {
   var [open, setOpen] = useState(weekIdx === 0);
   var phaseColor = PHASE_COLORS[week.phase] || pathAccent || '#3b82f6';
   var phaseIcon  = PHASE_ICONS[week.phase] || 'layers';
@@ -319,6 +309,20 @@ function PhaseCard({ week, weekIdx, pathId, levelId, planProgress, onActivityCom
     ),
     // Days expanded
     open && h('div', { style:{ padding:'10px 12px 14px',borderTop:'1px solid rgba(51,65,85,0.3)',display:'flex',flexDirection:'column',gap:8 } },
+      onAddToSchedule && h('button', {
+        onClick:function(e){ e.stopPropagation(); onAddToSchedule(); },
+        disabled: added,
+        style:{
+          display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'9px',borderRadius:10,
+          background: added ? 'rgba(16,185,129,0.08)' : phaseColor+'15',
+          border:'1px solid '+(added ? 'rgba(16,185,129,0.35)' : phaseColor+'35'),
+          color: added ? '#10b981' : phaseColor,
+          fontSize:12,fontWeight:800,cursor:added?'default':'pointer',fontFamily:'inherit',
+        }
+      },
+        h(Icon, { n: added?'check':'calendar', cls:'w-4 h-4' }),
+        added ? 'Added to Schedule ✓' : 'Add Week to Schedule'
+      ),
       week.days.map(function(day, di) {
         return h(DayCard, {
           key:di, day:day, dayIdx:di, weekIdx:weekIdx,
@@ -364,17 +368,42 @@ function exportPlanToICal(plan, planName) {
 
 // ── Main Page ─────────────────────────────────────────────────────
 function SkillPathsPage() {
-  const [pathId, setPathId] = useState(null);
-  const [levelId, setLevelId] = useState(null);
+  const [pathId, setPathId] = useState(function() {
+    var active = DB.getActiveSkillPath ? DB.getActiveSkillPath() : null;
+    return active ? active.pathId : null;
+  });
+  const [levelId, setLevelId] = useState(function() {
+    var active = DB.getActiveSkillPath ? DB.getActiveSkillPath() : null;
+    return active ? active.levelId : null;
+  });
   const [weekPlan, setWeekPlan] = useState(null);
   const [personalPlan, setPersonalPlan] = useState(null);
   const [earlyStartModal, setEarlyStartModal] = useState(null);
   const [planProgress, setPlanProgress] = useState({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [toast, setToast] = useState('');
   const user = DB.getUser ? DB.getUser() : null;
 
   const progress = DB.getProgress();
   const skillProg = progress.skill_path_progress || {};
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(function(){ setToast(''); }, 2500);
+  }
+
+  // Resume an active path/level on mount (fixes "restart" bug) — regenerate
+  // the plan locally since weekPlan/personalPlan aren't persisted.
+  useEffect(function() {
+    if (pathId && levelId && !weekPlan) {
+      var p = SKILL_PATHS.find(function(pp){ return pp.id===pathId; });
+      var lv2 = p && p.levels.find(function(l){ return l.id===levelId; });
+      if (!p || !lv2) return;
+      var pp3 = generatePersonalizedPlan && user ? (generatePersonalizedPlan(Object.assign({ recommendedPath: pathId }, user)) || null) : null;
+      var wp = pp3 ? pp3.weeks : generateWeekPlan(pathId, levelId);
+      setWeekPlan(wp); setPersonalPlan(pp3);
+    }
+  }, [pathId, levelId]);
 
   // Reload plan progress when pathId/levelId changes
   useEffect(function() {
@@ -387,8 +416,31 @@ function SkillPathsPage() {
   useEffect(function() {
     function onAutoComplete(e) {
       setRefreshKey(function(k){ return k + 1; });
+      var detail = e.detail || {};
+      var refId = detail.ref_id;
+      // Real-completion accountability: only check off the matching plan
+      // activity if the user actually started it from this plan.
+      try {
+        var raw = sessionStorage.getItem('sc_plan_pending');
+        if (raw) {
+          var pending = JSON.parse(raw);
+          if (pending && pending.ref_id === refId && pending.type === detail.type
+              && pending.planKey === planKey(pathId, levelId)) {
+            setPlanActivityDone(pathId, levelId, pending.actKey);
+            // Look up the activity's real XP value from the current plan
+            var m = pending.actKey.match(/^w(\d+)_d(\d+)_a(\d+)$/);
+            if (m && weekPlan) {
+              var wi = +m[1], di = +m[2], ai = +m[3];
+              var wk = weekPlan[wi], dy = wk && wk.days[di];
+              var act = dy && dy.activities && dy.activities[ai];
+              if (act) { try { awardXP(act.xp || 20, 0, 'plan_activity'); } catch(e2) {} }
+            }
+            handleActivityComplete(pending.actKey);
+            sessionStorage.removeItem('sc_plan_pending');
+          }
+        }
+      } catch(pe) {}
       // Fire sparkle on the matching activity row
-      var refId = e.detail && e.detail.ref_id;
       if (refId) {
         setTimeout(function() {
           var el = document.querySelector('[data-ref-id="'+refId+'"]');
@@ -401,7 +453,7 @@ function SkillPathsPage() {
     window.addEventListener('sc_plan_autocomplete', onAutoComplete);
     window.addEventListener('sc_update', function(){ setRefreshKey(function(k){ return k + 1; }); });
     return function() { window.removeEventListener('sc_plan_autocomplete', onAutoComplete); };
-  }, []);
+  }, [pathId, levelId, weekPlan]);
 
   function handleActivityComplete(key) {
     setPlanProgress(function(prev) {
@@ -428,34 +480,42 @@ function SkillPathsPage() {
     }
   }
 
-  function importToSchedule(plan) {
+  function addedWeekKey(weekIdx) { return 'sc_schedule_added_'+pathId+'_'+levelId+'_'+weekIdx; }
+  function isWeekAdded(weekIdx) {
+    try { return localStorage.getItem(addedWeekKey(weekIdx)) === '1'; } catch(e) { return false; }
+  }
+  function importWeekToSchedule(week, weekIdx) {
     haptic('medium');
     var monday = new Date();
     monday.setHours(0,0,0,0);
     var day = monday.getDay();
     monday.setDate(monday.getDate() + (day===0?-6:1-day));
-    var added = 0;
-    plan.forEach(function(week) {
-      if (week.week !== 1) return;
-      week.days.forEach(function(d) {
-        if (d.isRest) return;
-        var dd = addDays(monday, d.day-1);
-        var ds = dateStr(dd);
-        (d.activities||[]).forEach(function(act,i) {
-          DB.addSession({
-            id:'sch_'+Date.now()+'_'+d.day+'_'+i,
-            date:ds, time:i===0?'07:00':i===1?'17:00':'19:00',
-            type:act.type, title:act.title, ref_id:act.ref_id||act.id||null,
-            duration_minutes:parseInt(act.duration)||20, xp_value:act.xp,
-            status:'pending', notes:'From Skill Path',
-            color:(SCHED_TYPES&&SCHED_TYPES[act.type])?SCHED_TYPES[act.type].color:'#64748b'
-          });
-          added++;
+    monday = addDays(monday, weekIdx*7);
+    var added = 0, skipped = 0;
+    week.days.forEach(function(d) {
+      if (d.isRest) return;
+      var dd = addDays(monday, d.day-1);
+      var ds = dateStr(dd);
+      var existing = DB.getSessionsForDate(ds);
+      (d.activities||[]).forEach(function(act,i) {
+        var dup = act.ref_id && existing.some(function(s){ return s.ref_id===act.ref_id; });
+        if (dup) { skipped++; return; }
+        DB.addSession({
+          id:'sch_'+Date.now()+'_'+weekIdx+'_'+d.day+'_'+i,
+          date:ds, time:i===0?'07:00':i===1?'17:00':'19:00',
+          type:act.type, title:act.title, ref_id:act.ref_id||act.id||null,
+          duration_minutes:parseInt(act.duration)||20, xp_value:act.xp,
+          status:'pending', notes:'From Skill Path — '+week.phase,
+          color:(SCHED_TYPES&&SCHED_TYPES[act.type])?SCHED_TYPES[act.type].color:'#64748b'
         });
+        added++;
       });
     });
+    try { localStorage.setItem(addedWeekKey(weekIdx), '1'); } catch(e) {}
     window.dispatchEvent(new CustomEvent('sc_update'));
-    alert('✅ '+added+' sessions added to this week\'s schedule!');
+    setRefreshKey(function(k){ return k + 1; });
+    if (added) showToast('✅ '+week.phase+' added to your Schedule ('+added+' session'+(added===1?'':'s')+')');
+    else showToast('Already in your Schedule'+(skipped?' ('+skipped+' session'+(skipped===1?'':'s')+')':''));
   }
 
   // ── PATHS LIST ───────────────────────────────────────────────────
@@ -525,6 +585,7 @@ function SkillPathsPage() {
         setWeekPlan(wp);
         setPersonalPlan(pp);
         setEarlyStartModal(null);
+        DB.setActiveSkillPath(path.id, lv.id);
       },
       onCancel: function() { setEarlyStartModal(null); }
     }),
@@ -546,6 +607,7 @@ function SkillPathsPage() {
               var pp3 = generatePersonalizedPlan && user ? (generatePersonalizedPlan(Object.assign({ recommendedPath: path.id }, user)) || null) : null;
               var wp = pp3 ? pp3.weeks : generateWeekPlan(path.id, lv.id);
               setLevelId(lv.id); setWeekPlan(wp); setPersonalPlan(pp3);
+              DB.setActiveSkillPath(path.id, lv.id);
             },
             style:{ display:'flex',alignItems:'center',gap:14,padding:'16px',cursor:(unlocked||done)?'pointer':'default',background:'transparent',border:'none',textAlign:'left',width:'100%',fontFamily:'inherit' }
           },
@@ -598,40 +660,39 @@ function SkillPathsPage() {
     h(PageHeader, { title:plan.name||lv.label, subtitle:path.title, gradient:grad, onBack:function(){ setLevelId(null); } }),
 
     // Hero card
-    h(PlanHeroCard, { plan:plan, path:path, lv:lv, totalActivities:totalActs, doneActivities:doneActs, user:user }),
+    h(PlanHeroCard, { plan:plan, path:path, lv:lv, totalActivities:totalActs, doneActivities:doneActs, user:user, weekCount:weekPlan.length }),
 
     // Promise card
     plan.promise && h(PlanPromiseCard, { promise:plan.promise, accent:path.accent }),
 
+    // All-plan complete banner (automatic — not a manual "Done" button)
+    totalActs > 0 && doneActs === totalActs && h('div', {
+      style:{ margin:'0 16px 16px',padding:'14px 16px',borderRadius:14,background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.35)',display:'flex',alignItems:'center',gap:10 }
+    },
+      h(Icon, { n:'circleCheck', cls:'w-5 h-5', style:{ color:'#10b981',flexShrink:0 } }),
+      h('div', { style:{ flex:1 } },
+        h('div', { style:{ fontSize:13,fontWeight:900,color:'#10b981' } }, 'Level Complete! 🎉'),
+        h('div', { style:{ fontSize:11.5,color:'#94a3b8',marginTop:2 } }, 'Every activity in this plan is done — great work.')
+      )
+    ),
+
     // Action buttons
     h('div', { style:{ display:'flex',gap:8,padding:'0 16px 16px' } },
       h('button', {
-        onClick:function(){ importToSchedule(weekPlan); },
-        style:{ flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px',borderRadius:11,background:'linear-gradient(135deg,#0f766e,#0d9488)',border:'none',color:'#fff',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit' }
+        onClick:function(){ haptic('medium'); exportPlanToICal({ weeks:weekPlan }, plan.name); showToast('📅 Plan exported — check your downloads'); },
+        style:{ flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px',borderRadius:11,background:'rgba(22,27,34,0.9)',border:'1px solid '+path.accent+'40',color:path.accent,fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit' }
       },
-        h(Icon, { n:'calendar', cls:'w-4 h-4' }), 'Add Week 1 to Schedule'
-      ),
-      h('button', {
-        onClick:function(){ haptic('medium'); exportPlanToICal({ weeks:weekPlan }, plan.name); },
-        style:{ display:'flex',alignItems:'center',justifyContent:'center',gap:5,padding:'11px 14px',borderRadius:11,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(51,65,85,0.5)',color:'#94a3b8',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit' }
-      },
-        '📅 Export'
+        h(Icon, { n:'calendar', cls:'w-4 h-4' }), 'Export Plan'
       ),
       h('button', {
         onClick:function(){
-          haptic('badge');
-          var p2 = DB.getProgress();
-          if (!p2.skill_path_progress) p2.skill_path_progress = {};
-          if (!p2.skill_path_progress[path.id]) p2.skill_path_progress[path.id] = {};
-          p2.skill_path_progress[path.id][levelId] = true;
-          DB.saveProgress(p2);
-          awardXP(lv.xpPerDay*5, 30, 'skill_path');
-          try { if (window.SC_APP.fireConfetti) window.SC_APP.fireConfetti(); } catch(e) {}
-          setLevelId(null);
+          haptic('light');
+          DB.clearActiveSkillPath();
+          setPathId(null); setLevelId(null); setWeekPlan(null); setPersonalPlan(null);
         },
-        style:{ display:'flex',alignItems:'center',gap:5,padding:'11px 14px',borderRadius:11,background:'rgba(22,27,34,0.9)',border:'1px solid rgba(51,65,85,0.5)',color:'#94a3b8',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit' }
+        style:{ display:'flex',alignItems:'center',gap:6,padding:'11px 16px',borderRadius:11,background:'transparent',border:'1px solid rgba(248,113,113,0.35)',color:'#f87171',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit' }
       },
-        h(Icon, { n:'check', cls:'w-4 h-4' }), 'Done'
+        h(Icon, { n:'rotateCcw', cls:'w-4 h-4' }), 'Exit Skill Path'
       )
     ),
 
@@ -644,9 +705,14 @@ function SkillPathsPage() {
           planProgress:planProgress,
           onActivityComplete:handleActivityComplete,
           pathAccent:path.accent,
+          onAddToSchedule:function(){ importWeekToSchedule(week, wi); },
+          added:isWeekAdded(wi),
         });
       })
-    )
+    ),
+
+    // Toast
+    toast && h('div', { role:'status','aria-live':'polite', style:{ position:'fixed', bottom:90, left:16, right:16, zIndex:90, background:'#161b22', border:'1px solid '+path.accent+'50', color:'#f0fdf4', padding:'12px 18px', borderRadius:10, fontWeight:700, fontSize:13, textAlign:'center', boxShadow:'0 6px 24px rgba(0,0,0,0.5)' } }, toast)
   );
 }
 
