@@ -88,10 +88,11 @@ var FB2_LEVELS = [
 ];
 
 var FB2_BODY_FOCUS = [
-  { id: 'upper',  emoji: '💪', label: 'Upper Body',             sub: 'Chest, back, shoulders, arms' },
-  { id: 'core',   emoji: '🎯', label: 'Core & Stability',       sub: 'Abs, obliques, lower back' },
-  { id: 'lower',  emoji: '🦵', label: 'Lower Body & Power',     sub: 'Quads, hamstrings, glutes, calves' },
-  { id: 'cardio', emoji: '💨', label: 'Conditioning & Cardio',  sub: 'Stamina, VO2, match endurance' },
+  { id: 'upper',    emoji: '💪', label: 'Upper Body',             sub: 'Chest, back, shoulders, arms' },
+  { id: 'core',     emoji: '🎯', label: 'Core & Stability',       sub: 'Abs, obliques, lower back' },
+  { id: 'lower',    emoji: '🦵', label: 'Lower Body & Power',     sub: 'Quads, hamstrings, glutes, calves' },
+  { id: 'cardio',   emoji: '💨', label: 'Conditioning & Cardio',  sub: 'Stamina, VO2, match endurance' },
+  { id: 'mobility', emoji: '🧘', label: 'Mobility & Recovery',    sub: 'Stretching, flexibility, injury prevention' },
 ];
 
 var FB2_PATHS = [
@@ -157,12 +158,18 @@ function generateFB2Plan(profile) {
     upper:  ['chest', 'back', 'shoulders', 'arms', 'triceps', 'biceps'],
     core:   ['core', 'abs'],
     lower:  ['legs', 'glutes', 'quads', 'hamstrings'],
-    cardio: ['conditioning', 'cardio'],
   };
-  var targetMuscles = [];
+  var focusCategoryMap = {
+    cardio:   ['cardio'],
+    mobility: ['mobility'],
+  };
+  var targetMuscles = [], targetCategories = [];
   focus.forEach(function(f) {
     (focusMuscleMap[f] || []).forEach(function(m) {
       if (targetMuscles.indexOf(m) === -1) targetMuscles.push(m);
+    });
+    (focusCategoryMap[f] || []).forEach(function(c) {
+      if (targetCategories.indexOf(c) === -1) targetCategories.push(c);
     });
   });
 
@@ -171,7 +178,9 @@ function generateFB2Plan(profile) {
   var candidates = exercises.filter(function(e) {
     var eIdx = levelOrder.indexOf(e.difficulty);
     var levelOk = eIdx <= levelIdx + 1; // include one level above
-    var muscleOk = !targetMuscles.length || targetMuscles.indexOf(e.muscle_primary) !== -1;
+    var muscleOk = (!targetMuscles.length && !targetCategories.length) ||
+                   targetMuscles.indexOf(e.muscle_primary) !== -1 ||
+                   targetCategories.indexOf(e.category) !== -1;
     return levelOk && muscleOk;
   });
 
