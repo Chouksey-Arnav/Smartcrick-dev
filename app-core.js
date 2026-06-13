@@ -390,6 +390,22 @@ const DB = {
     return Object.assign({ drills: 3, xp: 150, streakGoal: 7 }, this.get('daily_targets') || {});
   },
   saveDailyTargets: function(v) { this.set('daily_targets', v); },
+
+  // ── Active Skill Path (resume on return) ──────────────────────
+  getActiveSkillPath: function() { return this.get('active_skill_path') || null; },
+  setActiveSkillPath: function(pathId, levelId) { this.set('active_skill_path', { pathId: pathId, levelId: levelId }); },
+  clearActiveSkillPath: function() { this.del('active_skill_path'); },
+
+  // ── Workout completion → auto-complete plan/schedule sessions ──
+  logWorkoutComplete: function(workoutId) {
+    try {
+      var today = new Date().toISOString().slice(0,10);
+      var sch = this.getSchedule();
+      var pending = (sch.sessions||[]).filter(function(s){ return s.date===today && s.ref_id===workoutId && s.status==='pending'; });
+      pending.forEach(function(s){ DB.updateSession(s.id, { status:'complete' }); });
+      if (pending.length) window.dispatchEvent(new CustomEvent('sc_plan_autocomplete', { detail:{ type:'fitness', ref_id:workoutId } }));
+    } catch(e) {}
+  },
 };
 A.DB = DB;
 
