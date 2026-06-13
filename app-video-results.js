@@ -114,19 +114,74 @@ function ICCBadge({ iccCheck }) {
   var status = iccCheck.status;
   var color  = iccCheck.color;
   var angle  = iccCheck.angle;
+
+  if (status === 'inconclusive' || status === 'not_analyzed') {
+    var reasonText = {
+      'no-delivery-detected': 'No bowling delivery could be confidently identified in this clip.',
+      'low-quality': 'Visibility/confidence near the release point was too low for a reliable reading.',
+      'camera-not-side-on': 'A side-on camera angle is required for the elbow-extension check.',
+    }[iccCheck.reason] || 'A bowling delivery could not be confidently analysed for this clip.';
+    var title = status === 'not_analyzed' ? 'NOT ANALYSED' : 'INCONCLUSIVE';
+
+    return h('div', { style: { borderRadius: 10, border: '1px solid ' + color, background: 'rgba(13,17,23,0.8)',
+      padding: '12px 16px', marginTop: 16 } },
+      h('div', { style: { fontSize: 11, fontWeight: 700, color: color, letterSpacing: '0.06em', marginBottom: 4 } },
+        'ICC ACTION COMPLIANCE — BioTrack™'),
+      h('div', { style: { fontSize: 15, fontWeight: 800, color: color, marginBottom: 4 } }, 'ICC CHECK ' + title),
+      h('div', { style: { fontSize: 12, color: '#8b949e', lineHeight: 1.5 } }, reasonText + ' Re-record side-on with the full run-up through follow-through clearly visible for a verdict.')
+    );
+  }
+
   var labels = { legal: 'LEGAL ACTION ✓', borderline: 'BORDERLINE ⚠', illegal: 'ILLEGAL ACTION ✗' };
   var descs  = {
-    legal: 'Elbow extension ' + angle + '° — within ICC 15° limit. Action is fully compliant.',
-    borderline: 'Elbow extension ' + angle + '° — approaching ICC 15° limit. Remedial coaching recommended.',
-    illegal: 'Elbow extension ' + angle + '° — exceeds ICC 15° limit. Immediate corrective work required.',
+    legal: 'Elbow extension ~' + angle + '° — within ICC 15° limit. Action is fully compliant.',
+    borderline: 'Elbow extension ~' + angle + '° — approaching ICC 15° limit. Remedial coaching recommended.',
+    illegal: 'Elbow extension ~' + angle + '° — exceeds ICC 15° limit. Corrective work recommended.',
   };
+  var deliveryNote = (iccCheck.totalDeliveries && iccCheck.totalDeliveries > 1)
+    ? ' (worst of ' + iccCheck.totalDeliveries + ' deliveries detected — delivery ' + iccCheck.deliveryIndex + ')'
+    : '';
 
   return h('div', { style: { borderRadius: 10, border: '1px solid ' + color, background: 'rgba(13,17,23,0.8)',
     padding: '12px 16px', marginTop: 16 } },
     h('div', { style: { fontSize: 11, fontWeight: 700, color: color, letterSpacing: '0.06em', marginBottom: 4 } },
-      'ICC ACTION COMPLIANCE — BioTrack™ VERIFIED'),
-    h('div', { style: { fontSize: 15, fontWeight: 800, color: color, marginBottom: 4 } }, labels[status]),
-    h('div', { style: { fontSize: 12, color: '#8b949e', lineHeight: 1.5 } }, descs[status])
+      'ICC ACTION COMPLIANCE — BioTrack™ ESTIMATE'),
+    h('div', { style: { fontSize: 15, fontWeight: 800, color: color, marginBottom: 4 } }, labels[status] + deliveryNote),
+    h('div', { style: { fontSize: 12, color: '#8b949e', lineHeight: 1.5 } }, descs[status]),
+    iccCheck.disclaimer && h('div', { style: { fontSize: 11, color: '#6b7280', lineHeight: 1.5, marginTop: 6, fontStyle: 'italic' } }, iccCheck.disclaimer)
+  );
+}
+
+// ── Per-delivery breakdown (bowling, multiple deliveries detected) ─
+function DeliveryBreakdown({ deliveries }) {
+  if (!deliveries || deliveries.length < 2) return null;
+  return h('div', { style: { marginTop: 12, borderRadius: 10, border: '1px solid rgba(48,54,61,0.7)',
+    background: 'rgba(13,17,23,0.6)', padding: '10px 14px' } },
+    h('div', { style: { fontSize: 11, fontWeight: 700, color: '#8b949e', letterSpacing: '0.06em', marginBottom: 8 } },
+      deliveries.length + ' DELIVERIES DETECTED'),
+    deliveries.map(function(d, i) {
+      var hasReading = d.elbowExtension !== null && d.elbowExtension !== undefined;
+      var qualifies = hasReading && d.cleanFrames >= 3 && d.avgConfidence >= 0.55;
+      var text = hasReading
+        ? '~' + Math.round(d.elbowExtension * 10) / 10 + '°' + (qualifies ? '' : ' (low confidence)')
+        : 'no reading';
+      return h('div', { key: i, style: { display: 'flex', justifyContent: 'space-between',
+        fontSize: 12, color: '#c9d1d9', padding: '4px 0' } },
+        h('span', null, 'Delivery ' + (i + 1)),
+        h('span', { style: { color: qualifies ? '#c9d1d9' : '#6b7280' } }, text)
+      );
+    })
+  );
+}
+
+// ── Session-level warnings banner ──────────────────────────────────
+function WarningsBanner({ warnings }) {
+  if (!warnings || !warnings.length) return null;
+  return h('div', { style: { marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 } },
+    warnings.map(function(w, i) {
+      return h('div', { key: i, style: { borderRadius: 8, border: '1px solid rgba(245,158,11,0.3)',
+        background: 'rgba(245,158,11,0.08)', padding: '10px 14px', fontSize: 12, color: '#fbbf24', lineHeight: 1.5 } }, w);
+    })
   );
 }
 
@@ -439,18 +494,27 @@ function generatePDFReport(session) {
   if (session.iccCheck) {
     y += 4;
     var ic = session.iccCheck;
-    var icColor = ic.status === 'legal' ? [22,163,74] : ic.status === 'borderline' ? [245,158,11] : [220,38,38];
+    var isConclusive = ic.status === 'legal' || ic.status === 'borderline' || ic.status === 'illegal';
+    var icColor = ic.status === 'legal' ? [22,163,74] : ic.status === 'borderline' ? [245,158,11] : ic.status === 'illegal' ? [220,38,38] : [148,163,184];
     doc.setFillColor(22, 27, 34);
     doc.setDrawColor.apply(doc, icColor);
     doc.roundedRect(margin, y, w - margin*2, 18, 3, 3, 'FD');
     doc.setTextColor.apply(doc, icColor);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('ICC Legal Action Assessment: ' + ic.status.toUpperCase() + ' (' + ic.angle + '°)', margin + 5, y + 7);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(139, 148, 158);
-    doc.text('Elbow extension angle: ' + ic.angle + '°  |  ICC legal limit: 15°', margin + 5, y + 13);
+    if (isConclusive) {
+      doc.text('ICC Action Estimate: ' + ic.status.toUpperCase() + ' (~' + ic.angle + '°)', margin + 5, y + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(139, 148, 158);
+      doc.text('Estimated elbow extension: ~' + ic.angle + '°  |  ICC limit: 15°  |  2D video estimate, not an official assessment', margin + 5, y + 13);
+    } else {
+      doc.text('ICC Action Check: ' + (ic.status === 'not_analyzed' ? 'NOT ANALYSED' : 'INCONCLUSIVE'), margin + 5, y + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(139, 148, 158);
+      doc.text('Could not confidently analyse a delivery — re-record side-on with full action visible.', margin + 5, y + 13);
+    }
     y += 24;
   }
 
@@ -561,8 +625,12 @@ function VideoResultsPage({ session, videoUrl, onRetry, onClose }) {
         })
       ),
 
+      // Warnings (low confidence, no delivery detected, demo mode, etc.)
+      h(WarningsBanner, { warnings: s.warnings }),
+
       // ICC Badge for bowling
       h(ICCBadge, { iccCheck: s.iccCheck }),
+      h(DeliveryBreakdown, { deliveries: s.deliveries }),
 
       // Phase breakdown
       h(PhaseBar, { subScores: s.subScores, mode: s.mode }),
