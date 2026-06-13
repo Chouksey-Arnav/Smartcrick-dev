@@ -74,9 +74,10 @@ function HomeTab({ profile, plan, onStartSession, onResetProfile }) {
   return h('div', null,
     // Profile banner
     h('div', { style:{
-      padding:'14px 16px', borderRadius:16, marginBottom:14,
+      padding:'16px 18px', borderRadius:18, marginBottom:14,
       background:'linear-gradient(135deg,rgba(22,27,34,0.98),rgba(13,17,23,0.95))',
       border:'1px solid rgba(22,163,74,0.2)',
+      boxShadow:'0 8px 24px rgba(0,0,0,0.35)',
     }},
       h('div', { style:{ display:'flex', gap:12, alignItems:'center', marginBottom:10 }},
         h('div', { style:{
@@ -253,20 +254,27 @@ function FitnessBuilder2Page() {
 
     // Tab nav
     h('div', { style:{
-      display:'flex', borderBottom:'1px solid rgba(48,54,61,0.7)',
-      background:C.bg, position:'sticky', top:0, zIndex:10,
+      display:'flex', gap:4, padding:'8px 10px',
+      borderBottom:'1px solid rgba(48,54,61,0.7)',
+      background:'rgba(13,17,23,0.92)', backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
+      position:'sticky', top:0, zIndex:10,
     }},
       TABS.map(function(t) {
         var active = tab === t.id;
         return h('button', {
           key:t.id, onClick:function(){ setTab(t.id); },
           style:{
-            flex:1, padding:'12px 8px', border:'none', cursor:'pointer', fontFamily:'inherit',
-            background:'transparent', color:active?C.accent:C.dim,
-            borderBottom:active?'2px solid '+C.accent:'2px solid transparent',
+            flex:1, padding:'10px 8px', border:'1px solid '+(active?'rgba(22,163,74,0.35)':'transparent'),
+            borderRadius:11, cursor:'pointer', fontFamily:'inherit',
+            background:active?'rgba(22,163,74,0.12)':'transparent',
+            color:active?C.accent:C.dim,
             fontSize:12.5, fontWeight:active?800:600, transition:'all 0.15s',
+            display:'flex', flexDirection:'column', alignItems:'center', gap:2,
           }
-        }, t.icon + ' ' + t.label);
+        },
+          h('span', { style:{ fontSize:15 }}, t.icon),
+          h('span', null, t.label)
+        );
       })
     ),
 
