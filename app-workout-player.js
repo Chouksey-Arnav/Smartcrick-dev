@@ -379,6 +379,7 @@ function WorkoutPlayerPage(props) {
 
   var finishWorkout = function(difficulty) {
     if (A.awardXP) A.awardXP(Math.round(workout.xp_value*1.25), workout.duration_minutes, 'workout', 'workout', workout.id, true);
+    if (A.DB && A.DB.logWorkoutComplete) { try { A.DB.logWorkoutComplete(workout.id); } catch(e) {} }
     if (A.FitnessEngine && A.FitnessEngine.recordWorkout) {
       A.FitnessEngine.recordWorkout(workout, {
         minutes: Math.round(elapsedRef.current / 60) || workout.duration_minutes,
