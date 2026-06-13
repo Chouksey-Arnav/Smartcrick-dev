@@ -913,7 +913,7 @@ function ScrReveal({ data, plan, onNext }) {
 // ================================================================
 function FB2OnboardingFlow({ onComplete }) {
   var state = useReducer(function(d, action) {
-    return Object.assign({}, d, action);
+    return Object.assign({}, d, typeof action === 'function' ? action(d) : action);
   }, {});
   var data = state[0], setData = state[1];
   var idxState = useState(0);
