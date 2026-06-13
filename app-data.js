@@ -395,8 +395,10 @@ A.FIT_GOALS = FIT_GOALS;
 A.FIT_DURS = FIT_DURS;
 
 // ── Workouts ──────────────────────────────────────────────────────
-function mkW(id,name,level,target,goal,durCat,exercises,durMin,xp) {
-  return {id:id,name:name,level:level,target:target,goal:goal,duration_category:durCat,exercises:exercises,duration_minutes:durMin,xp_value:xp};
+function mkW(id,name,level,target,goal,durCat,exercises,durMin,xp,videoId) {
+  var w = {id:id,name:name,level:level,target:target,goal:goal,duration_category:durCat,exercises:exercises,duration_minutes:durMin,xp_value:xp};
+  if (videoId) w.video_id = videoId;
+  return w;
 }
 A.mkW = mkW;
 
@@ -483,26 +485,26 @@ const WORKOUTS = [
   mkW('wp020','Full Body Pro Cardio','pro','full-body','lose-weight','20-25',6,22,288),
 
   // ── Cricket-Specific & Gap-Filler Workouts (20) ─────────────
-  mkW('wc001','Cricket Bowling Power','intermediate','back','build-muscle','20-25',6,22,155),
-  mkW('wc002','Batting Explosive Strength','intermediate','core','build-muscle','20-25',6,22,160),
-  mkW('wc003','Fielding Agility Circuit','intermediate','full-body','improve-endurance','15-20',7,18,148),
-  mkW('wc004','Wicket Keeper Endurance','intermediate','legs','improve-endurance','20-25',6,22,155),
-  mkW('wc005','Cricket Warm-Up Protocol','beginner','full-body','improve-endurance','<10',5,8,65),
-  mkW('wc006','Speed & Agility HIIT','advanced','full-body','improve-endurance','20-25',7,22,208),
-  mkW('wc007','Rotational Power Builder','advanced','core','build-muscle','15-20',5,17,182),
-  mkW('wc008','Explosive Lower Body','advanced','legs','build-muscle','20-25',6,22,195),
-  mkW('wc009','Shoulder Armour','beginner','shoulders','build-muscle','10-15',4,12,78),
-  mkW('wc010','Core Circuit Blast','beginner','core','lose-weight','10-15',5,12,80),
-  mkW('wc011','Pulling Power Builder','intermediate','back','build-muscle','15-20',5,17,142),
-  mkW('wc012','Chest & Tricep Superset','intermediate','chest','build-muscle','15-20',5,17,145),
-  mkW('wc013','Lower Body Fat Burner','beginner','legs','lose-weight','10-15',4,12,82),
-  mkW('wc014','Upper Body Shred','intermediate','chest','lose-weight','15-20',5,17,140),
-  mkW('wc015','Full Body Metabolic Burn','advanced','full-body','lose-weight','20-25',7,22,215),
-  mkW('wc016','Pro Conditioning Circuit','pro','full-body','improve-endurance','25+',8,28,315),
-  mkW('wc017','Elite Strength Foundations','pro','full-body','build-muscle','25+',7,28,322),
-  mkW('wc018','Arm Sculptor','beginner','arms','build-muscle','10-15',4,12,76),
-  mkW('wc019','Glute & Hamstring Focus','intermediate','glutes','build-muscle','15-20',5,17,142),
-  mkW('wc020','Athletic Performance Elite','pro','full-body','improve-endurance','25+',8,28,328),
+  mkW('wc001','Cricket Bowling Power','intermediate','back','build-muscle','20-25',6,22,155,'KPuHcBDL5oc'),
+  mkW('wc002','Batting Explosive Strength','intermediate','core','build-muscle','20-25',6,22,160,'dEG3f0lfBHM'),
+  mkW('wc003','Fielding Agility Circuit','intermediate','full-body','improve-endurance','15-20',7,18,148,'gM9jCNTxhEY'),
+  mkW('wc004','Wicket Keeper Endurance','intermediate','legs','improve-endurance','20-25',6,22,155,'oSIa1yDf1K8'),
+  mkW('wc005','Cricket Warm-Up Protocol','beginner','full-body','improve-endurance','<10',5,8,65,'VLjJhGkRkpE'),
+  mkW('wc006','Speed & Agility HIIT','advanced','full-body','improve-endurance','20-25',7,22,208,'gM9jCNTxhEY'),
+  mkW('wc007','Rotational Power Builder','advanced','core','build-muscle','15-20',5,17,182,'dEG3f0lfBHM'),
+  mkW('wc008','Explosive Lower Body','advanced','legs','build-muscle','20-25',6,22,195,'VLjJhGkRkpE'),
+  mkW('wc009','Shoulder Armour','beginner','shoulders','build-muscle','10-15',4,12,78,'KPuHcBDL5oc'),
+  mkW('wc010','Core Circuit Blast','beginner','core','lose-weight','10-15',5,12,80,'VLjJhGkRkpE'),
+  mkW('wc011','Pulling Power Builder','intermediate','back','build-muscle','15-20',5,17,142,'KPuHcBDL5oc'),
+  mkW('wc012','Chest & Tricep Superset','intermediate','chest','build-muscle','15-20',5,17,145,'dEG3f0lfBHM'),
+  mkW('wc013','Lower Body Fat Burner','beginner','legs','lose-weight','10-15',4,12,82,'VLjJhGkRkpE'),
+  mkW('wc014','Upper Body Shred','intermediate','chest','lose-weight','15-20',5,17,140,'dEG3f0lfBHM'),
+  mkW('wc015','Full Body Metabolic Burn','advanced','full-body','lose-weight','20-25',7,22,215,'gM9jCNTxhEY'),
+  mkW('wc016','Pro Conditioning Circuit','pro','full-body','improve-endurance','25+',8,28,315,'VLjJhGkRkpE'),
+  mkW('wc017','Elite Strength Foundations','pro','full-body','build-muscle','25+',7,28,322,'KPuHcBDL5oc'),
+  mkW('wc018','Arm Sculptor','beginner','arms','build-muscle','10-15',4,12,76,'KPuHcBDL5oc'),
+  mkW('wc019','Glute & Hamstring Focus','intermediate','glutes','build-muscle','15-20',5,17,142,'VLjJhGkRkpE'),
+  mkW('wc020','Athletic Performance Elite','pro','full-body','improve-endurance','25+',8,28,328,'gM9jCNTxhEY'),
 ];
 A.WORKOUTS = WORKOUTS;
 
