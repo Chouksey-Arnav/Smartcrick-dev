@@ -65,6 +65,7 @@ const APP_SHELL = [
   '/app-mental-content-extended.js',
   // Fitness
   '/app-exercise-db.js',
+  '/data/exercise-library.json',
   '/app-fitness-engine.js',
   '/app-fitness.js',
   '/app-workout-player.js',
