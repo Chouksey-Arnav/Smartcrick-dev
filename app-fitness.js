@@ -376,6 +376,11 @@ function WorkoutDetailPage({ params }) {
         h(StatCard, { label:'Focus', value:w.target.replace('-',' '), color:'#f97316' }),
         h(StatCard, { label:'Goal', value:goalLabels[w.goal]||w.goal, color:'#f59e0b' })
       ),
+      w.video_id && A.VideoPlayer
+        ? h('div', { style:{ marginBottom:16 } },
+            h(A.VideoPlayer, { drill:{ videoId:w.video_id, videoTitle:w.name+' — Technique', videoChannel:'Cricket Highlights' } })
+          )
+        : null,
       lastRating && h('div', { style:{ padding:'11px 14px', borderRadius:11, marginBottom:14, background:'rgba(96,165,250,0.08)', border:'1px solid rgba(96,165,250,0.22)' } },
         h('span', { style:{ fontSize:12, color:'#93c5fd', fontWeight:600 } }, '🎯 ' + (ratingNote[lastRating]||'Adapted to you.'))
       ),
