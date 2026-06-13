@@ -1,6 +1,8 @@
 // ================================================================
-// app-exercise-db.js — SmartCrick Exercise Database v1.0
-// 200 exercises + getWorkoutExercises() helper
+// app-exercise-db.js — SmartCrick Exercise Database v1.1
+// 200 native exercises + getWorkoutExercises() helper, plus an
+// async-loaded extended library (data/exercise-library.json, 857
+// exercises merged from free-exercise-db + exercemus)
 // ================================================================
 (function() {
 'use strict';
@@ -317,6 +319,28 @@ var EXERCISES = [
 ];
 
 A.EXERCISES = EXERCISES;
+
+// ─── Extended exercise library (merged from free-exercise-db +
+// exercemus via scripts/build-exercise-library.py) ─────────────
+// Loaded async so the native 200 are usable instantly; the Library
+// browser re-renders once this lands via A.onExerciseLibraryUpdated.
+A.EXERCISES_EXTENDED_LOADED = false;
+function loadExtendedExerciseLibrary() {
+  fetch('/data/exercise-library.json')
+    .then(function(res) { return res.ok ? res.json() : []; })
+    .then(function(extra) {
+      if (!extra || !extra.length) return;
+      extra.forEach(function(ex) {
+        if (!ex.youtube_id) ex.youtube_id = YOUTUBE_IDS[ex.id] || null;
+        EXERCISES.push(ex);
+      });
+      A.EXERCISES_EXTENDED_LOADED = true;
+      if (typeof A.onExerciseLibraryUpdated === 'function') A.onExerciseLibraryUpdated();
+      console.log('[SC] extended exercise library loaded —', extra.length, 'exercises (total', EXERCISES.length, ')');
+    })
+    .catch(function(e) { console.warn('[SC] extended exercise library failed to load', e); });
+}
+loadExtendedExerciseLibrary();
 
 // ─── Warm-up pool (dynamic, raise heart-rate & mobilise) ──────
 // Every session opens with a warm-up so the body is ready — exactly
