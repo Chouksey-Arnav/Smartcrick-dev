@@ -509,12 +509,12 @@ var FEEDBACK_LIBRARY = {
         'ICC-compliant action detected. Your elbow extension is clean — you can bowl with confidence in any level of cricket.',
       ],
       borderline: [
-        'Borderline elbow extension detected — approaching the 15° ICC limit. We recommend remedial work before formal assessment.',
-        'Action is in the caution zone. While not illegal, this level of extension will attract scrutiny at higher levels. Corrective technique work is advised.',
+        'Estimated elbow extension is approaching the 15° ICC limit. We recommend a specialist coach review before a formal assessment.',
+        'Action is in the caution zone based on this clip. While not necessarily illegal, this level of extension will attract scrutiny at higher levels — corrective technique work is advised.',
       ],
       illegal: [
-        'ILLEGAL ACTION DETECTED — elbow extension exceeds the ICC 15° threshold. Immediate remedial coaching is essential.',
-        'WARNING: Action is non-compliant with ICC rules. This must be corrected before competing. Work with a specialist bowling coach on extension mechanics.',
+        'Estimated elbow extension exceeds the ICC 15° threshold for this clip. This is a 2D estimate, not an official ruling — have a specialist bowling coach review your action.',
+        'This clip suggests elbow extension above the ICC guideline. Treat this as a prompt to get a coach\'s opinion and, if needed, a formal biomechanical assessment — not as a final verdict.',
       ],
     },
 
