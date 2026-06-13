@@ -14,17 +14,16 @@
 //   ACT 4  Commitment + permissions ...... lock-in + re-engagement
 //   ACT 5  "Building your plan" + reveal .. show complexity, deliver value
 //   ACT 6  Lock progress (account) ....... commitment device
-//   ACT 7  Hard paywall -> spin -> discount the obvious final step
+//   ACT 7  Free unlock .................... the obvious final step
 //
-// By the time the paywall appears, the user has: entered lots of data
-// (sunk cost), seen social proof (trust), visualised success (desire),
-// been affirmed (belief), and received a "custom plan" (ownership).
-// The paywall is framed not as a cost but as the unlock of the plan
-// they already built.
+// By the time the unlock screen appears, the user has: entered lots of
+// data (sunk cost), seen social proof (trust), visualised success
+// (desire), been affirmed (belief), and received a "custom plan"
+// (ownership). The unlock is framed as receiving the plan they already
+// built — and it's instant and free.
 //
-// NOTE: SmartCrick has no payment backend, so this is a SOFT paywall.
-// "Start free trial" / "Unlock" simulates activation (persists
-// user.pro). "Maybe later" still lets the user into the app for free.
+// NOTE: SmartCrick has no payment system. Everything is free, so every
+// user finishes onboarding with full access (user.pro = true).
 // ================================================================
 (function () {
 'use strict';
@@ -963,190 +962,48 @@ function ScrAccount({ data, setData, onNext }) {
 }
 
 // ================================================================
-// ACT 7 — PAYWALL  /  SPIN  /  DISCOUNTED PAYWALL
+// ACT 7 — FREE UNLOCK (no payment system — everything is free)
 // ================================================================
-
-// PlanOption row for the paywall.
-function PlanRow({ selected, onClick, title, price, sub, badge, perWeek }) {
-  return h('button', {
-    onClick: function () { haptic(); onClick(); },
-    'aria-pressed': selected ? 'true' : 'false',
-    style: {
-      position: 'relative', width: '100%', padding: '16px', borderRadius: 15, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-      background: selected ? 'rgba(22,163,74,0.12)' : C.card,
-      border: '2px solid ' + (selected ? C.green : C.border),
-      boxShadow: selected ? '0 0 0 3px rgba(22,163,74,0.16)' : 'none', transition: 'all 0.15s',
-    },
-  },
-    badge && h('span', { style: { position: 'absolute', top: -10, right: 14, background: C.green, color: '#fff', fontSize: 10, fontWeight: 900, padding: '3px 9px', borderRadius: 99, textTransform: 'uppercase', letterSpacing: '0.06em' }}, badge),
-    h('div', null,
-      h('div', { style: { fontSize: 15, fontWeight: 800, color: C.text }}, title),
-      h('div', { style: { fontSize: 12.5, color: C.sub, marginTop: 2 }}, sub)
-    ),
-    h('div', { style: { textAlign: 'right', flexShrink: 0 }},
-      h('div', { style: { fontSize: 15, fontWeight: 900, color: selected ? C.greenLt : C.text }}, price),
-      perWeek && h('div', { style: { fontSize: 11, color: C.faint, marginTop: 1 }}, perWeek)
-    )
-  );
-}
-
-// Hard paywall. PURPOSE: final conversion. Everything funnels here; the
-// plan is "built", so this is framed as the unlock — not a cost.
-function ScrPaywall({ data, onStart, onDecline }) {
-  var [plan, setPlan] = useState('annual');
+// PURPOSE: Cal AI's funnel ends in a hard paywall. SmartCrick has no
+// payments, so this screen keeps the same emotional payoff — "everything
+// you just built is now yours" — but the unlock is instant and free.
+function ScrUnlock({ data, onContinue }) {
   var name = (data.name || '').trim();
+  useEffect(function () {
+    try { A.fireConfetti && A.fireConfetti(); } catch (e) {}
+  }, []);
   return h('div', { style: { minHeight: '100dvh', background: 'radial-gradient(120% 70% at 50% 0%, rgba(22,163,74,0.18), #0d1117 50%)', display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto', width: '100%', padding: 'env(safe-area-inset-top,16px) 0 env(safe-area-inset-bottom,20px)', boxSizing: 'border-box' }},
-    h('div', { style: { display: 'flex', justifyContent: 'flex-end', padding: '8px 16px 0' }},
-      h('button', { onClick: onDecline, 'aria-label': 'Close', style: { background: 'transparent', border: 'none', color: C.faint, fontSize: 26, lineHeight: 1, cursor: 'pointer', padding: 6, fontFamily: 'inherit' }}, '×')
-    ),
-    h('div', { style: { flex: 1, overflowY: 'auto', padding: '4px 22px 8px' }},
+    h('div', { style: { flex: 1, overflowY: 'auto', padding: '24px 22px 8px' }},
       h(StaggerChildren, { baseDelay: 40 },
-        h('div', { style: { textAlign: 'center', marginBottom: 20 }},
-          h('div', { 'aria-hidden': 'true', style: { fontSize: 40, marginBottom: 10 }}, '🏏'),
+        h('div', { style: { textAlign: 'center', marginBottom: 22 }},
+          h('div', { 'aria-hidden': 'true', style: { fontSize: 44, marginBottom: 10 }}, '🔓'),
+          h('div', { style: { display: 'inline-block', background: 'rgba(52,211,153,0.12)', color: C.greenLt, fontSize: 12, fontWeight: 900, padding: '6px 14px', borderRadius: 99, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 }}, '100% free — no card needed'),
           h('h2', { style: { fontSize: '1.65rem', fontWeight: 900, color: C.text, marginBottom: 8, lineHeight: 1.2, letterSpacing: '-0.02em' }},
-            'Unlock your full plan' + (name ? ', ' + name : '')),
+            'Everything is unlocked' + (name ? ', ' + name : '')),
           h('p', { style: { fontSize: 14.5, color: C.sub, lineHeight: 1.6, maxWidth: 320, margin: '0 auto' }},
-            'Your custom 12-week plan is ready. Start your free trial to unlock every drill, session and tool.')
+            'Your custom 12-week plan is ready to go — every drill, session and tool, completely free.')
         ),
-        // Value stack — remind them what they're unlocking.
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 20 }},
+        // Value stack — what they get, all free.
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }},
           [
             'Your personalised 12-week plan',
             '35+ pro drills + 60+ mental sessions',
             'Progress tracking, streaks & analytics',
-            'New content every week',
+            'New content every week — all free',
           ].map(function (t, i) {
             return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 11 }},
               h('span', { 'aria-hidden': 'true', style: { width: 22, height: 22, borderRadius: '50%', background: 'rgba(22,163,74,0.18)', color: C.greenLt, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900, flexShrink: 0 }}, '✓'),
               h('span', { style: { fontSize: 14, color: C.text, fontWeight: 600 }}, t)
             );
           })
-        ),
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 14 }},
-          h(PlanRow, { selected: plan === 'annual', onClick: function () { setPlan('annual'); }, title: 'Yearly', sub: '3-day free trial, then billed yearly', price: '$59.99/yr', perWeek: 'just $1.15/week', badge: 'Best value' }),
-          h(PlanRow, { selected: plan === 'monthly', onClick: function () { setPlan('monthly'); }, title: 'Monthly', sub: 'Flexible, cancel anytime', price: '$14.99/mo' })
         )
       )
     ),
     h('div', { style: { padding: '8px 22px 0' }},
       A.SpringBtn
-        ? h(A.SpringBtn, { label: plan === 'annual' ? 'Start my 3-day free trial' : 'Unlock SmartCrick', onClick: function () { onStart(plan, plan === 'annual'); }, style: { width: '100%', padding: '17px', borderRadius: 14, fontSize: 16.5, fontWeight: 800, fontFamily: 'inherit', minHeight: 56, background: C.green, color: '#fff', boxShadow: '0 8px 28px rgba(22,163,74,0.45)', border: 'none' }})
-        : h('button', { onClick: function () { onStart(plan, plan === 'annual'); }, style: { width: '100%', padding: '17px', border: 'none', borderRadius: 14, fontSize: 16.5, fontWeight: 800, fontFamily: 'inherit', minHeight: 56, background: C.green, color: '#fff', cursor: 'pointer', boxShadow: '0 8px 28px rgba(22,163,74,0.45)' }}, plan === 'annual' ? 'Start my 3-day free trial' : 'Unlock SmartCrick'),
-      h('p', { style: { fontSize: 11, color: C.faint, textAlign: 'center', marginTop: 10, lineHeight: 1.5 }},
-        plan === 'annual' ? 'No charge today. We\'ll remind you before your trial ends. Cancel anytime.' : 'Cancel anytime in settings.'),
-      h('div', { style: { display: 'flex', justifyContent: 'center', gap: 18, marginTop: 8 }},
-        h('button', { onClick: onDecline, style: { background: 'transparent', border: 'none', color: C.dim, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 4 }}, 'Maybe later'),
-        h('button', { onClick: function () { onStart(plan, false, true); }, style: { background: 'transparent', border: 'none', color: C.dim, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 4 }}, 'Restore')
-      )
-    )
-  );
-}
-
-// Spin-the-wheel. PURPOSE: gamified, variable-reward discount that fires
-// only if the user declined the first offer — makes them feel "lucky"
-// and re-opens the conversion with urgency.
-function ScrSpin({ onResult }) {
-  var [spinning, setSpinning] = useState(false);
-  var [done, setDone] = useState(false);
-  var rotRef = useRef(0);
-  var [rot, setRot] = useState(0);
-  var segs = [
-    { label: '20% OFF', off: 20, color: '#1f6f43' },
-    { label: '40% OFF', off: 40, color: '#16a34a' },
-    { label: '50% OFF', off: 50, color: '#1f6f43' },
-    { label: '60% OFF', off: 60, color: '#16a34a' },
-    { label: '30% OFF', off: 30, color: '#1f6f43' },
-    { label: '60% OFF', off: 60, color: '#16a34a' },
-  ];
-  var WIN = 3; // always lands on 60% OFF (index 3) — the "lucky" outcome
-  function spin() {
-    if (spinning || done) return;
-    setSpinning(true); haptic();
-    var seg = 360 / segs.length;
-    var target = 360 * 5 + (360 - (WIN * seg + seg / 2)); // land WIN under pointer (top)
-    rotRef.current = target;
-    setRot(target);
-    setTimeout(function () {
-      setSpinning(false); setDone(true);
-      try { A.fireConfetti && A.fireConfetti(); } catch (e) {}
-      setTimeout(function () { onResult(segs[WIN].off); }, 900);
-    }, 4200);
-  }
-  var seg = 360 / segs.length;
-  return h('div', { style: { minHeight: '100dvh', background: 'radial-gradient(120% 70% at 50% 0%, rgba(245,158,11,0.14), #0d1117 55%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, maxWidth: 480, margin: '0 auto', width: '100%', boxSizing: 'border-box', textAlign: 'center' }},
-    h('h2', { style: { fontSize: '1.55rem', fontWeight: 900, color: C.text, marginBottom: 6 }}, 'Wait — one last thing 🎁'),
-    h('p', { style: { fontSize: 14.5, color: C.sub, lineHeight: 1.6, maxWidth: 320, marginBottom: 26 }}, 'Spin the wheel for an exclusive one-time discount on your plan.'),
-    h('div', { style: { position: 'relative', width: 260, height: 260, marginBottom: 30 }},
-      h('div', { 'aria-hidden': 'true', style: { position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '12px solid transparent', borderRight: '12px solid transparent', borderTop: '20px solid ' + C.gold, zIndex: 3, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}),
-      h('svg', { width: 260, height: 260, viewBox: '0 0 260 260', style: { transform: 'rotate(' + rot + 'deg)', transition: spinning ? 'transform 4.2s cubic-bezier(0.17,0.67,0.12,0.99)' : 'none', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))' }, 'aria-hidden': 'true' },
-        segs.map(function (s, i) {
-          var a0 = (i * seg - 90) * Math.PI / 180, a1 = ((i + 1) * seg - 90) * Math.PI / 180;
-          var x0 = 130 + 125 * Math.cos(a0), y0 = 130 + 125 * Math.sin(a0);
-          var x1 = 130 + 125 * Math.cos(a1), y1 = 130 + 125 * Math.sin(a1);
-          var mid = (i * seg + seg / 2 - 90) * Math.PI / 180;
-          var tx = 130 + 78 * Math.cos(mid), ty = 130 + 78 * Math.sin(mid);
-          return h('g', { key: i },
-            h('path', { d: 'M130 130 L' + x0.toFixed(1) + ' ' + y0.toFixed(1) + ' A125 125 0 0 1 ' + x1.toFixed(1) + ' ' + y1.toFixed(1) + ' Z', fill: s.color, stroke: '#0d1117', strokeWidth: 2 }),
-            h('text', { x: tx, y: ty, fill: '#fff', fontSize: 14, fontWeight: 900, textAnchor: 'middle', dominantBaseline: 'middle', transform: 'rotate(' + (i * seg + seg / 2) + ' ' + tx + ' ' + ty + ')' }, s.label)
-          );
-        }),
-        h('circle', { cx: 130, cy: 130, r: 22, fill: '#0d1117', stroke: C.gold, strokeWidth: 3 })
-      )
-    ),
-    h('button', { onClick: spin, disabled: spinning || done, style: { width: '100%', maxWidth: 320, padding: '17px', border: 'none', borderRadius: 14, fontSize: 16.5, fontWeight: 800, fontFamily: 'inherit', minHeight: 56, background: done ? 'rgba(48,54,61,0.5)' : C.gold, color: done ? C.faint : '#1a1205', cursor: done || spinning ? 'default' : 'pointer', boxShadow: done ? 'none' : '0 8px 28px rgba(245,158,11,0.4)' }},
-      spinning ? 'Spinning…' : done ? 'You won! 🎉' : 'SPIN TO WIN')
-  );
-}
-
-// Discounted paywall. PURPOSE: one-time offer + scarcity/urgency
-// (countdown). The last conversion push for users who didn't take the
-// first offer.
-function ScrDiscount({ data, offer, onStart, onDecline }) {
-  offer = offer || 60;
-  var full = 59.99;
-  var discounted = Math.round((full * (1 - offer / 100)) * 100) / 100;
-  var [secs, setSecs] = useState(10 * 60);
-  useEffect(function () {
-    var iv = setInterval(function () { setSecs(function (s) { return s > 0 ? s - 1 : 0; }); }, 1000);
-    return function () { clearInterval(iv); };
-  }, []);
-  var mm = String(Math.floor(secs / 60)).padStart(2, '0');
-  var ss = String(secs % 60).padStart(2, '0');
-  return h('div', { style: { minHeight: '100dvh', background: 'radial-gradient(120% 70% at 50% 0%, rgba(245,158,11,0.16), #0d1117 50%)', display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto', width: '100%', padding: 'env(safe-area-inset-top,16px) 0 env(safe-area-inset-bottom,20px)', boxSizing: 'border-box' }},
-    h('div', { style: { display: 'flex', justifyContent: 'flex-end', padding: '8px 16px 0' }},
-      h('button', { onClick: onDecline, 'aria-label': 'Close', style: { background: 'transparent', border: 'none', color: C.faint, fontSize: 26, cursor: 'pointer', padding: 6, fontFamily: 'inherit' }}, '×')
-    ),
-    h('div', { style: { flex: 1, overflowY: 'auto', padding: '4px 22px 8px' }},
-      h(StaggerChildren, { baseDelay: 40 },
-        h('div', { style: { textAlign: 'center', marginBottom: 18 }},
-          h('div', { style: { display: 'inline-block', background: 'rgba(245,158,11,0.16)', color: C.gold, fontSize: 12, fontWeight: 900, padding: '6px 14px', borderRadius: 99, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}, '🎉 ' + offer + '% OFF — one time only'),
-          h('h2', { style: { fontSize: '1.7rem', fontWeight: 900, color: C.text, marginBottom: 10, lineHeight: 1.2 }}, 'Your exclusive offer'),
-          h('div', { style: { display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 12, marginBottom: 8 }},
-            h('span', { style: { fontSize: 20, color: C.dim, textDecoration: 'line-through', fontWeight: 700 }}, '$' + full.toFixed(2)),
-            h('span', { style: { fontSize: 40, fontWeight: 900, color: C.greenLt }}, '$' + discounted.toFixed(2)),
-            h('span', { style: { fontSize: 14, color: C.sub, fontWeight: 700 }}, '/yr')
-          ),
-          h('p', { style: { fontSize: 13.5, color: C.sub }}, 'Locked in forever. Less than ' + ('$' + (discounted / 52).toFixed(2)) + '/week.')
-        ),
-        // Urgency countdown.
-        h('div', { style: { textAlign: 'center', marginBottom: 20 }},
-          h('div', { style: { fontSize: 12, color: C.dim, fontWeight: 700, marginBottom: 6 }}, 'Offer expires in'),
-          h('div', { style: { fontSize: 30, fontWeight: 900, color: C.gold, fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em' }}, mm + ':' + ss)
-        ),
-        h('div', { style: { display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 8 }},
-          ['Everything in SmartCrick Pro', 'Your custom 12-week plan', 'Lowest price we ever offer'].map(function (t, i) {
-            return h('div', { key: i, style: { display: 'flex', alignItems: 'center', gap: 11 }},
-              h('span', { 'aria-hidden': 'true', style: { color: C.greenLt, fontWeight: 900 }}, '✓'),
-              h('span', { style: { fontSize: 14, color: C.text, fontWeight: 600 }}, t)
-            );
-          })
-        )
-      )
-    ),
-    h('div', { style: { padding: '8px 22px 0' }},
-      h('button', { onClick: function () { onStart('annual_discount', false); }, style: { width: '100%', padding: '17px', border: 'none', borderRadius: 14, fontSize: 16.5, fontWeight: 800, fontFamily: 'inherit', minHeight: 56, background: C.green, color: '#fff', cursor: 'pointer', boxShadow: '0 8px 28px rgba(22,163,74,0.45)' }}, 'Claim ' + offer + '% off  →'),
-      h('button', { onClick: onDecline, style: { width: '100%', padding: '12px', marginTop: 8, border: 'none', background: 'transparent', color: C.dim, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}, 'No thanks, I\'ll start with the free version')
+        ? h(A.SpringBtn, { label: 'Start training  →', onClick: onContinue, style: { width: '100%', padding: '17px', borderRadius: 14, fontSize: 16.5, fontWeight: 800, fontFamily: 'inherit', minHeight: 56, background: C.green, color: '#fff', boxShadow: '0 8px 28px rgba(22,163,74,0.45)', border: 'none' }})
+        : h('button', { onClick: onContinue, style: { width: '100%', padding: '17px', border: 'none', borderRadius: 14, fontSize: 16.5, fontWeight: 800, fontFamily: 'inherit', minHeight: 56, background: C.green, color: '#fff', cursor: 'pointer', boxShadow: '0 8px 28px rgba(22,163,74,0.45)' }}, 'Start training  →'),
+      h('p', { style: { fontSize: 11, color: C.faint, textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}, 'No trial, no subscription — just train.')
     )
   );
 }
@@ -1260,9 +1117,7 @@ var FLOW = [
   { id: 'building',   type: 'building' },
   { id: 'reveal',     type: 'reveal' },
   { id: 'account',    type: 'account' },
-  { id: 'paywall',    type: 'paywall' },
-  { id: 'spin',       type: 'spin' },
-  { id: 'discount',   type: 'discount' },
+  { id: 'unlock',     type: 'unlock' },
 ];
 var FORM_TOTAL = FLOW.filter(function (s) { return s.form; }).length;
 
@@ -1275,13 +1130,13 @@ function OnboardPage() {
     name: '', source: '', usedOthers: '', ageGroup: '', role: '', battingStyle: '',
     level: '', skills: { batting: 3, bowling: 3, fielding: 3, fitness: 3, mental: 3 },
     goal: '', vision: '', blockers: [], motivations: [], pace: 'balanced',
-    trainingDays: '4', notifications: false, referral: '', account: '', offer: 0,
+    trainingDays: '4', notifications: false, referral: '', account: '',
   });
 
   var step = FLOW[idx];
 
   function go(id) { var i = FLOW.findIndex(function (s) { return s.id === id; }); if (i !== -1) { setIdx(i); window.scrollTo(0, 0); } }
-  function next() { if (idx < FLOW.length - 1) { setIdx(idx + 1); window.scrollTo(0, 0); } else finalize(false); }
+  function next() { if (idx < FLOW.length - 1) { setIdx(idx + 1); window.scrollTo(0, 0); } else finalize(); }
   function back() {
     // Skip non-form / one-way screens when going back.
     var i = idx - 1;
@@ -1294,8 +1149,8 @@ function OnboardPage() {
   var formSoFar = FLOW.slice(0, idx + 1).filter(function (s) { return s.form; }).length;
   var progress = Math.min(1, formSoFar / FORM_TOTAL);
 
-  // ── Persist + finish. pro=true if they started a trial / purchased. ──
-  function finalize(pro, planId) {
+  // ── Persist + finish. Everything is free, so every user gets full access. ──
+  function finalize() {
     var xpGoalMap = { '3': 150, '4': 200, '5': 280, '6': 350, '7': 450 };
     var weeklyXP = xpGoalMap[data.trainingDays] || 200;
     var pathMap = { batsman: 'batting', bowler: 'bowling', allrounder: 'allrounder', wicketkeeper: 'fielding' };
@@ -1309,8 +1164,7 @@ function OnboardPage() {
       notifications: !!data.notifications, referral: (data.referral || '').trim(),
       account: data.account || null, accountLinked: !!data.account,
       recommendedPath: pathMap[data.role] || 'batting',
-      pro: !!pro, plan: pro ? (planId || 'annual') : null,
-      proSince: pro ? new Date().toISOString() : null,
+      pro: true, plan: null, proSince: new Date().toISOString(),
       onboardDone: true, joinedAt: new Date().toISOString(),
     }));
     DB.setWeeklyXPGoal(weeklyXP);
@@ -1321,17 +1175,6 @@ function OnboardPage() {
     } catch (e) {}
     nav('Home');
   }
-
-  // ── Paywall handlers ──────────────────────────────────────────
-  function startSubscription(planId, isTrial) {
-    haptic();
-    try { A.fireConfetti && A.fireConfetti(); } catch (e) {}
-    finalize(true, planId);
-  }
-  // Hard-paywall decline → spin the wheel (Cal AI plays the discount card).
-  function paywallDecline() { go('spin'); }
-  function spinResult(offer) { setData(function (d) { return Object.assign({}, d, { offer: offer }); }); go('discount'); }
-  function discountDecline() { finalize(false); }
 
   // ── Render the current step ───────────────────────────────────
   var stepProps = { data: data, setData: setData, onNext: next, onBack: idx > 0 ? back : null, progress: progress };
@@ -1354,26 +1197,13 @@ function OnboardPage() {
     case 'building': view = h(ScrBuilding, { onNext: next }); break;
     case 'reveal':   view = h(ScrReveal, { data: data, onNext: next, onBack: null }); break;
     case 'account':  view = h(ScrAccount, { data: data, setData: setData, onNext: next }); break;
-    case 'paywall':  view = h(ScrPaywall, { data: data, onStart: startSubscription, onDecline: paywallDecline }); break;
-    case 'spin':     view = h(ScrSpin, { onResult: spinResult }); break;
-    case 'discount': view = h(ScrDiscount, { data: data, offer: data.offer || 60, onStart: startSubscription, onDecline: discountDecline }); break;
+    case 'unlock':   view = h(ScrUnlock, { data: data, onContinue: next }); break;
     default:         view = h(ScrWelcome, { onNext: next });
   }
 
   return h('div', { role: 'main', key: step.id }, view);
 }
 
-// ── Standalone Paywall page (reusable post-onboarding, e.g. "Go Pro"). ─
-function PaywallPage() {
-  function start(planId) {
-    try { A.fireConfetti && A.fireConfetti(); } catch (e) {}
-    DB.setUser(Object.assign({}, DB.getUser(), { pro: true, plan: planId || 'annual', proSince: new Date().toISOString() }));
-    nav('Home');
-  }
-  return h(ScrPaywall, { data: DB.getUser() || {}, onStart: function (p) { start(p); }, onDecline: function () { nav('Home'); } });
-}
-
 A.OnboardPage = OnboardPage;
-A.PaywallPage = PaywallPage;
 console.log('[SC] app-onboard v2.0 — Cal-AI-style conversion funnel ready (' + FLOW.length + ' steps)');
 })();
