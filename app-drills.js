@@ -1424,5 +1424,6 @@ function DrillsPage() {
 }
 
 A.DrillsPage = DrillsPage;
+A.VideoPlayer = VideoPlayer;
 console.log('[SC] app-drills v6.0 — ' + (A.DRILLS ? A.DRILLS.length : 0) + ' drills · commitment system · ambient video · reflection modal');
 })();
