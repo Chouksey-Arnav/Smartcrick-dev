@@ -31,6 +31,14 @@ var MP_CDN_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@' + MP_VERSION;
 var MP_CAMERA_VER = '0.3.1675466862';
 var MP_CAMERA_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@' + MP_CAMERA_VER + '/camera_utils.js';
 
+// ── Shared quality thresholds ──────────────────────────────────────
+// Single source of truth for "is this landmark/frame trustworthy enough to
+// use in a measurement". Drawing/overlay code may use a looser cutoff.
+var VIS_OK = 0.5;
+var MIN_ACTION_CONF = 0.55;
+// Physiologically implausible elbow-extension readings (tracking glitches)
+var MAX_PLAUSIBLE_ELBOW_EXT = 60;
+
 // ── Pure-math utility functions (also injected into Web Worker) ──
 function angleBetween3Points(a, b, c) {
   if (!a || !b || !c) return 0;
@@ -62,7 +70,40 @@ function vectorMagnitude2D(a, b) {
 }
 
 function landmarkVisibilityOk(lm) {
-  return lm && (lm.visibility === undefined || lm.visibility >= 0.4);
+  return lm && (lm.visibility === undefined || lm.visibility >= VIS_OK);
+}
+
+// ── Temporal smoothing ─────────────────────────────────────────────
+// Exponential moving-average filter over each landmark's (x,y,z) across
+// consecutive frames. Removes single-frame jitter that otherwise causes
+// spurious angle spikes (e.g. a momentary "illegal" elbow-extension reading).
+// Raw landmarks are kept for drawing/overlay; smoothed copies are used for
+// all angle/metric math.
+function smoothLandmarksSequence(allLandmarks, alpha) {
+  alpha = alpha === undefined ? 0.35 : alpha;
+  var out = new Array(allLandmarks.length);
+  var prev = null;
+  for (var i = 0; i < allLandmarks.length; i++) {
+    var lm = allLandmarks[i];
+    if (!lm) { out[i] = prev; continue; }
+    if (!prev) {
+      out[i] = lm.map(function(p) { return p ? { x: p.x, y: p.y, z: p.z || 0, visibility: p.visibility } : p; });
+    } else {
+      out[i] = lm.map(function(p, idx) {
+        if (!p) return prev[idx];
+        var pp = prev[idx];
+        if (!pp) return { x: p.x, y: p.y, z: p.z || 0, visibility: p.visibility };
+        return {
+          x: pp.x + alpha * (p.x - pp.x),
+          y: pp.y + alpha * (p.y - pp.y),
+          z: (pp.z || 0) + alpha * ((p.z || 0) - (pp.z || 0)),
+          visibility: p.visibility,
+        };
+      });
+    }
+    prev = out[i];
+  }
+  return out;
 }
 
 function stdDev(arr) {
@@ -319,7 +360,7 @@ function detectActionWindows(landmarks, fps) {
 
   // Need at least 0.5s of sustained motion to count as action
   var MIN_RUN = Math.max(4, Math.round(fps * 0.5));
-  var MERGE_GAP = Math.max(3, Math.round(fps * 0.4));
+  var MERGE_GAP = Math.max(2, Math.round(fps * 0.25));
 
   // Find high-energy runs
   var inAction = false, runStart = 0;
@@ -357,24 +398,10 @@ function findBiomechanicalWindow(landmarks, mode, handedness, fps) {
   var bowlSide = (handedness === 'LHB') ? 'L' : 'R';
 
   if (mode === 'bowling') {
-    // Release point: frame where bowling wrist is at maximum height (minimum Y)
-    var bestFrame = -1, bestY = Infinity;
-    for (var i = 0; i < landmarks.length; i++) {
-      var lm = landmarks[i];
-      if (!lm) continue;
-      var wrist = lm[MP[bowlSide + '_WRIST']];
-      var shoulder = lm[MP[bowlSide + '_SHOULDER']];
-      if (wrist && shoulder && wrist.visibility !== undefined && wrist.visibility >= 0.5) {
-        // Wrist above shoulder = arm raised = delivery action
-        if (wrist.y < shoulder.y && wrist.y < bestY) {
-          bestY = wrist.y;
-          bestFrame = i;
-        }
-      }
-    }
-    if (bestFrame >= 0) {
-      return [{ start: Math.max(0, bestFrame - Math.round(fps * 1.5)), end: Math.min(landmarks.length - 1, bestFrame + Math.round(fps * 0.75)) }];
-    }
+    // Bowling release-point anchoring is handled separately by
+    // findBowlingDeliveries(), which requires multi-signal agreement
+    // (motion energy + trunk rotation + wrist velocity), not just "arm raised".
+    return null;
 
   } else if (mode === 'batting') {
     // Contact point: frame where bat-hand wrist speed is highest near hip height
@@ -415,6 +442,87 @@ function findBiomechanicalWindow(landmarks, mode, handedness, fps) {
   }
 
   return null; // No event found — fall back to motion energy
+}
+
+// ── Bowling delivery detection ─────────────────────────────────────
+// Finds candidate "release points" using multiple agreeing signals — wrist
+// raised above the shoulder, increasing hip-shoulder separation (trunk
+// rotating through the delivery), upward wrist velocity, AND agreement with
+// a general motion-energy window. A single "arm is up" frame is no longer
+// enough — that also fires for walking, stretching, adjusting a cap, etc.
+// Returns one entry per detected delivery (capped at 6), or [] if nothing
+// plausible was found.
+function findBowlingDeliveries(landmarks, handedness, fps) {
+  if (!landmarks || landmarks.length < 5) return [];
+  fps = fps || 12;
+  var bowlSide = (handedness === 'LHB') ? 'L' : 'R';
+  var wristIdx = MP[bowlSide + '_WRIST'];
+  var shoulderIdx = MP[bowlSide + '_SHOULDER'];
+  var elbowIdx = MP[bowlSide + '_ELBOW'];
+
+  var n = landmarks.length;
+  var hss = new Array(n).fill(null);
+  for (var i = 0; i < n; i++) {
+    var lm = landmarks[i];
+    if (!lm) continue;
+    var lHip = lm[MP.L_HIP], rHip = lm[MP.R_HIP], lSh = lm[MP.L_SHOULDER], rSh = lm[MP.R_SHOULDER];
+    if (lHip && rHip && lSh && rSh) hss[i] = hipShoulderSeparation(lHip, rHip, lSh, rSh);
+  }
+
+  // Motion-energy windows must agree with the candidate frame
+  var motionWindows = detectActionWindows(landmarks, fps) || [];
+
+  var lookback = Math.max(2, Math.round(fps * 0.3));
+  var candidates = [];
+  for (var i = 1; i < n; i++) {
+    var lm = landmarks[i], prev = landmarks[i-1];
+    if (!lm || !prev) continue;
+    var wrist = lm[wristIdx], shoulder = lm[shoulderIdx], elbow = lm[elbowIdx];
+    var prevWrist = prev[wristIdx];
+    if (!wrist || !shoulder || !elbow || !prevWrist) continue;
+    if (!landmarkVisibilityOk(wrist) || !landmarkVisibilityOk(shoulder) || !landmarkVisibilityOk(elbow)) continue;
+
+    // Arm raised above shoulder = arm in delivery swing
+    if (wrist.y >= shoulder.y) continue;
+
+    // Trunk rotation: hip-shoulder separation should have been increasing
+    // over the preceding ~0.3s — the body is rotating through the delivery,
+    // not just standing with an arm raised
+    if (hss[i] === null || hss[Math.max(0, i - lookback)] === null) continue;
+    if (hss[i] <= hss[Math.max(0, i - lookback)] + 2) continue;
+
+    // Must sit inside a detected motion-energy window
+    var inMotionWindow = motionWindows.some(function(w) { return i >= w.start && i <= w.end; });
+    if (!inMotionWindow) continue;
+
+    candidates.push({ frame: i, vel: prevWrist.y - wrist.y }); // positive = moving up
+  }
+
+  if (!candidates.length) return [];
+
+  // Collapse candidates within the same motion window to a single delivery,
+  // keeping the frame with the strongest upward wrist velocity as release.
+  var byWindow = {};
+  candidates.forEach(function(c) {
+    var w = null;
+    for (var wi = 0; wi < motionWindows.length; wi++) {
+      if (c.frame >= motionWindows[wi].start && c.frame <= motionWindows[wi].end) { w = motionWindows[wi]; break; }
+    }
+    var key = w ? (w.start + '-' + w.end) : ('f' + c.frame);
+    if (!byWindow[key] || c.vel > byWindow[key].vel) byWindow[key] = c;
+  });
+
+  var deliveries = Object.keys(byWindow).map(function(key) {
+    var c = byWindow[key];
+    return {
+      releaseFrame: c.frame,
+      start: Math.max(0, c.frame - Math.round(fps * 1.5)),
+      end: Math.min(n - 1, c.frame + Math.round(fps * 0.75)),
+    };
+  });
+
+  deliveries.sort(function(a, b) { return a.releaseFrame - b.releaseFrame; });
+  return deliveries.slice(0, 6);
 }
 
 function getActionFrameSet(landmarks, mode, handedness, fps) {
@@ -543,6 +651,40 @@ function minVal(arr) {
   return Math.min.apply(null, arr);
 }
 
+// Robust elbow-extension measurement for one delivery: take the 5-frame
+// window centred on the release frame, drop any frame with low-visibility
+// landmarks or a physiologically implausible reading, and use the MEDIAN of
+// what's left. A single noisy frame can no longer flip legal -> illegal.
+function computeDeliveryElbowExtension(landmarks, delivery, handedness) {
+  var bowlSide = (handedness === 'LHB') ? 'L' : 'R';
+  var shoulderIdx = MP[bowlSide + '_SHOULDER'], elbowIdx = MP[bowlSide + '_ELBOW'], wristIdx = MP[bowlSide + '_WRIST'];
+  var values = [];
+  var visSum = 0, visCount = 0;
+  var lo = Math.max(0, delivery.releaseFrame - 2);
+  var hi = Math.min(landmarks.length - 1, delivery.releaseFrame + 2);
+  for (var i = lo; i <= hi; i++) {
+    var lm = landmarks[i];
+    if (!lm) continue;
+    var shoulder = lm[shoulderIdx], elbow = lm[elbowIdx], wrist = lm[wristIdx];
+    if (!shoulder || !elbow || !wrist) continue;
+    if (!landmarkVisibilityOk(shoulder) || !landmarkVisibilityOk(elbow) || !landmarkVisibilityOk(wrist)) continue;
+    var ext = elbowExtensionAngle(shoulder, elbow, wrist);
+    if (ext < 0 || ext > MAX_PLAUSIBLE_ELBOW_EXT) continue;
+    values.push(ext);
+    [shoulder, elbow, wrist].forEach(function(p) {
+      visSum += (p.visibility === undefined ? 1 : p.visibility);
+      visCount++;
+    });
+  }
+  values.sort(function(a, b) { return a - b; });
+  var median = values.length ? values[Math.floor(values.length / 2)] : null;
+  return {
+    elbowExtension: median,
+    cleanFrames: values.length,
+    avgConfidence: visCount ? visSum / visCount : 0,
+  };
+}
+
 // ── Scoring functions ─────────────────────────────────────────────
 function scoreBatting(acc, handedness) {
   var headStability = 100;
@@ -609,11 +751,52 @@ function scoreBatting(acc, handedness) {
   };
 }
 
-function scoreBowling(acc, handedness) {
-  var avgElbowExt  = avg(acc.elbowExtensions);
-  var maxElbowExt  = maxVal(acc.elbowExtensions) || 0;
-  var iccStatus    = maxElbowExt < 15 ? 'legal' : maxElbowExt < 22 ? 'borderline' : 'illegal';
-  var iccScore     = maxElbowExt < 15 ? 100 : maxElbowExt < 22 ? 62 : 20;
+function scoreBowling(acc, handedness, bowlingExtra) {
+  bowlingExtra = bowlingExtra || {};
+  var deliveries = bowlingExtra.deliveries || [];
+  var cameraAngle = bowlingExtra.cameraAngle;
+
+  var avgElbowExt = avg(acc.elbowExtensions);
+
+  // ICC verdict comes ONLY from per-delivery release-window measurements
+  // that have enough clean, high-confidence frames — never from a single
+  // noisy frame across the whole clip.
+  var qualifyingDeliveries = deliveries.filter(function(d) {
+    return d.elbowExtension !== null && d.cleanFrames >= 3 && d.avgConfidence >= MIN_ACTION_CONF;
+  });
+
+  var iccCheck, maxElbowExt = 0, inconclusiveReason = null;
+  if (cameraAngle === 'front-on') {
+    inconclusiveReason = 'camera-not-side-on';
+  } else if (!deliveries.length) {
+    inconclusiveReason = 'no-delivery-detected';
+  } else if (!qualifyingDeliveries.length) {
+    inconclusiveReason = 'low-quality';
+  }
+
+  if (inconclusiveReason) {
+    var fallbackValues = qualifyingDeliveries.map(function(d) { return d.elbowExtension; });
+    maxElbowExt = fallbackValues.length ? maxVal(fallbackValues) : (avgElbowExt || 0);
+    iccCheck = { status: 'inconclusive', angle: null, color: '#94a3b8', reason: inconclusiveReason };
+  } else {
+    var worst = qualifyingDeliveries.reduce(function(a, b) { return b.elbowExtension > a.elbowExtension ? b : a; });
+    maxElbowExt = worst.elbowExtension;
+    var iccStatus = maxElbowExt < 15 ? 'legal' : maxElbowExt < 22 ? 'borderline' : 'illegal';
+    iccCheck = {
+      angle: Math.round(maxElbowExt * 10) / 10,
+      status: iccStatus,
+      color: iccStatus === 'legal' ? '#16a34a' : iccStatus === 'borderline' ? '#f59e0b' : '#dc2626',
+      deliveryIndex: deliveries.indexOf(worst) + 1,
+      totalDeliveries: deliveries.length,
+      disclaimer: 'Estimated from 2D video — not an official ICC assessment. For a formal review, use 3D motion capture under official ICC testing protocols.',
+    };
+  }
+
+  // For scoring purposes (not displayed as ICC verdict), treat an
+  // inconclusive reading as neutral rather than dragging the score down.
+  var iccScore = inconclusiveReason
+    ? 70
+    : (maxElbowExt < 15 ? 100 : maxElbowExt < 22 ? 62 : 20);
 
   var avgHSS       = avg(acc.hsValues) || 0;
   var hssScore     = scoreVsIdeal(avgHSS, 42, 12);
@@ -642,7 +825,9 @@ function scoreBowling(acc, handedness) {
     releaseScore * 0.20
   );
 
-  var loadScore = Math.min(10, Math.round((maxElbowExt / 22) * 5 + (acc.frameCount > 100 ? 3 : 1)));
+  var loadScore = inconclusiveReason && !maxElbowExt
+    ? null
+    : Math.min(10, Math.round((maxElbowExt / 22) * 5 + (acc.frameCount > 100 ? 3 : 1)));
 
   return {
     score: Math.max(0, Math.min(100, overall)),
@@ -657,11 +842,8 @@ function scoreBowling(acc, handedness) {
     },
     shotType: null,
     shotLabel: null,
-    iccCheck: {
-      angle: Math.round(maxElbowExt * 10) / 10,
-      status: iccStatus,
-      color: iccStatus === 'legal' ? '#16a34a' : iccStatus === 'borderline' ? '#f59e0b' : '#dc2626',
-    },
+    iccCheck: iccCheck,
+    deliveries: deliveries,
     injuryRisk: loadScore,
   };
 }
@@ -750,8 +932,9 @@ function demoScore(mode, videoEl) {
     score: totalScore, subScores: sub, metrics: demoMetrics,
     shotType: mode === 'batting' ? 'cover_drive' : null,
     shotLabel: mode === 'batting' ? 'Cover Drive' : null,
-    iccCheck: mode === 'bowling' ? {angle:r(8,6), status:'legal', color:'#16a34a'} : null,
-    injuryRisk: mode === 'bowling' ? 3 : null,
+    iccCheck: mode === 'bowling' ? { status: 'not_analyzed', angle: null, color: '#94a3b8' } : null,
+    injuryRisk: null,
+    warnings: ['⚠️ Demo mode — the ProVision™ pose engine could not load, so these are illustrative placeholder results, not a real analysis of your video. Check your connection and try again.'],
   };
 }
 
@@ -800,7 +983,8 @@ function createMediaPoseInstance(complexity) {
 async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
   var mode       = opts.mode || 'batting';
   var handedness = opts.handedness || 'RHB';
-  var fps        = opts.fps || 8;
+  var fps        = opts.fps || 12;
+  var cameraAngle = opts.cameraAngle || 'side-on';
   var backend    = 'demo';
 
   onProgress && onProgress(2, 'Initializing BioTrack™ Pose System...');
@@ -862,8 +1046,36 @@ async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
   onProgress && onProgress(88, 'Detecting action windows...');
   await delay(150);
 
+  // Smooth landmarks (EMA) before any angle/metric math — raw allLandmarks
+  // is kept for skeleton drawing/replay.
+  var smoothedLandmarks = smoothLandmarksSequence(allLandmarks);
+
   // Pass 2: detect action windows and score only action frames
-  var actionResult = getActionFrameSet(allLandmarks, mode, handedness, fps);
+  var actionResult, deliveries, noBowlingActionDetected = false;
+  if (mode === 'bowling') {
+    deliveries = findBowlingDeliveries(smoothedLandmarks, handedness, fps).map(function(d) {
+      var m = computeDeliveryElbowExtension(smoothedLandmarks, d, handedness);
+      return Object.assign({}, d, m);
+    });
+    if (deliveries.length) {
+      var frameSet = new Set();
+      deliveries.forEach(function(d) { for (var i = d.start; i <= d.end; i++) frameSet.add(i); });
+      var totalActionFrames = frameSet.size;
+      actionResult = {
+        frames: frameSet,
+        windows: deliveries.map(function(d) { return { start: d.start, end: d.end }; }),
+        detectedSeconds: Math.round(totalActionFrames / fps * 10) / 10,
+      };
+    } else {
+      noBowlingActionDetected = true;
+      // No confident delivery found — fall back to motion-energy windows
+      // purely so other (non-ICC) metrics still have something to score,
+      // but the ICC verdict will be reported as inconclusive.
+      actionResult = getActionFrameSet(smoothedLandmarks, mode, handedness, fps);
+    }
+  } else {
+    actionResult = getActionFrameSet(smoothedLandmarks, mode, handedness, fps);
+  }
   var usingActionSegmentation = !!actionResult;
   var detectedSeconds = actionResult ? actionResult.detectedSeconds : null;
 
@@ -873,7 +1085,7 @@ async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
   // Accumulate metrics only for action frames
   var filteredCount = 0;
   for (var fi = 0; fi < allLandmarks.length; fi++) {
-    var lm = allLandmarks[fi];
+    var lm = smoothedLandmarks[fi];
     if (!lm) continue;
     // Skip non-action frames if action was detected
     if (actionResult && !actionResult.frames.has(fi)) continue;
@@ -916,7 +1128,7 @@ async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
 
   var scored;
   if (mode === 'batting')       scored = scoreBatting(acc, handedness);
-  else if (mode === 'bowling')  scored = scoreBowling(acc, handedness);
+  else if (mode === 'bowling')  scored = scoreBowling(acc, handedness, { deliveries: deliveries, cameraAngle: cameraAngle });
   else if (mode === 'fielding') scored = scoreFielding(acc);
   else                          scored = scoreKeeping(acc);
 
@@ -926,10 +1138,20 @@ async function analyseVideo(videoEl, opts, onProgress, onFrameResult) {
   scored.framesScored = filteredCount;
 
   // Low confidence warning
+  var warnings = [];
   var avgConf = avg(acc.confidences) || 1;
   if (avgConf < 0.45) {
-    scored.warnings = ['Low video visibility detected. For best accuracy: good lighting, contrasting clothing, side-on camera angle.'];
+    warnings.push('Low video visibility detected. For best accuracy: good lighting, contrasting clothing, side-on camera angle.');
   }
+  if (mode === 'bowling') {
+    if (noBowlingActionDetected) {
+      warnings.push('Couldn\'t confidently detect a bowling delivery in this clip. For ICC analysis, record side-on with the full run-up through follow-through clearly visible.');
+    } else if (cameraAngle !== 'side-on') {
+      warnings.push('ICC elbow-extension check requires a side-on camera angle — switch to side-on for a legal/illegal verdict.');
+    }
+  }
+  scored.warnings = warnings;
+
   if (usingActionSegmentation && detectedSeconds !== null) {
     scored.actionInfo = detectedSeconds + 's of action detected and scored';
   } else if (!usingActionSegmentation && allLandmarks.length > 10) {
@@ -961,6 +1183,7 @@ function buildSession(scored, mode, handedness, videoEl, backend, landmarks) {
     shotType: scored.shotType,
     shotLabel: scored.shotLabel,
     iccCheck: scored.iccCheck,
+    deliveries: scored.deliveries || null,
     injuryRisk: scored.injuryRisk,
     warnings: scored.warnings || [],
     feedback: feedback,
@@ -989,9 +1212,29 @@ function buildFeedback(scored, mode) {
   subArr.sort(function(a, b) { return a.val - b.val; });
   var weakSubs = subArr.slice(0, 2);
 
+  // elbowExtension/maxElbowExtension are raw degree values (not 0-100 scores)
+  // and the ICC verdict is already shown via the ICCBadge — handle them
+  // separately so the generic 0-100 scoring logic below doesn't
+  // misinterpret a clean ~8° action as a "poor" score.
+  var skipMetrics = { elbowExtension: true, maxElbowExtension: true };
+  if (mode === 'bowling' && scored.iccCheck) {
+    var ic = scored.iccCheck;
+    if (ic.status === 'legal' || ic.status === 'borderline' || ic.status === 'illegal') {
+      var iccText = null;
+      var bank = A.VD.FEEDBACK_LIBRARY && A.VD.FEEDBACK_LIBRARY.bowling &&
+        A.VD.FEEDBACK_LIBRARY.bowling.elbowExtension && A.VD.FEEDBACK_LIBRARY.bowling.elbowExtension[ic.status];
+      if (bank && bank.length) iccText = bank[Math.floor(Math.random() * bank.length)];
+      if (iccText) {
+        feedback.push({ metric: 'elbowExtension', score: ic.status === 'legal' ? 95 : ic.status === 'borderline' ? 60 : 25,
+          text: iccText, priority: ic.status === 'legal' ? 3 : ic.status === 'illegal' ? 1 : 2 });
+      }
+    }
+  }
+
   // Generate feedback for key metrics
   var metricKeys = Object.keys(metrics);
   metricKeys.forEach(function(mk) {
+    if (skipMetrics[mk]) return;
     var val = metrics[mk];
     if (val === null || val === undefined) return;
     var text = A.VD.getFeedback(mode, mk, val);
@@ -1005,9 +1248,14 @@ function buildFeedback(scored, mode) {
 function buildLinkedDrills(scored, mode) {
   if (!A.VD) return [];
   var metrics = scored.metrics || {};
+  var skipMetrics = { elbowExtension: true, maxElbowExtension: true };
   var lowMetrics = Object.keys(metrics).filter(function(k) {
-    return metrics[k] !== null && metrics[k] < 65;
+    return !skipMetrics[k] && metrics[k] !== null && metrics[k] < 65;
   });
+  if (mode === 'bowling' && scored.iccCheck &&
+      (scored.iccCheck.status === 'borderline' || scored.iccCheck.status === 'illegal')) {
+    lowMetrics.push('elbowExtension');
+  }
   return A.VD.getLinkedDrills(lowMetrics);
 }
 
@@ -1101,6 +1349,11 @@ Object.assign(A, {
     scoreFielding: scoreFielding,
     scoreKeeping: scoreKeeping,
     demoScore: demoScore,
+    // Expose bowling action-detection internals for testing
+    findBowlingDeliveries: findBowlingDeliveries,
+    computeDeliveryElbowExtension: computeDeliveryElbowExtension,
+    smoothLandmarksSequence: smoothLandmarksSequence,
+    elbowExtensionAngle: elbowExtensionAngle,
   },
 });
 
