@@ -19,16 +19,6 @@ var TYPE_COLORS = {
   custom:  { label:'Custom Session',   color:'#8b949e', bg:'rgba(139,148,158,.12)',   border:'rgba(139,148,158,.4)',icon:'list'     },
 };
 
-// ── Pending session bridge (from Today's Mission "Start" btn) ─────
-function checkPendingSession() {
-  try {
-    var raw = sessionStorage.getItem('sc_pending_session');
-    if (!raw) return null;
-    sessionStorage.removeItem('sc_pending_session');
-    return JSON.parse(raw);
-  } catch(e) { return null; }
-}
-
 // ── Session Card ──────────────────────────────────────────────────
 function SessionCard({ sess, onComplete, onDelete }) {
   var tc = TYPE_COLORS[sess.type] || TYPE_COLORS.custom;
@@ -176,22 +166,24 @@ function SchedulePage() {
   var today = new Date().toISOString().slice(0,10);
 
   useEffect(function(){
-    var pending = checkPendingSession();
-    if (pending) { completePendingSession(pending); }
-  }, []);
-  useEffect(function(){
     var onUpdate = function(){ setSchedule(DB.getSchedule()); };
     window.addEventListener('sc_update', onUpdate);
     return function(){ window.removeEventListener('sc_update', onUpdate); };
   }, []);
-
-  function completePendingSession(pending) {
-    var xp = pending.xp_value || 60;
-    awardXP(xp, pending.duration_minutes||15, pending.type||'drill', pending.type==='drill'?'drill':pending.type==='mental'?'mental':null, pending.ref_id||null);
-    if (pending.schedule_id) DB.updateSession(pending.schedule_id, { status:'complete' });
-    setSchedule(DB.getSchedule());
-    showToast('✓ Session complete! +' + xp + ' XP');
-  }
+  // Sessions auto-complete when the linked drill/mental/workout is actually finished
+  useEffect(function(){
+    function onAutoComplete(e) {
+      setSchedule(DB.getSchedule());
+      var refId = e.detail && e.detail.ref_id;
+      var sess = (DB.getSchedule().sessions||[]).find(function(s){ return s.ref_id===refId && s.status==='complete'; });
+      if (sess) {
+        fireConfetti();
+        showToast('✓ '+sess.title+' complete! +'+(sess.xp_value||0)+' XP');
+      }
+    }
+    window.addEventListener('sc_plan_autocomplete', onAutoComplete);
+    return function(){ window.removeEventListener('sc_plan_autocomplete', onAutoComplete); };
+  }, []);
 
   function showToast(msg) {
     setToast(msg);
@@ -199,20 +191,21 @@ function SchedulePage() {
   }
 
   function handleComplete(sess) {
-    DB.updateSession(sess.id, { status:'complete' });
     var xp = sess.xp_value||60;
-    awardXP(xp, sess.duration_minutes||15, sess.type, sess.type==='drill'?'drill':sess.type==='mental'?'mental':null, sess.ref_id||null);
-    // If it's a drill/mental ref, navigate into it
+    // Drill/mental/fitness sessions only count as done once the linked
+    // activity is actually completed — navigate there and let the
+    // autoCompletePlan/autoCompleteMental/logWorkoutComplete hooks in
+    // app-core.js mark the session complete (and award XP) for real.
     if (sess.type==='drill' && sess.ref_id) {
-      sessionStorage.setItem('sc_pending_session', JSON.stringify(Object.assign({},sess,{schedule_id:sess.id})));
       nav('DrillDetail', { id: sess.ref_id });
     } else if (sess.type==='mental' && sess.ref_id) {
-      sessionStorage.setItem('sc_pending_session', JSON.stringify(Object.assign({},sess,{schedule_id:sess.id})));
       nav('MentalPlayer', { id: sess.ref_id });
     } else if (sess.type==='fitness' && sess.ref_id) {
-      sessionStorage.setItem('sc_pending_session', JSON.stringify(Object.assign({},sess,{schedule_id:sess.id})));
       nav('WorkoutDetail', { id: sess.ref_id });
     } else {
+      // Freeform/manual sessions (no linked content) — nothing to verify
+      DB.updateSession(sess.id, { status:'complete' });
+      awardXP(xp, sess.duration_minutes||15, sess.type, null, null);
       fireConfetti();
       setSchedule(DB.getSchedule());
       showToast('✓ '+sess.title+' complete! +'+xp+' XP');
@@ -283,7 +276,7 @@ function SchedulePage() {
     ),
 
     // Days
-    h('div', { style:{ padding:'0 16px 16px' } },
+    h('div', { className:'sc-stagger', style:{ padding:'0 16px 16px' } },
       days.map(function(day) {
         return h('div', { key:day.date, style:{ marginBottom:12 } },
           // Day header
